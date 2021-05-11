@@ -9,9 +9,11 @@
   "dependencies": {
     "@codemirror/state": "^0.18.6",
     "@codemirror/view": "^0.18.11",
+    "cytoscape": "^3.19.0",
     "vue": "^3.0.5"
   },
   "devDependencies": {
+    "@types/cytoscape": "^3.14.15",
     "@vitejs/plugin-vue": "^1.2.1",
     "@vue/compiler-sfc": "^3.0.5",
     "typescript": "^4.1.3",
