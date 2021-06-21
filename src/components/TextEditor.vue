@@ -6,7 +6,7 @@
 import { defineComponent } from 'vue'
 import { EditorState } from "@codemirror/state"
 import { 
-  EditorView, keymap, drawSelection, 
+  EditorView, keymap, drawSelection, ViewUpdate,
   highlightActiveLine, highlightSpecialChars
 } from "@codemirror/view"
 import { defaultKeymap } from "@codemirror/commands"
@@ -20,6 +20,7 @@ import { defaultHighlightStyle } from "@codemirror/highlight"
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/closebrackets"
 import { commentKeymap } from "@codemirror/comment"
 import { fizLanguage } from 'lang-fiz'
+import { fillTree } from '../common/treeFactory'
 
 export default defineComponent({
   name: 'TextEditor',
@@ -39,6 +40,12 @@ export default defineComponent({
         closeBrackets(),
         defaultHighlightStyle.fallback,
         highlightSpecialChars(),
+        EditorView.updateListener.of((v:ViewUpdate): void => {
+          if (v.docChanged) {
+            let tree = fillTree(v.state)
+            console.log(tree.formatTree())
+          }
+        }),
         keymap.of([
           ...defaultKeymap,
           ...historyKeymap,
