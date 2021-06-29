@@ -39,9 +39,9 @@ export type StatementTreeNode = CallTreeNode | AssignmentTreeNode | AliasTreeNod
 export class RecipeTreeNode extends BaseTreeNode {
   private statements: Array<StatementTreeNode>
 
-  constructor() {
+  constructor(init_stmts: Array<StatementTreeNode> = []) {
     super(NodeType.Recipe)
-    this.statements = []
+    this.statements = init_stmts
   }
 
   addChild(child: StatementTreeNode): void {

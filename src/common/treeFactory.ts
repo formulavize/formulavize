@@ -73,7 +73,13 @@ function fillStatement(c: TreeCursor, s: EditorState): StatementTreeNode | null 
     case "Assignment":
       stmtNode = fillAssignment(c, s)
       break
-    case "⚠": // Error token
+    case "⚠": // Error token for incomplete trees
+      break
+    case "Recipe":
+      break
+    case "LineComment":
+      break
+    case "BlockComment":
       break
     default:
       console.warn("Unknown node type " + c.node.name)
@@ -85,7 +91,7 @@ export function fillTree(s: EditorState): BaseTreeNode {
   const editorStateTree = syntaxTree(s)
   let cursor = editorStateTree.fullCursor()
   if (cursor.name !== "Recipe") {
-    console.error("Failed to parse Recipe")
+    console.error("Failed to parse " + cursor.name)
   }
   let stRoot = new RecipeTreeNode()
   cursor.firstChild()
