@@ -10,6 +10,7 @@ export default defineComponent({
   name: 'GraphView',
   mounted(): void {
     var cy = cytoscape({container: this.$refs.canvas as HTMLElement})
+    console.log(cy.destroyed())
   },
 })
 </script>

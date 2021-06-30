@@ -61,6 +61,7 @@ export default defineComponent({
       state: state,
       parent: this.$refs.editorview as Element,
     })
+    view.focus()
   },
 })
 </script>

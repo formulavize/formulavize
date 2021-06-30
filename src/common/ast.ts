@@ -97,7 +97,7 @@ export class AssignmentTreeNode extends BaseTreeNode {
   }
 
   getChildren(): Array<BaseTreeNode> {
-    let retList: Array<ValueTreeNode> = this.lhs
+    const retList: Array<ValueTreeNode> = this.lhs
     if (this.rhs) retList.push(this.rhs)
     return retList
   }
@@ -123,7 +123,7 @@ export class AliasTreeNode extends BaseTreeNode  {
   }
 
   getChildren(): Array<BaseTreeNode> {
-    let retList = []
+    const retList = []
     if (this.lhs) retList.push(this.lhs)
     if (this.rhs) retList.push(this.rhs)
     return retList
