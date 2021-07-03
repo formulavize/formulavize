@@ -1,6 +1,8 @@
 <template>
-  <HelloWorld msg="Hello World!" />
-  <splitpanes class="default-theme">
+  <header>
+    <HelloWorld msg="Hello World!" />
+  </header>
+  <splitpanes id="panes" class="default-theme">
     <pane>
       <TextEditor />
     </pane>
@@ -8,6 +10,8 @@
       <GraphView />
     </pane>
   </splitpanes>
+  <footer>
+  </footer>
 </template>
 
 <script lang="ts">
@@ -31,4 +35,13 @@ export default defineComponent({
 </script>
 
 <style>
+  html, body, #app {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+  }
+</style>
+
+<style scoped>
+  #panes { height: 80%; }
 </style>

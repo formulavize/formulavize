@@ -1,5 +1,5 @@
 <template>
-  <div ref="editorview" />
+  <div id="editorview" ref="editorview" />
 </template>
 
 <script lang="ts">
@@ -40,6 +40,7 @@ export default defineComponent({
         closeBrackets(),
         defaultHighlightStyle.fallback,
         highlightSpecialChars(),
+        EditorView.lineWrapping,
         EditorView.updateListener.of((v:ViewUpdate): void => {
           if (v.docChanged) {
             let tree = fillTree(v.state)
@@ -65,3 +66,9 @@ export default defineComponent({
   },
 })
 </script>
+
+<style>
+  #editorview { height: 100%; }
+  .cm-wrap { height: 100%; }
+  .cm-scroller { overflow: auto }
+</style>
