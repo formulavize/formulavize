@@ -21,6 +21,8 @@ import { closeBrackets, closeBracketsKeymap } from "@codemirror/closebrackets"
 import { commentKeymap } from "@codemirror/comment"
 import { fizLanguage } from 'lang-fiz'
 import { fillTree } from '../common/treeFactory'
+import { makeDag } from '../common/dagFactory'
+import { RecipeTreeNode } from 'common/ast'
 
 export default defineComponent({
   name: 'TextEditor',
@@ -45,6 +47,8 @@ export default defineComponent({
           if (v.docChanged) {
             let tree = fillTree(v.state)
             console.log(tree.formatTree())
+            let dag = makeDag(tree as RecipeTreeNode)
+            console.log(dag.formatDag())
           }
         }),
         keymap.of([

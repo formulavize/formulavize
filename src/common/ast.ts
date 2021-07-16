@@ -48,7 +48,7 @@ export class RecipeTreeNode extends BaseTreeNode {
     this.statements.push(child)
   }
 
-  getChildren(): Array<BaseTreeNode> {
+  getChildren(): Array<StatementTreeNode> {
     return this.statements
   }
 
@@ -84,6 +84,14 @@ export class CallTreeNode extends BaseTreeNode {
   isComplete(): boolean {
     return this.name !== ""
   }
+
+  get Name(): string {
+    return this.name
+  }
+  
+  get ArgList(): Array<ValueTreeNode> {
+    return this.argList
+  }
 }
 
 export class AssignmentTreeNode extends BaseTreeNode {
@@ -108,6 +116,14 @@ export class AssignmentTreeNode extends BaseTreeNode {
 
   isComplete(): boolean {
     return this.lhs.length > 0 && this.rhs !== null
+  }
+
+  get Lhs(): Array<VariableTreeNode> {
+    return this.lhs
+  }
+
+  get Rhs(): CallTreeNode | null {
+    return this.rhs
   }
 }
 
@@ -136,6 +152,14 @@ export class AliasTreeNode extends BaseTreeNode  {
   isComplete(): boolean {
     return this.lhs !== null && this.rhs !== null
   }
+
+  get Lhs(): VariableTreeNode | null {
+    return this.lhs
+  }
+
+  get Rhs(): VariableTreeNode | null {
+    return this.rhs
+  }
 }
 
 export class VariableTreeNode extends BaseTreeNode {
@@ -156,5 +180,9 @@ export class VariableTreeNode extends BaseTreeNode {
 
   isComplete(): boolean {
     return this.value !== ""
+  }
+
+  get Value(): string {
+    return this.value
   }
 }
