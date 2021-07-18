@@ -40,6 +40,14 @@ export class Dag {
     this.edgeMap.set(edge.id, edge)
   }
 
+  getNodeList(): Array<DagNode> {
+    return Array.from(this.nodeMap.values())
+  }
+
+  getEdgeList(): Array<DagEdge> {
+    return Array.from(this.edgeMap.values())
+  }
+
   getNodeNameList(): Array<string> {
     return Array.from(this.nodeMap.values())
             .map(node => node.name)

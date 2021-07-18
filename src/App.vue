@@ -4,10 +4,10 @@
   </header>
   <splitpanes id="panes" class="default-theme">
     <pane>
-      <TextEditor />
+      <TextEditor @update-dag="updateDag"/>
     </pane>
     <pane>
-      <GraphView />
+      <GraphView :curDag="curDag"/>
     </pane>
   </splitpanes>
   <footer>
@@ -19,11 +19,22 @@ import { defineComponent } from 'vue'
 import HelloWorld from './components/HelloWorld.vue'
 import TextEditor from './components/TextEditor.vue'
 import GraphView from './components/GraphView.vue'
+import { Dag } from "./common/dag"
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 
 export default defineComponent({
   name: 'App',
+  data() {
+    return {
+      curDag: new Dag()
+    }
+  },
+  methods: {
+    updateDag(dag: Dag) {
+      this.curDag = dag
+    }
+  },
   components: {
     HelloWorld,
     Splitpanes,

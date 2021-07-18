@@ -5,17 +5,58 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import cytoscape from 'cytoscape'
+import { Dag } from '../common/dag'
 
 export default defineComponent({
   name: 'GraphView',
+  props: {
+    curDag: Dag
+  },
+  data() {
+    return {
+      cy: cytoscape({style: [
+        { selector: "node[label]", style: {"label": "data(label)"} },
+        { selector: "edge",
+          style: {
+            "curve-style": "bezier",
+            "target-arrow-shape": "triangle"
+          }
+        }
+      ]})
+    }
+  },
+  watch: {
+    curDag(newVal, _) {
+      this.reDrawDag(newVal)
+    }
+  },
+  methods: {
+    reDrawDag(dag: Dag) {
+      console.log(dag.formatDag())
+      this.cy.remove("*")
+      for (let node of dag.getNodeList()) {
+        this.cy.add({
+          group: 'nodes',
+          data: {
+            id: node.id,
+            label: node.name
+          },
+        })
+      }
+      for (let edge of dag.getEdgeList()) {
+        this.cy.add({
+          group: 'edges',
+          data: {
+            id: edge.id,
+            source: edge.srcNodeId,
+            target: edge.destNodeId
+          },
+        })
+      }
+    }
+  },
   mounted(): void {
-    var cy = cytoscape({container: this.$refs.canvas as HTMLElement})
-    cy.add({
-      group: 'nodes',
-      data: { weight: 10 },
-      position: { x: 20, y: 20 }
-    })
-    cy.resize()
+    this.cy.mount(this.$refs.canvas as HTMLElement)
   },
 })
 </script>

@@ -48,7 +48,7 @@ export default defineComponent({
             let tree = fillTree(v.state)
             console.log(tree.formatTree())
             let dag = makeDag(tree as RecipeTreeNode)
-            console.log(dag.formatDag())
+            this.$emit("update-dag", dag)
           }
         }),
         keymap.of([
