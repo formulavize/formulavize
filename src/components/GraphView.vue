@@ -6,6 +6,10 @@
 import { defineComponent } from 'vue'
 import cytoscape from 'cytoscape'
 import { Dag } from '../common/dag'
+//@ts-ignore
+import dagre from 'cytoscape-dagre'
+
+cytoscape.use(dagre)
 
 export default defineComponent({
   name: 'GraphView',
@@ -14,15 +18,17 @@ export default defineComponent({
   },
   data() {
     return {
-      cy: cytoscape({style: [
-        { selector: "node[label]", style: {"label": "data(label)"} },
-        { selector: "edge",
-          style: {
-            "curve-style": "bezier",
-            "target-arrow-shape": "triangle"
+      cy: cytoscape({
+        style: [
+          { selector: "node[label]", style: {"label": "data(label)"} },
+          { selector: "edge",
+            style: {
+              "curve-style": "bezier",
+              "target-arrow-shape": "triangle"
+            }
           }
-        }
-      ]})
+        ]
+      })
     }
   },
   watch: {
@@ -53,6 +59,7 @@ export default defineComponent({
           },
         })
       }
+      this.cy.layout({name: 'dagre'}).run()
     }
   },
   mounted(): void {
