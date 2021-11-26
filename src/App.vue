@@ -4,7 +4,14 @@
   </header>
   <splitpanes id="panes" class="default-theme">
     <pane>
-      <TextEditor @update-dag="updateDag"/>
+      <tabs :options="{ useUrlFragment: false }">
+        <tab name="Recipe">
+          <TextEditor @update-dag="updateDag"/>
+        </tab>
+        <tab name="Style">
+          <p>Test</p>
+        </tab>
+      </tabs>
     </pane>
     <pane>
       <GraphView :curDag="curDag"/>
@@ -22,6 +29,7 @@ import GraphView from './components/GraphView.vue'
 import { Dag } from "./common/dag"
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
+import './tabs-component.css';
 
 export default defineComponent({
   name: 'App',

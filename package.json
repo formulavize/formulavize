@@ -25,9 +25,10 @@
     "cytoscape": "^3.19.0",
     "cytoscape-dagre": "^2.3.2",
     "lang-fiz": "github:anthologen/lang-fiz#dev",
-    "splitpanes": "^3.0.4",
+    "splitpanes": "^3.0.6",
     "uuid": "^8.3.2",
-    "vue": "^3.0.5"
+    "vue": "^3.0.5",
+    "vue3-tabs-component": "^1.0.2"
   },
   "devDependencies": {
     "@types/cytoscape": "^3.14.17",
