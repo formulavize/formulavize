@@ -38,7 +38,6 @@ export default defineComponent({
   },
   methods: {
     reDrawDag(dag: Dag) {
-      console.log(dag.formatDag())
       this.cy.remove("*")
       for (let node of dag.getNodeList()) {
         this.cy.add({

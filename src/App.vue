@@ -6,7 +6,7 @@
     <pane>
       <tabs :options="{ useUrlFragment: false }">
         <tab name="Recipe">
-          <TextEditor @update-dag="updateDag"/>
+          <TextEditor @update-recipetree="updateRecipeTree"/>
         </tab>
         <tab name="Style">
           <p>Test</p>
@@ -15,6 +15,8 @@
     </pane>
     <pane>
       <GraphView :curDag="curDag"/>
+      <!--<TextDumpView title="AST Dump" :content="astTextDump"/>-->
+      <!--<TextDumpView title="DAG Dump" :content="dagTextDump"/>-->
     </pane>
   </splitpanes>
   <footer>
@@ -26,7 +28,10 @@ import { defineComponent } from 'vue'
 import HelloWorld from './components/HelloWorld.vue'
 import TextEditor from './components/TextEditor.vue'
 import GraphView from './components/GraphView.vue'
-import { Dag } from "./common/dag"
+import TextDumpView from './components/TextDumpView.vue'
+import { RecipeTreeNode } from "./common/ast"
+import { Dag } from './common/dag'
+import { makeDag } from './common/dagFactory'
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import './tabs-component.css';
@@ -35,12 +40,23 @@ export default defineComponent({
   name: 'App',
   data() {
     return {
-      curDag: new Dag()
+      curRecipeTree: new RecipeTreeNode()
+    }
+  },
+  computed: {
+    curDag(): Dag {
+      return makeDag(this.curRecipeTree as RecipeTreeNode)
+    },
+    astTextDump(): String {
+      return this.curRecipeTree.formatTree()
+    },
+    dagTextDump(): String {
+      return this.curDag.formatDag()
     }
   },
   methods: {
-    updateDag(dag: Dag) {
-      this.curDag = dag
+    updateRecipeTree(recipeTree: RecipeTreeNode) {
+      this.curRecipeTree = recipeTree
     }
   },
   components: {
@@ -49,6 +65,7 @@ export default defineComponent({
     Pane,
     TextEditor,
     GraphView,
+    TextDumpView
   }
 })
 </script>
