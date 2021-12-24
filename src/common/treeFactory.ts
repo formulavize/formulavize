@@ -87,9 +87,22 @@ function fillStatement(c: TreeCursor, s: EditorState): StatementTreeNode | null 
   return stmtNode
 }
 
+/*
+Lezer's lightweight design means it doesn't store token values.
+https://discuss.codemirror.net/t/example-of-using-lezer-to-generate-a-traditional-ast/2907
+We need to fill in the AST values ourselves by looking up syntax tree nodes'
+text positions in the document. Though inefficient, reproducing the tree after
+every change is the cleanest approach. Memoize / optimize later.
+https://discuss.codemirror.net/t/efficient-reuse-of-productions-of-the-parse-tree/2944
+*/
 export function fillTree(s: EditorState): BaseTreeNode {
   const editorStateTree = syntaxTree(s)
   const cursor = editorStateTree.fullCursor()
+
+  if (cursor.name == "") {
+    return new RecipeTreeNode()
+  }
+
   if (cursor.name !== "Recipe") {
     console.error("Failed to parse " + cursor.name)
   }

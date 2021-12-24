@@ -6,7 +6,7 @@
     <pane>
       <tabs :options="{ useUrlFragment: false }">
         <tab name="Recipe">
-          <TextEditor @update-recipetree="updateRecipeTree"/>
+          <TextEditor @update-editorstate="updateEditorState"/>
         </tab>
         <tab name="Style">
           <p>Test</p>
@@ -29,9 +29,11 @@ import HelloWorld from './components/HelloWorld.vue'
 import TextEditor from './components/TextEditor.vue'
 import GraphView from './components/GraphView.vue'
 import TextDumpView from './components/TextDumpView.vue'
-import { RecipeTreeNode } from "./common/ast"
+import { EditorState } from "@codemirror/state"
+import { BaseTreeNode, RecipeTreeNode } from "./common/ast"
 import { Dag } from './common/dag'
 import { makeDag } from './common/dagFactory'
+import { fillTree } from './common/treeFactory'
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import './tabs-component.css';
@@ -40,10 +42,13 @@ export default defineComponent({
   name: 'App',
   data() {
     return {
-      curRecipeTree: new RecipeTreeNode()
+      curEditorState: EditorState.create()
     }
   },
   computed: {
+    curRecipeTree(): BaseTreeNode {
+      return fillTree(this.curEditorState as EditorState)
+    },
     curDag(): Dag {
       return makeDag(this.curRecipeTree as RecipeTreeNode)
     },
@@ -55,8 +60,8 @@ export default defineComponent({
     }
   },
   methods: {
-    updateRecipeTree(recipeTree: RecipeTreeNode) {
-      this.curRecipeTree = recipeTree
+    updateEditorState(editorState: EditorState) {
+      this.curEditorState = editorState
     }
   },
   components: {

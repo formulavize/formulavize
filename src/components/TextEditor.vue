@@ -20,7 +20,6 @@ import { defaultHighlightStyle } from "@codemirror/highlight"
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/closebrackets"
 import { commentKeymap } from "@codemirror/comment"
 import { fizLanguage } from 'lang-fiz'
-import { fillTree } from '../common/treeFactory'
 
 export default defineComponent({
   name: 'TextEditor',
@@ -43,8 +42,7 @@ export default defineComponent({
         EditorView.lineWrapping,
         EditorView.updateListener.of((v:ViewUpdate): void => {
           if (v.docChanged) {
-            let tree = fillTree(v.state)
-            this.$emit("update-recipetree", tree)
+            this.$emit("update-editorstate", v.state)
           }
         }),
         keymap.of([
