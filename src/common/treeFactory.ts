@@ -1,6 +1,6 @@
 import { EditorState } from "@codemirror/state"
 import { syntaxTree } from "@codemirror/language"
-import { TreeCursor } from "lezer-tree"
+import { TreeCursor } from "@lezer/common"
 import { BaseTreeNode, RecipeTreeNode, StatementTreeNode, ValueTreeNode,
          CallTreeNode, AssignmentTreeNode, AliasTreeNode, VariableTreeNode} from "./ast"
 
