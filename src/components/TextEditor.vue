@@ -67,6 +67,7 @@ export default defineComponent({
 
 <style>
   #editorview { height: 100%; }
+  .cm-editor { height: 100%; }
   .cm-wrap { height: 100%; }
   .cm-scroller { overflow: auto }
 </style>
