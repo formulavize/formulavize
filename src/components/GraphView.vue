@@ -38,27 +38,26 @@ export default defineComponent({
   },
   methods: {
     reDrawDag(dag: Dag) {
-      this.cy.remove("*")
-      for (let node of dag.getNodeList()) {
-        this.cy.add({
-          group: 'nodes',
+      let nodeList = dag.getNodeList().map((node) => {
+        return { 
           data: {
             id: node.id,
             label: node.name
-          },
-        })
-      }
-      for (let edge of dag.getEdgeList()) {
-        this.cy.add({
-          group: 'edges',
+          }
+        }
+      })
+      let edgeList = dag.getEdgeList().map((edge) => {
+        return {
           data: {
             id: edge.id,
             source: edge.srcNodeId,
             target: edge.destNodeId
-          },
-        })
-      }
-      this.cy.layout({name: 'dagre'}).run()
+          }
+        }
+      })
+      this.cy.elements().remove()
+      this.cy.add({ nodes: nodeList, edges: edgeList })
+      this.cy.layout({ name: 'dagre' }).run()
     }
   },
   mounted(): void {
