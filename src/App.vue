@@ -14,9 +14,18 @@
       </tabs>
     </pane>
     <pane>
-      <GraphView :curDag="curDag"/>
-      <!--<TextDumpView title="AST Dump" :content="astTextDump"/>-->
-      <!--<TextDumpView title="DAG Dump" :content="dagTextDump"/>-->
+      <tabs v-if="debugMode" :options="{ useUrlFragment: false }">
+        <tab name="Output">
+          <GraphView :curDag="curDag"/>
+        </tab>
+        <tab name="AST">
+          <TextDumpView title="AST Dump" :content="astTextDump"/>
+        </tab>
+        <tab name="DAG">
+          <TextDumpView title="DAG Dump" :content="dagTextDump"/>
+        </tab>
+      </tabs>
+      <GraphView v-else :curDag="curDag"/>
     </pane>
   </splitpanes>
   <footer>
@@ -42,7 +51,8 @@ export default defineComponent({
   name: 'App',
   data() {
     return {
-      curEditorState: EditorState.create()
+      debugMode: false,
+      curEditorState: EditorState.create(),
     }
   },
   computed: {
