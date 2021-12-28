@@ -23,6 +23,11 @@ import { fizLanguage } from 'lang-fiz'
 
 export default defineComponent({
   name: 'TextEditor',
+  data() {
+    return {
+      prevTimeoutId: -1
+    }
+  },
   mounted(): void {
     let state = EditorState.create({
       extensions: [
@@ -42,7 +47,12 @@ export default defineComponent({
         EditorView.lineWrapping,
         EditorView.updateListener.of((v:ViewUpdate): void => {
           if (v.docChanged) {
-            this.$emit("update-editorstate", v.state)
+            // delay until typing finishes so we don't process on every keystroke
+            clearTimeout(this.prevTimeoutId);
+            let timeOut = 500 // ms
+            this.prevTimeoutId = setTimeout(() => {
+              this.$emit("update-editorstate", v.state)
+            }, timeOut)
           }
         }),
         keymap.of([

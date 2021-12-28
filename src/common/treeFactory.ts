@@ -1,8 +1,8 @@
 import { EditorState } from "@codemirror/state"
 import { syntaxTree } from "@codemirror/language"
 import { TreeCursor } from "@lezer/common"
-import { BaseTreeNode, RecipeTreeNode, StatementTreeNode, ValueTreeNode,
-         CallTreeNode, AssignmentTreeNode, AliasTreeNode, VariableTreeNode} from "./ast"
+import { RecipeTreeNode, StatementTreeNode, ValueTreeNode, CallTreeNode,
+         AssignmentTreeNode, AliasTreeNode, VariableTreeNode} from "./ast"
 
 function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
   let functionName = ""
@@ -95,7 +95,7 @@ text positions in the document. Though inefficient, reproducing the tree after
 every change is the cleanest approach. Memoize / optimize later.
 https://discuss.codemirror.net/t/efficient-reuse-of-productions-of-the-parse-tree/2944
 */
-export function fillTree(s: EditorState): BaseTreeNode {
+export function fillTree(s: EditorState): RecipeTreeNode {
   const editorStateTree = syntaxTree(s)
   const cursor = editorStateTree.fullCursor()
 

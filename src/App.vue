@@ -39,7 +39,7 @@ import TextEditor from './components/TextEditor.vue'
 import GraphView from './components/GraphView.vue'
 import TextDumpView from './components/TextDumpView.vue'
 import { EditorState } from "@codemirror/state"
-import { BaseTreeNode, RecipeTreeNode } from "./common/ast"
+import { RecipeTreeNode } from "./common/ast"
 import { Dag } from './common/dag'
 import { makeDag } from './common/dagFactory'
 import { fillTree } from './common/treeFactory'
@@ -56,11 +56,11 @@ export default defineComponent({
     }
   },
   computed: {
-    curRecipeTree(): BaseTreeNode {
+    curRecipeTree(): RecipeTreeNode {
       return fillTree(this.curEditorState as EditorState)
     },
     curDag(): Dag {
-      return makeDag(this.curRecipeTree as RecipeTreeNode)
+      return makeDag(this.curRecipeTree)
     },
     astTextDump(): String {
       return this.curRecipeTree.formatTree()
