@@ -23,12 +23,13 @@ import { fizLanguage } from 'lang-fiz'
 
 export default defineComponent({
   name: 'TextEditor',
+  emits: ["update-editorstate"],
   data() {
     return {
       prevTimeoutId: -1
     }
   },
-  mounted(): void {
+  mounted() {
     let state = EditorState.create({
       extensions: [
         lineNumbers(),

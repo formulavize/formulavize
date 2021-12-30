@@ -8,15 +8,19 @@
         <tab name="Recipe">
           <TextEditor @update-editorstate="updateEditorState"/>
         </tab>
+        <tab name="Operators">
+          <OperatorsView @update-opbundle="updateOpBundle"/>
+        </tab>
         <tab name="Style">
           <p>Test</p>
         </tab>
       </tabs>
     </pane>
     <pane>
-      <tabs v-if="debugMode" :options="{ useUrlFragment: false }">
+      <GraphView v-if="!debugMode" :curDag="curDag" :curOpBundle="curOpBundle"/>
+      <tabs v-else :options="{ useUrlFragment: false }">
         <tab name="Output">
-          <GraphView :curDag="curDag"/>
+          <GraphView :curDag="curDag" :curOpBundle="curOpBundle"/>
         </tab>
         <tab name="AST">
           <TextDumpView title="AST Dump" :content="astTextDump"/>
@@ -25,7 +29,6 @@
           <TextDumpView title="DAG Dump" :content="dagTextDump"/>
         </tab>
       </tabs>
-      <GraphView v-else :curDag="curDag"/>
     </pane>
   </splitpanes>
   <footer>
@@ -38,11 +41,13 @@ import HelloWorld from './components/HelloWorld.vue'
 import TextEditor from './components/TextEditor.vue'
 import GraphView from './components/GraphView.vue'
 import TextDumpView from './components/TextDumpView.vue'
+import OperatorsView from './components/OperatorsView.vue'
 import { EditorState } from "@codemirror/state"
 import { RecipeTreeNode } from "./common/ast"
 import { Dag } from './common/dag'
 import { makeDag } from './common/dagFactory'
 import { fillTree } from './common/treeFactory'
+import { OpBundle } from './common/opBundle'
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import './tabs-component.css';
@@ -51,8 +56,9 @@ export default defineComponent({
   name: 'App',
   data() {
     return {
-      debugMode: false,
+      debugMode: true,
       curEditorState: EditorState.create(),
+      curOpBundle: new OpBundle("")
     }
   },
   computed: {
@@ -72,6 +78,9 @@ export default defineComponent({
   methods: {
     updateEditorState(editorState: EditorState) {
       this.curEditorState = editorState
+    },
+    updateOpBundle(opBundle: OpBundle) {
+      this.curOpBundle = opBundle
     }
   },
   components: {
@@ -80,7 +89,8 @@ export default defineComponent({
     Pane,
     TextEditor,
     GraphView,
-    TextDumpView
+    TextDumpView,
+    OperatorsView
   }
 })
 </script>

@@ -6,6 +6,7 @@
 import { defineComponent } from 'vue'
 import cytoscape from 'cytoscape'
 import { Dag } from '../common/dag'
+import { OpBundle } from '../common/opBundle'
 //@ts-ignore
 import dagre from 'cytoscape-dagre'
 
@@ -14,13 +15,31 @@ cytoscape.use(dagre)
 export default defineComponent({
   name: 'GraphView',
   props: {
-    curDag: Dag
+    curDag: {
+      type: Dag,
+      default: new Dag(),
+    },
+    curOpBundle: {
+      type: OpBundle,
+      default: new OpBundle("")
+    }
   },
   data() {
     return {
       cy: cytoscape({
         style: [
-          { selector: "node[label]", style: {"label": "data(label)"} },
+          { selector: "node[label]",
+            style: {
+              "label": "data(label)",
+              "text-valign": "bottom",
+            }
+          },
+          { selector: "node[img]",
+            style: {
+              "background-image": "data(img)",
+              "background-fit": "contain"
+            }
+          },
           { selector: "edge",
             style: {
               "curve-style": "bezier",
@@ -32,8 +51,11 @@ export default defineComponent({
     }
   },
   watch: {
-    curDag(newVal, _) {
-      this.reDrawDag(newVal)
+    curDag() {
+      this.reDrawDag()
+    },
+    curOpBundle() {
+      this.reDrawDag()
     }
   },
   methods: {
@@ -45,16 +67,18 @@ export default defineComponent({
     // Moreover, layout is the fundamental bottleneck. Running layout on a large
     // graph with just one added node has better performance than running on an
     // entirely new graph but still has a noticeable delay.
-    reDrawDag(dag: Dag) {
-      let nodeList = dag.getNodeList().map((node) => {
+    reDrawDag() {
+      let curOps = this.curOpBundle.Operators
+      let nodeList = this.curDag.getNodeList().map((node) => {
         return { 
           data: {
             id: node.id,
-            label: node.name
+            label: node.name,
+            img: curOps.get(node.name)?.imgUrl
           }
         }
       })
-      let edgeList = dag.getEdgeList().map((edge) => {
+      let edgeList = this.curDag.getEdgeList().map((edge) => {
         return {
           data: {
             id: edge.id,
