@@ -1,4 +1,4 @@
-import { fillTree } from 'common/treeFactory'
+import { fillTree } from 'common/astFactory'
 import { RecipeTreeNode as Recipe,
          CallTreeNode as Call,
          AssignmentTreeNode as Assignment,

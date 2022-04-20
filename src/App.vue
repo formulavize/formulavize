@@ -46,7 +46,7 @@ import { EditorState } from "@codemirror/state"
 import { RecipeTreeNode } from "./common/ast"
 import { Dag } from './common/dag'
 import { makeDag } from './common/dagFactory'
-import { fillTree } from './common/treeFactory'
+import { fillTree } from './common/astFactory'
 import { OpBundle } from './common/opBundle'
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
