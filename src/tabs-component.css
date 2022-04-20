@@ -59,7 +59,6 @@
   background-color: #fff;
   border: solid 1px #ddd;
   flex: 1 1 auto;
-  max-height: max-content;
   overflow: hidden;
 }
 
