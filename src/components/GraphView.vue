@@ -28,9 +28,6 @@ export default defineComponent({
   watch: {
     curDag() {
       this.reDrawDag()
-    },
-    curOpBundle() {
-      this.reDrawDag()
     }
   },
   methods: {

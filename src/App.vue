@@ -9,7 +9,7 @@
           <TextEditor @update-editorstate="updateEditorState"/>
         </tab>
         <tab name="Operators">
-          <OperatorsView @update-opbundle="updateOpBundle"/>
+          <OperatorsView />
         </tab>
         <tab name="Style">
           <p>Test</p>
@@ -17,10 +17,10 @@
       </tabs>
     </pane>
     <pane>
-      <GraphView v-if="!debugMode" :curDag="curDag" :curOpBundle="curOpBundle"/>
+      <GraphView v-if="!debugMode" :curDag="curDag"/>
       <tabs v-else :options="{ useUrlFragment: false }">
         <tab name="Output">
-          <GraphView :curDag="curDag" :curOpBundle="curOpBundle"/>
+          <GraphView :curDag="curDag"/>
         </tab>
         <tab name="AST">
           <TextDumpView title="AST Dump" :content="astTextDump"/>
@@ -47,7 +47,6 @@ import { RecipeTreeNode } from "./common/ast"
 import { Dag } from './common/dag'
 import { makeDag } from './common/dagFactory'
 import { fillTree } from './common/astFactory'
-import { OpBundle } from './common/opBundle'
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import './tabs-component.css';
@@ -57,8 +56,7 @@ export default defineComponent({
   data() {
     return {
       debugMode: true,
-      curEditorState: EditorState.create(),
-      curOpBundle: new OpBundle("")
+      curEditorState: EditorState.create()
     }
   },
   computed: {
@@ -78,9 +76,6 @@ export default defineComponent({
   methods: {
     updateEditorState(editorState: EditorState) {
       this.curEditorState = editorState
-    },
-    updateOpBundle(opBundle: OpBundle) {
-      this.curOpBundle = opBundle
     }
   },
   components: {
