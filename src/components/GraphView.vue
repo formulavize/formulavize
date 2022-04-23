@@ -5,8 +5,8 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import cytoscape from 'cytoscape'
+import { makeCyElements, makeCyStylesheets } from '../common/cyGraphFactory'
 import { Dag } from '../common/dag'
-import { OpBundle } from '../common/opBundle'
 //@ts-ignore
 import dagre from 'cytoscape-dagre'
 
@@ -18,36 +18,11 @@ export default defineComponent({
     curDag: {
       type: Dag,
       default: new Dag(),
-    },
-    curOpBundle: {
-      type: OpBundle,
-      default: new OpBundle("")
     }
   },
   data() {
     return {
-      cy: cytoscape({
-        style: [
-          { selector: "node[label]",
-            style: {
-              "label": "data(label)",
-              "text-valign": "bottom",
-            }
-          },
-          { selector: "node[img]",
-            style: {
-              "background-image": "data(img)",
-              "background-fit": "contain"
-            }
-          },
-          { selector: "edge",
-            style: {
-              "curve-style": "bezier",
-              "target-arrow-shape": "triangle"
-            }
-          }
-        ]
-      })
+      cy: cytoscape()
     }
   },
   watch: {
@@ -68,28 +43,13 @@ export default defineComponent({
     // graph with just one added node has better performance than running on an
     // entirely new graph but still has a noticeable delay.
     reDrawDag() {
-      let curOps = this.curOpBundle.Operators
-      let nodeList = this.curDag.getNodeList().map((node) => {
-        return { 
-          data: {
-            id: node.id,
-            label: node.name,
-            img: curOps.get(node.name)?.imgUrl
-          }
-        }
-      })
-      let edgeList = this.curDag.getEdgeList().map((edge) => {
-        return {
-          data: {
-            id: edge.id,
-            source: edge.srcNodeId,
-            target: edge.destNodeId
-          }
-        }
-      })
-      let newElements = { nodes: nodeList, edges: edgeList }
+      const newElements = makeCyElements(this.curDag)
       this.cy.elements().remove()
       this.cy.add(newElements)
+
+      const newStyleshets = makeCyStylesheets(this.curDag)
+      this.cy.style(newStyleshets)
+
       Promise.resolve().then(() => {
         this.cy.layout({ name: 'dagre' }).run() // most expensive operation
       })
