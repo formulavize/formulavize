@@ -3,23 +3,26 @@
 </template>
 
 <script lang="ts">
+
 import { defineComponent } from 'vue'
+
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete"
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands"
+import { 
+  bracketMatching, defaultHighlightStyle, 
+  foldGutter, foldKeymap,
+  syntaxHighlighting
+} from "@codemirror/language"
+import { highlightSelectionMatches, searchKeymap } from "@codemirror/search"
 import { EditorState } from "@codemirror/state"
 import { 
-  EditorView, keymap, drawSelection, ViewUpdate,
-  highlightActiveLine, highlightSpecialChars
+  EditorView, ViewUpdate, drawSelection,
+  highlightActiveLine, highlightActiveLineGutter, highlightSpecialChars,
+  keymap, lineNumbers, rectangularSelection
 } from "@codemirror/view"
-import { defaultKeymap } from "@codemirror/commands"
-import { lineNumbers, highlightActiveLineGutter } from "@codemirror/gutter"
-import { history, historyKeymap } from "@codemirror/history"
-import { bracketMatching } from "@codemirror/matchbrackets"
-import { rectangularSelection } from "@codemirror/rectangular-selection"
-import { searchKeymap, highlightSelectionMatches } from "@codemirror/search"
-import { foldGutter, foldKeymap } from "@codemirror/fold"
-import { defaultHighlightStyle } from "@codemirror/highlight"
-import { closeBrackets, closeBracketsKeymap } from "@codemirror/closebrackets"
-import { commentKeymap } from "@codemirror/comment"
+
 import { fizLanguage } from 'lang-fiz'
+
 
 export default defineComponent({
   name: 'TextEditor',
@@ -43,7 +46,7 @@ export default defineComponent({
         highlightSelectionMatches(),
         foldGutter(),
         closeBrackets(),
-        defaultHighlightStyle.fallback,
+        syntaxHighlighting(defaultHighlightStyle),
         highlightSpecialChars(),
         EditorView.lineWrapping,
         EditorView.updateListener.of((v:ViewUpdate): void => {
@@ -62,7 +65,6 @@ export default defineComponent({
           ...searchKeymap,
           ...foldKeymap,
           ...closeBracketsKeymap,
-          ...commentKeymap,
         ]),
         fizLanguage,
       ]

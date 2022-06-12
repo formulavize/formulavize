@@ -17,7 +17,7 @@ function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
     for (const valNode of valueNodes) {
       switch(valNode.name) {
         case "Call":
-          argList.push(fillCall(valNode.cursor, s))
+          argList.push(fillCall(valNode.cursor(), s))
           break
         case "Variable":
           argList.push(new VariableTreeNode(s.doc.sliceString(valNode.from, valNode.to)))
@@ -39,7 +39,7 @@ function fillAssignment(c: TreeCursor, s: EditorState): AssignmentTreeNode {
   let rhsCall: CallTreeNode | null = null
   const candidateRhsIdent = c.node.getChild("Call")
   if (candidateRhsIdent) {
-    rhsCall = fillCall(candidateRhsIdent.cursor, s)
+    rhsCall = fillCall(candidateRhsIdent.cursor(), s)
   }
   return new AssignmentTreeNode(lhsVars, rhsCall)
 }
@@ -97,7 +97,7 @@ https://discuss.codemirror.net/t/efficient-reuse-of-productions-of-the-parse-tre
 */
 export function fillTree(s: EditorState): RecipeTreeNode {
   const editorStateTree = syntaxTree(s)
-  const cursor = editorStateTree.fullCursor()
+  const cursor = editorStateTree.cursor()
 
   if (cursor.name == "") {
     return new RecipeTreeNode()
