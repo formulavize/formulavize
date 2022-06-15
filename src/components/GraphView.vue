@@ -30,6 +30,10 @@ export default defineComponent({
       this.reDrawDag()
     }
   },
+  mounted(): void {
+    this.cy.autoungrabify(true)
+    this.cy.mount(this.$refs.canvas as HTMLElement)
+  },
   methods: {
     // Re-painting the entire graph is an expensive operation.
     // We could slightly optimize it by creating an AST/DAG in a way
@@ -51,10 +55,6 @@ export default defineComponent({
         this.cy.layout({ name: 'dagre' }).run() // most expensive operation
       })
     }
-  },
-  mounted(): void {
-    this.cy.autoungrabify(true)
-    this.cy.mount(this.$refs.canvas as HTMLElement)
   },
 })
 </script>

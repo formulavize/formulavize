@@ -11,8 +11,14 @@ import { defineComponent } from 'vue'
 export default defineComponent({
   name: 'TextDumpView',
   props: {
-    title: String,
-    content: String
+    title: {
+      type: String,
+      default: "Title"
+    },
+    content: {
+      type: String,
+      default: "Content"
+    }
   }
 })
 </script>

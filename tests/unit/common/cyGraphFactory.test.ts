@@ -4,7 +4,7 @@ import { Dag } from '../../../src/common/dag'
 
 describe("makes cytoscape nodes", () => {
   test("with two nodes", () => {
-    let testDag = new Dag()
+    const testDag = new Dag()
     testDag.addNode({id :"idX", name: "nameX"})
     testDag.addNode({id :"idY", name: "nameY"})
     const expectedCyNodes = [
@@ -17,7 +17,7 @@ describe("makes cytoscape nodes", () => {
 
 describe("makes cytoscape edges", () => {
   test("with one edge", () => {
-    let testDag = new Dag()
+    const testDag = new Dag()
     testDag.addNode({id :"idX", name: "nameX"})
     testDag.addNode({id :"idY", name: "nameY"})
     testDag.addEdge({
@@ -32,7 +32,7 @@ describe("makes cytoscape edges", () => {
 
 describe("makes cytoscape stylesheets", () => {
   test("with one node label", () => {
-    let testDag = new Dag()
+    const testDag = new Dag()
     testDag.addNode({id :"idX", name: "nameX"})
     const expectedCyStyleSheets = [
       { selector: "node#idX", style: { label: "nameX" } }

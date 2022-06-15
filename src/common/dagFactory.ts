@@ -9,14 +9,15 @@ function processCall(callStmt: CallTreeNode,
                      workingDag: Dag) : string {
   const nodeId = uuidv4()
   type NodeIdVarNamePair = [string, string]
-  let argIdentList: Array<NodeIdVarNamePair> = [] // node id, variable name
-  for (let arg of callStmt.ArgList) {
+  const argIdentList: Array<NodeIdVarNamePair> = [] // node id, variable name
+  for (const arg of callStmt.ArgList) {
     switch(arg.Type) {
-      case NodeType.Call:
+      case NodeType.Call: {
         const argNodeId = processCall(arg as CallTreeNode, varNameToNodeIdMap, workingDag)
         argIdentList.push([argNodeId, ""])
         break
-      case NodeType.Variable:
+      }
+      case NodeType.Variable: {
         const argVarName = arg as VariableTreeNode
         const varName = argVarName.Value
         const candidateSrcNodeId = varNameToNodeIdMap.get(varName)
@@ -26,14 +27,16 @@ function processCall(callStmt: CallTreeNode,
           console.log('Unable to find variable with name ', varName)
         }
         break
-      default:
+      }
+      default: {
         console.log("Unknown node type ", arg.Type)
+      }
     }
   }
   const thisNode = { id: nodeId, name: callStmt.Name }
   workingDag.addNode(thisNode) 
 
-  for (let argIdent of argIdentList) {
+  for (const argIdent of argIdentList) {
     const edgeId = uuidv4()
     const thisEdge = { 
       id: edgeId,
@@ -48,27 +51,29 @@ function processCall(callStmt: CallTreeNode,
 }
 
 export function makeDag(recipe: RecipeTreeNode): Dag {
-  let varNameToNodeIdMap = new Map()
-  let resultDag = new Dag()
-  for (let stmt of recipe.getChildren()) {
+  const varNameToNodeIdMap = new Map()
+  const resultDag = new Dag()
+  for (const stmt of recipe.getChildren()) {
     switch(stmt.Type) {
-      case NodeType.Call:
+      case NodeType.Call: {
         const callStmt = stmt as CallTreeNode
         processCall(callStmt, varNameToNodeIdMap, resultDag)
         break
-      case NodeType.Assignment:
+      }
+      case NodeType.Assignment: {
         const assigmentStmt = stmt as AssignmentTreeNode
         if (assigmentStmt.Rhs) {
           const thisNodeId = processCall(assigmentStmt.Rhs, varNameToNodeIdMap, resultDag)
           const lhsVals = assigmentStmt.Lhs.map(v => v.Value)
-          for (let lhsVar of lhsVals) {
+          for (const lhsVar of lhsVals) {
             varNameToNodeIdMap.set(lhsVar, thisNodeId)
           }
         } else {
           console.log('The assignment statement has no RHS ', stmt)
         }
         break
-      case NodeType.Alias:
+      }
+      case NodeType.Alias: {
         const aliasStmt = stmt as AliasTreeNode
         const aliasRhsVal = aliasStmt.Rhs?.Value
         const aliasLhsVal = aliasStmt.Lhs?.Value
@@ -81,6 +86,7 @@ export function makeDag(recipe: RecipeTreeNode): Dag {
           console.log('var ' + aliasRhsVal + ' not found')
         }
         break
+      }
     }
   }
   return resultDag

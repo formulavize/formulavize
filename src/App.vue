@@ -17,10 +17,10 @@
       </tabs>
     </pane>
     <pane>
-      <GraphView v-if="!debugMode" :curDag="curDag"/>
+      <GraphView v-if="!debugMode" :cur-dag="curDag"/>
       <tabs v-else :options="{ useUrlFragment: false }">
         <tab name="Output">
-          <GraphView :curDag="curDag"/>
+          <GraphView :cur-dag="curDag"/>
         </tab>
         <tab name="AST">
           <TextDumpView title="AST Dump" :content="astTextDump"/>
@@ -53,6 +53,15 @@ import './tabs-component.css';
 
 export default defineComponent({
   name: 'App',
+  components: {
+    HelloWorld,
+    Splitpanes,
+    Pane,
+    TextEditor,
+    GraphView,
+    TextDumpView,
+    OperatorsView
+  },
   data() {
     return {
       debugMode: true,
@@ -77,15 +86,6 @@ export default defineComponent({
     updateEditorState(editorState: EditorState) {
       this.curEditorState = editorState
     }
-  },
-  components: {
-    HelloWorld,
-    Splitpanes,
-    Pane,
-    TextEditor,
-    GraphView,
-    TextDumpView,
-    OperatorsView
   }
 })
 </script>
