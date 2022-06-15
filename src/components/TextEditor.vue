@@ -29,7 +29,7 @@ export default defineComponent({
   emits: ["update-editorstate"],
   data() {
     return {
-      prevTimeoutId: -1
+      prevTimeoutId: setTimeout(() => {})
     }
   },
   mounted() {
