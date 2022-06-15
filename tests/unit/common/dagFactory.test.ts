@@ -1,11 +1,13 @@
+import { describe, test, expect } from 'vitest'
 import { RecipeTreeNode as Recipe,
   CallTreeNode as Call,
   AssignmentTreeNode as Assignment,
   AliasTreeNode as Alias,
-  VariableTreeNode as Variable} from "common/ast"
+  VariableTreeNode as Variable} from '../../../src/common/ast'
+import { Dag } from "../../../src/common/dag"
+import { makeDag } from "../../../src/common/dagFactory"
 
-import { Dag } from "common/dag"
-import { makeDag } from "common/dagFactory"
+
 
 describe("node tests", () => {
   test("empty recipe", () => {

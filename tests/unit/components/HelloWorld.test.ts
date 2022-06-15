@@ -1,11 +1,12 @@
 /**
- * @jest-environment jsdom
+ * @vitest-environment jsdom
  */
+import { describe, test, expect } from 'vitest'
 import { mount } from '@vue/test-utils'
-import HelloWorld from 'components/HelloWorld.vue'
+import HelloWorld from '../../../src/components/HelloWorld.vue'
 
 describe('HelloWorld', () => {
-  it('should display header text', () => {
+  test('should display header text', () => {
     const msg = 'Hello Vue 3'
     const wrapper = mount(HelloWorld, { props: { msg } })
 

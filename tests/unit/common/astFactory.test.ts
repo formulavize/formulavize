@@ -1,10 +1,11 @@
-import { fillTree } from 'common/astFactory'
+import { describe, test, expect } from 'vitest'
+import { fillTree } from '../../../src/common/astFactory'
 import { RecipeTreeNode as Recipe,
          CallTreeNode as Call,
          AssignmentTreeNode as Assignment,
          AliasTreeNode as Alias,
          VariableTreeNode as Variable,
-         BaseTreeNode } from "common/ast"
+         BaseTreeNode } from "../../../src/common/ast"
 import { EditorState } from "@codemirror/state"
 import { fizLanguage } from 'lang-fiz'
 

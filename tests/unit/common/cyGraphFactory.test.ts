@@ -1,5 +1,6 @@
-import { makeCyNodes, makeCyEdges, makeNodeLabelStylesheets} from 'common/cyGraphFactory'
-import { Dag } from 'common/dag'
+import { describe, test, expect } from 'vitest'
+import { makeCyNodes, makeCyEdges, makeNodeLabelStylesheets} from '../../../src/common/cyGraphFactory'
+import { Dag } from '../../../src/common/dag'
 
 describe("makes cytoscape nodes", () => {
   test("with two nodes", () => {
