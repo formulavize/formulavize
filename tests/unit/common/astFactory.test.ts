@@ -5,6 +5,8 @@ import { RecipeTreeNode as Recipe,
          AssignmentTreeNode as Assignment,
          AliasTreeNode as Alias,
          VariableTreeNode as Variable,
+         StyleTreeNode as Style,
+         NamedStyleTreeNode as NamedStyle,
          BaseTreeNode } from "../../../src/common/ast"
 import { EditorState } from "@codemirror/state"
 import { fizLanguage } from 'lang-fiz'
@@ -55,6 +57,85 @@ describe("single statements", () => {
         new Assignment(
           [ new Variable("a"), new Variable("b") ],
           new Call("c", [])
+        )
+      ])
+    )
+  })
+  test("style declaration", () => {
+    const input = "#s{}"
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new NamedStyle("s")
+      ])
+    )
+  })
+})
+
+describe("style nodes", () => {
+  test("basic style declaration", () => {
+    const input = '#s{x:1px\ny:#abc\nz:"w"}'
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new NamedStyle("s", new Style(
+          new Map<string, string>([
+            ["x", "1px"],
+            ["y", "#abc"],
+            ["z", "\"w\""],
+          ])
+        ))
+      ])
+    )
+  })
+  test("styled call", () => {
+    const input = 'f(){x:1}'
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new Call("f", [], new Style(
+          new Map<string, string>([
+            ["x", "1"],
+          ])
+        ))
+      ])
+    )
+  })
+  test("styled assignment", () => {
+    const input = 'a{b:1}, c{#d #e} = f()'
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new Assignment(
+          [
+            new Variable("a", new Style(new Map<string, string>([["b", "1"]]))),
+            new Variable("c", new Style(undefined, ["#d", "#e"]))
+          ],
+          new Call("f", []),
+        )
+      ])
+    )
+  })
+  test("styled alias", () => {
+    const input = 'x{#y} = z'
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new Alias(
+          new Variable("x", new Style(undefined, ["#y"])),
+          new Variable("z"),
+        )
+      ])
+    )
+  })
+  test("style with mixed types", () => {
+    const input = '#s{a-b:1\nc--d:2;e_f:3,4 5\n #x #y; #z}'
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new NamedStyle("s",
+          new Style(
+            new Map<string, string>([
+              ["a-b", "1"],
+              ["c--d", "2"],
+              ["e_f", "3,4,5"]
+            ]),
+            ["#x", "#y", "#z"]
+          )
         )
       ])
     )

@@ -4,6 +4,8 @@ export enum NodeType {
   Alias,
   Variable,
   Recipe,
+  Style,
+  NamedStyle,
 }
 
 export abstract class BaseTreeNode {
@@ -34,7 +36,10 @@ export abstract class BaseTreeNode {
   }
 }
 
-export type StatementTreeNode = CallTreeNode | AssignmentTreeNode | AliasTreeNode
+export type StatementTreeNode = CallTreeNode 
+  | AssignmentTreeNode 
+  | AliasTreeNode 
+  | NamedStyleTreeNode
 
 export class RecipeTreeNode extends BaseTreeNode {
   private statements: Array<StatementTreeNode>
@@ -66,15 +71,23 @@ export type ValueTreeNode = CallTreeNode | VariableTreeNode
 export class CallTreeNode extends BaseTreeNode {
   private name: string
   private argList: Array<ValueTreeNode>
+  private styling: StyleTreeNode | null
 
-  constructor(name: string, argList: Array<ValueTreeNode>) {
+  constructor(
+    name: string,
+    argList: Array<ValueTreeNode>,
+    styling: StyleTreeNode | null = null
+  ) {
     super(NodeType.Call)
     this.name = name
     this.argList = argList
+    this.styling = styling
   }
 
   getChildren(): Array<BaseTreeNode> {
-    return this.argList
+    const childList: Array<BaseTreeNode> = this.argList
+    if (this.styling) childList.push(this.styling)
+    return childList
   }
 
   formatValue(): string {
@@ -92,6 +105,10 @@ export class CallTreeNode extends BaseTreeNode {
   get ArgList(): Array<ValueTreeNode> {
     return this.argList
   }
+
+  get Styling(): StyleTreeNode | null {
+    return this.styling
+  }
 }
 
 export class AssignmentTreeNode extends BaseTreeNode {
@@ -105,9 +122,9 @@ export class AssignmentTreeNode extends BaseTreeNode {
   }
 
   getChildren(): Array<BaseTreeNode> {
-    const retList: Array<ValueTreeNode> = this.lhs
-    if (this.rhs) retList.push(this.rhs)
-    return retList
+    const childList: Array<BaseTreeNode> = this.lhs
+    if (this.rhs) childList.push(this.rhs)
+    return childList
   }
 
   formatValue(): string {
@@ -139,10 +156,10 @@ export class AliasTreeNode extends BaseTreeNode  {
   }
 
   getChildren(): Array<BaseTreeNode> {
-    const retList = []
-    if (this.lhs) retList.push(this.lhs)
-    if (this.rhs) retList.push(this.rhs)
-    return retList
+    const childList: Array<BaseTreeNode> = []
+    if (this.lhs) childList.push(this.lhs)
+    if (this.rhs) childList.push(this.rhs)
+    return childList
   }
 
   formatValue(): string {
@@ -164,14 +181,19 @@ export class AliasTreeNode extends BaseTreeNode  {
 
 export class VariableTreeNode extends BaseTreeNode {
   private value: string
+  private styling: StyleTreeNode | null
 
-  constructor(value: string) {
+  constructor(
+    value: string,
+    styling: StyleTreeNode | null = null
+  ) {
     super(NodeType.Variable)
     this.value = value
+    this.styling = styling
   }
 
   getChildren(): Array<BaseTreeNode> {
-    return []
+    return this.styling ? [this.styling] : []
   }
 
   formatValue(): string {
@@ -184,5 +206,90 @@ export class VariableTreeNode extends BaseTreeNode {
 
   get Value(): string {
     return this.value
+  }
+
+  get Styling(): StyleTreeNode | null {
+    return this.styling
+  }
+}
+
+export class StyleTreeNode extends BaseTreeNode {
+  private keyValueMap: Map<string, string>
+  private styleTagList: Array<string>
+
+  constructor(
+    initMap: Map<string, string> = new Map(),
+    initTags: Array<string> = []
+  ) {
+    super(NodeType.Style)
+    this.keyValueMap = initMap
+    this.styleTagList = initTags
+  }
+
+  addKeyValue(key: string, value: string): void {
+    this.keyValueMap.set(key, value)
+  }
+
+  addStyleTag(styleTag: string): void {
+    this.styleTagList.push(styleTag)
+  }
+
+  getChildren(): Array<BaseTreeNode> {
+    return []
+  }
+
+  formatValue(): string {
+    return "StyleTagList: [" + this.styleTagList.join(' ')
+      + "] StyleMap: {"
+      + Array.from(this.keyValueMap.entries())
+          .map(([k, v]) => k + ":" + v)
+          .join(' ')
+      + "}"
+  }
+
+  isComplete(): boolean {
+    return true
+  }
+
+  get KeyValueMap(): Map<string, string> {
+    return this.keyValueMap
+  }
+
+  get StyleTagList(): Array<string> {
+    return this.styleTagList
+  }
+}
+
+export class NamedStyleTreeNode extends BaseTreeNode {
+  private styleName: string
+  private styleNode: StyleTreeNode
+
+  constructor(
+    styleName: string = "",
+    styleNode: StyleTreeNode = new StyleTreeNode()
+  ) {
+    super(NodeType.NamedStyle)
+    this.styleName = styleName
+    this.styleNode = styleNode
+  }
+
+  getChildren(): Array<BaseTreeNode> {
+    return [this.styleNode]
+  }
+
+  formatValue(): string {
+    return "StyleName: " + this.styleName
+  }
+
+  isComplete(): boolean {
+    return true
+  }
+
+  get StyleName(): string {
+    return this.styleName
+  }
+
+  get StyleNode(): StyleTreeNode {
+    return this.styleNode
   }
 }

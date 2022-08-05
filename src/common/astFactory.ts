@@ -2,7 +2,50 @@ import { EditorState } from "@codemirror/state"
 import { syntaxTree } from "@codemirror/language"
 import { TreeCursor } from "@lezer/common"
 import { RecipeTreeNode, StatementTreeNode, ValueTreeNode, CallTreeNode,
-         AssignmentTreeNode, AliasTreeNode, VariableTreeNode} from "./ast"
+         AssignmentTreeNode, AliasTreeNode, VariableTreeNode,
+         StyleTreeNode, NamedStyleTreeNode
+        } from "./ast"
+
+function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
+  const styleTags: Array<string> = []
+  c.node.getChildren("StyleTag").forEach(
+    (styleTag) => styleTags.push(s.doc.sliceString(styleTag.from, styleTag.to))
+  )
+
+  const styleDeclarations: Map<string, string> = new Map<string, string>()
+  c.node.getChildren("StyleDeclaration").forEach(
+    (styleDec) => {
+      const candidatePropName = styleDec.getChild("PropertyName")
+      let propName = ""
+      if (candidatePropName) {
+        propName = s.doc.sliceString(candidatePropName.from, candidatePropName.to)
+      }
+
+      const candidateStyleVal = styleDec.getChildren("StyleValue")
+      const styleVals = candidateStyleVal.map((styleVal) => {
+        return s.doc.sliceString(styleVal.from, styleVal.to)
+      }).join(",")
+      styleDeclarations.set(propName, styleVals)
+    }
+  )
+  return new StyleTreeNode(styleDeclarations, styleTags)
+}
+
+function fillNamedStyle(c: TreeCursor, s: EditorState): NamedStyleTreeNode {
+  let styleName = ""
+  const candidateIdent = c.node.getChild("StyleTag")?.getChild("Identifier")
+  if (candidateIdent) {
+    styleName = s.doc.sliceString(candidateIdent.from, candidateIdent.to)
+  }
+
+  let styleNode: StyleTreeNode = new StyleTreeNode()
+  const candidateStyleArgList = c.node.getChild("StyleArgList")
+  if (candidateStyleArgList) {
+    styleNode = fillStyle(candidateStyleArgList.cursor(), s)
+  }
+
+  return new NamedStyleTreeNode(styleName, styleNode)
+}
 
 function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
   let functionName = ""
@@ -27,13 +70,35 @@ function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
       }
     }
   }
-  return new CallTreeNode(functionName, argList)
+  let styleNode: StyleTreeNode | null = null
+  const candidateStyleArgList = c.node.getChild("StyleArgList")
+  if (candidateStyleArgList) {
+    styleNode = fillStyle(candidateStyleArgList.cursor(), s)
+  }
+
+  return new CallTreeNode(functionName, argList, styleNode)
+}
+
+function fillLhsVariable(c: TreeCursor, s: EditorState): VariableTreeNode {
+  let ident = ""
+  const candidateIdent = c.node.getChild("Variable")
+  if (candidateIdent) {
+    ident = s.doc.sliceString(candidateIdent.from, candidateIdent.to)
+  }
+
+  let styleNode: StyleTreeNode | null = null
+  const candidateStyleArgList = c.node.getChild("StyleArgList")
+  if (candidateStyleArgList) {
+    styleNode = fillStyle(candidateStyleArgList.cursor(), s)
+  }
+
+  return new VariableTreeNode(ident, styleNode)
 }
 
 function fillAssignment(c: TreeCursor, s: EditorState): AssignmentTreeNode {
-  const candidateLhsIdent = c.node.getChildren("Variable")
-  const lhsVars = candidateLhsIdent.map(
-    v => new VariableTreeNode(s.doc.sliceString(v.from, v.to))
+  const candidateLhsVars = c.node.getChildren("LhsVariable")
+  const lhsVars = candidateLhsVars.map(
+    candidateLhsVar => fillLhsVariable(candidateLhsVar.cursor(), s)
   )
 
   let rhsCall: CallTreeNode | null = null
@@ -41,23 +106,24 @@ function fillAssignment(c: TreeCursor, s: EditorState): AssignmentTreeNode {
   if (candidateRhsIdent) {
     rhsCall = fillCall(candidateRhsIdent.cursor(), s)
   }
+
   return new AssignmentTreeNode(lhsVars, rhsCall)
 }
 
 function fillAlias(c: TreeCursor, s: EditorState): AliasTreeNode {
   let lhsVar : VariableTreeNode | null = null
-  const candidateLhsIdent = c.node.getChild("Variable", null, "Eq")
-  if (candidateLhsIdent) {
-    const lhsIdent = s.doc.sliceString(candidateLhsIdent.from, candidateLhsIdent.to)
-    lhsVar = new VariableTreeNode(lhsIdent)
+  const candidateLhsVar = c.node.getChild("LhsVariable")
+  if (candidateLhsVar) {
+    lhsVar = fillLhsVariable(candidateLhsVar.cursor(), s)
   }
   
   let rhsVar : VariableTreeNode | null = null
-  const candidateRhsIdent = c.node.getChild("Variable", "Eq", null)
+  const candidateRhsIdent = c.node.getChild("Variable")
   if (candidateRhsIdent) {
     const rhsIdent = s.doc.sliceString(candidateRhsIdent.from, candidateRhsIdent.to)
     rhsVar = new VariableTreeNode(rhsIdent)
   }
+
   return new AliasTreeNode(lhsVar, rhsVar)
 }
 
@@ -72,6 +138,9 @@ function fillStatement(c: TreeCursor, s: EditorState): StatementTreeNode | null 
       break
     case "Assignment":
       stmtNode = fillAssignment(c, s)
+      break
+    case "StyleTagDeclaration":
+      stmtNode = fillNamedStyle(c, s)
       break
     case "⚠": // Error token for incomplete trees
       break
