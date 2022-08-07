@@ -1,20 +1,34 @@
 import { v4 as uuidv4 } from 'uuid';
 
 import { RecipeTreeNode, CallTreeNode, AssignmentTreeNode,
-         AliasTreeNode, VariableTreeNode, NodeType} from "./ast"
+         AliasTreeNode, VariableTreeNode, NodeType,
+         StyleTreeNode, NamedStyleTreeNode } from "./ast"
 import { Dag } from "./dag" 
 
 function processCall(callStmt: CallTreeNode,
                      varNameToNodeIdMap: Map<string, string>,
+                     varNameToStyleNode: Map<string, StyleTreeNode>,
                      workingDag: Dag) : string {
-  const nodeId = uuidv4()
-  type NodeIdVarNamePair = [string, string]
-  const argIdentList: Array<NodeIdVarNamePair> = [] // node id, variable name
+  type IncomingEdgeInfo = {
+    nodeId: string,
+    varName: string,
+    varStyle: StyleTreeNode | null
+  }
+  const incomingEdgeInfoList: Array<IncomingEdgeInfo> = []
   for (const arg of callStmt.ArgList) {
     switch(arg.Type) {
       case NodeType.Call: {
-        const argNodeId = processCall(arg as CallTreeNode, varNameToNodeIdMap, workingDag)
-        argIdentList.push([argNodeId, ""])
+        const argNodeId = processCall(
+          arg as CallTreeNode,
+          varNameToNodeIdMap,
+          varNameToStyleNode,
+          workingDag
+        )
+        incomingEdgeInfoList.push({
+          nodeId: argNodeId, 
+          varName: "", // unnamed
+          varStyle: null // unstyled
+        })
         break
       }
       case NodeType.Variable: {
@@ -22,7 +36,11 @@ function processCall(callStmt: CallTreeNode,
         const varName = argVarName.Value
         const candidateSrcNodeId = varNameToNodeIdMap.get(varName)
         if (candidateSrcNodeId) {
-          argIdentList.push([candidateSrcNodeId, varName])
+          incomingEdgeInfoList.push({
+            nodeId: candidateSrcNodeId,
+            varName: varName,
+            varStyle: varNameToStyleNode.get(varName) ?? null
+          })
         } else {
           console.log('Unable to find variable with name ', varName)
         }
@@ -33,58 +51,104 @@ function processCall(callStmt: CallTreeNode,
       }
     }
   }
-  const thisNode = { id: nodeId, name: callStmt.Name }
+  const thisNodeId = uuidv4()
+  const thisNode = {
+    id: thisNodeId,
+    name: callStmt.Name,
+    styleTags: callStmt.Styling?.StyleTagList ?? [],
+    styleMap: callStmt.Styling?.KeyValueMap ?? new Map<string, string>(),
+  }
   workingDag.addNode(thisNode) 
 
-  for (const argIdent of argIdentList) {
+  for (const incomingEdge of incomingEdgeInfoList) {
     const edgeId = uuidv4()
     const thisEdge = { 
       id: edgeId,
-      name: argIdent[1],
-      srcNodeId: argIdent[0],
-      destNodeId: nodeId
+      name: incomingEdge.varName,
+      srcNodeId: incomingEdge.nodeId,
+      destNodeId: thisNodeId,
+      styleTags: incomingEdge.varStyle?.StyleTagList ?? [],
+      styleMap: incomingEdge.varStyle?.KeyValueMap ?? new Map<string, string>(),
     }
     workingDag.addEdge(thisEdge)
   }
 
-  return nodeId
+  return thisNodeId
 }
 
 export function makeDag(recipe: RecipeTreeNode): Dag {
-  const varNameToNodeIdMap = new Map()
+  const varNameToNodeIdMap = new Map<string, string>()
+  const varNameToStyleNode = new Map<string, StyleTreeNode>()
+  const styleTagToFlatStyleMap = new Map<string, Map<string, string>>()
   const resultDag = new Dag()
+
+  function mergeMap(
+    mutableMap: Map<string, string>, mapToAdd: Map<string, string>
+  ): void {
+    mapToAdd.forEach((value, key) => {
+      mutableMap.set(key, value)
+    })
+  }
+
   for (const stmt of recipe.getChildren()) {
     switch(stmt.Type) {
       case NodeType.Call: {
         const callStmt = stmt as CallTreeNode
-        processCall(callStmt, varNameToNodeIdMap, resultDag)
+        processCall(callStmt, varNameToNodeIdMap, varNameToStyleNode, resultDag)
         break
       }
       case NodeType.Assignment: {
         const assigmentStmt = stmt as AssignmentTreeNode
-        if (assigmentStmt.Rhs) {
-          const thisNodeId = processCall(assigmentStmt.Rhs, varNameToNodeIdMap, resultDag)
-          const lhsVals = assigmentStmt.Lhs.map(v => v.Value)
-          for (const lhsVar of lhsVals) {
-            varNameToNodeIdMap.set(lhsVar, thisNodeId)
+        if (assigmentStmt.Lhs && assigmentStmt.Rhs) {
+          const thisNodeId = processCall(
+            assigmentStmt.Rhs,
+            varNameToNodeIdMap,
+            varNameToStyleNode,
+            resultDag
+          )
+          for (const lhsVar of assigmentStmt.Lhs) {
+            varNameToNodeIdMap.set(lhsVar.Value, thisNodeId)
+            if (lhsVar.Styling) {
+              varNameToStyleNode.set(lhsVar.Value, lhsVar.Styling)
+            }
           }
-        } else {
-          console.log('The assignment statement has no RHS ', stmt)
         }
         break
       }
       case NodeType.Alias: {
         const aliasStmt = stmt as AliasTreeNode
-        const aliasRhsVal = aliasStmt.Rhs?.Value
-        const aliasLhsVal = aliasStmt.Lhs?.Value
-        if (varNameToNodeIdMap.has(aliasRhsVal) && aliasLhsVal) {
-          // Assumes recipes are processed incrementally
-          // and intermediate aliases are not modified
-          const RhsCurTarget = varNameToNodeIdMap.get(aliasRhsVal)
-          varNameToNodeIdMap.set(aliasLhsVal, RhsCurTarget)
-        } else {
-          console.log('var ' + aliasRhsVal + ' not found')
+        if (aliasStmt.Lhs && aliasStmt.Rhs) {
+          const lhsName = aliasStmt.Lhs!.Value
+          const rhsName = aliasStmt.Rhs!.Value
+          const RhsReferentNodeId = varNameToNodeIdMap.get(rhsName)
+          if (RhsReferentNodeId) {
+            varNameToNodeIdMap.set(lhsName, RhsReferentNodeId)
+          } else {
+            console.log('var ' + lhsName + ' not found')
+          }
+          if (aliasStmt.Lhs.Styling) {
+            varNameToStyleNode.set(lhsName, aliasStmt.Lhs.Styling)
+          }
         }
+        break
+      }
+      case NodeType.NamedStyle: {
+        const namedStyleStmt = stmt as NamedStyleTreeNode
+        const styleNode = namedStyleStmt.StyleNode
+        const workingStyleMap = new Map<string, string>()
+        for (const styleTag of styleNode.StyleTagList) {
+          const referentStyle = styleTagToFlatStyleMap.get(styleTag)
+          if (referentStyle) {
+            mergeMap(workingStyleMap, referentStyle)
+          } else { // styles must be declared before usage
+            console.log('styleTag ' + styleTag + ' not found')
+          }
+        }
+        // any locally defined properties will overwrite referenced styles
+        mergeMap(workingStyleMap, styleNode.KeyValueMap)
+        const thisStyleTag = "#" + namedStyleStmt.StyleName
+        styleTagToFlatStyleMap.set(thisStyleTag, workingStyleMap)
+        resultDag.addStyle(thisStyleTag, workingStyleMap)
         break
       }
     }

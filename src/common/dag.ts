@@ -1,11 +1,14 @@
-export interface DagNode {
+interface DagElement {
   id: string
   name: string
+  styleTags: Array<string>
+  styleMap: Map<string, string>
 }
 
-export interface DagEdge {
-  id: string
-  name: string
+export interface DagNode extends DagElement {
+}
+
+export interface DagEdge extends DagElement {
   srcNodeId: string
   destNodeId: string
 }
@@ -15,13 +18,16 @@ export type NodeNamePair = [ string, string ]
 export class Dag {
   private nodeMap: Map<string, DagNode>
   private edgeMap: Map<string, DagEdge>
+  private flatStyleMap: Map<string, Map<string, string>>
 
   constructor(
     nodeMap: Map<string, DagNode> = new Map(),
-    edgeMap: Map<string, DagEdge> = new Map()
+    edgeMap: Map<string, DagEdge> = new Map(),
+    flatStyleMap: Map<string, Map<string, string>> = new Map()
   ) {
     this.nodeMap = nodeMap
     this.edgeMap = edgeMap
+    this.flatStyleMap = flatStyleMap
   }
 
   addNode(node: DagNode): void {
@@ -38,6 +44,10 @@ export class Dag {
       return
     }
     this.edgeMap.set(edge.id, edge)
+  }
+
+  addStyle(styleName: string, styleMap: Map<string, string>): void {
+    this.flatStyleMap.set(styleName, styleMap)
   }
 
   getNodeList(): Array<DagNode> {
@@ -63,15 +73,47 @@ export class Dag {
             .sort()
   }
 
+  getFlattenedStyles(): Map<string, Map<string, string>> {
+    return this.flatStyleMap
+  }
+
   formatDag(): string {
+    function styleTagDump(styleTagList: Array<string>): string {
+      let resultDump = ""
+      if (styleTagList.length > 0) {
+        resultDump = "\n\tStyleTags: [" + styleTagList.join(' ') + "]"
+      }
+      return resultDump
+    }
+
+    function styleMapDump(styleMap: Map<string, string>): string {
+      let resultDump = ""
+      if (styleMap.size > 0) {
+        resultDump = "\n\tStyleMap: {"
+          + Array.from(styleMap.entries())
+            .map(([k, v]) => k + ":" + v)
+            .join(' ') + "}"
+      }
+      return resultDump
+    }
+
     let result = ""
     for (const [_, node] of this.nodeMap) {
-      result += "Node: " + node.name + "\n"
+      result += "Node: " + node.name
+        + styleTagDump(node.styleTags)
+        + styleMapDump(node.styleMap)
+        + "\n"
     }
     for (const [_, edge] of this.edgeMap) {
       result += "Edge: " + this.nodeMap.get(edge.srcNodeId)?.name
-                + " -(" + edge.name + ")-> " 
-                + this.nodeMap.get(edge.destNodeId)?.name + "\n"
+        + " -(" + edge.name + ")-> " 
+        + this.nodeMap.get(edge.destNodeId)?.name
+        + styleTagDump(edge.styleTags)
+        + styleMapDump(edge.styleMap)
+        + "\n"
+    }
+    for (const [styleName, style] of this.flatStyleMap) {
+      result += "Style: " + styleName + styleMapDump(style) + "\n"
     }
     return result
   }
