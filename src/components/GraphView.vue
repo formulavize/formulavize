@@ -47,9 +47,9 @@ export default defineComponent({
       const newElements = makeCyElements(this.curDag)
       this.cy.elements().remove()
       this.cy.add(newElements)
-
-      const newStyleshets = makeCyStylesheets(this.curDag)
-      this.cy.style(newStyleshets)
+      
+      const newStylesheets = makeCyStylesheets(this.curDag)
+      this.cy.style(newStylesheets)
 
       Promise.resolve().then(() => {
         this.cy.layout({ name: 'dagre' }).run() // most expensive operation
