@@ -81,7 +81,7 @@ export class Dag {
     function styleTagDump(styleTagList: Array<string>): string {
       let resultDump = ""
       if (styleTagList.length > 0) {
-        resultDump = "\n\tStyleTags: [" + styleTagList.join(' ') + "]"
+        resultDump = "\n\tStyleTags: [" + styleTagList.toString() + "]"
       }
       return resultDump
     }
@@ -89,10 +89,8 @@ export class Dag {
     function styleMapDump(styleMap: Map<string, string>): string {
       let resultDump = ""
       if (styleMap.size > 0) {
-        resultDump = "\n\tStyleMap: {"
-          + Array.from(styleMap.entries())
-            .map(([k, v]) => k + ":" + v)
-            .join(' ') + "}"
+        resultDump = "\n\tStyleMap: "
+          + JSON.stringify(Object.fromEntries(styleMap))
       }
       return resultDump
     }

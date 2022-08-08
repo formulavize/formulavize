@@ -9,7 +9,15 @@ import { RecipeTreeNode, StatementTreeNode, ValueTreeNode, CallTreeNode,
 function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
   const styleTags: Array<string> = []
   c.node.getChildren("StyleTag").forEach(
-    (styleTag) => styleTags.push(s.doc.sliceString(styleTag.from, styleTag.to))
+    (styleTag) => {
+      const childTagId = styleTag.getChild("Identifier")
+      let styleTagIdent = ""
+      if (childTagId)
+      {
+        styleTagIdent = s.doc.sliceString(childTagId.from, childTagId.to)
+      }
+      styleTags.push(styleTagIdent)
+    }
   )
 
   const styleDeclarations: Map<string, string> = new Map<string, string>()
@@ -23,8 +31,10 @@ function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
 
       const candidateStyleVal = styleDec.getChildren("StyleValue")
       const styleVals = candidateStyleVal.map((styleVal) => {
-        return s.doc.sliceString(styleVal.from, styleVal.to)
-      }).join(",")
+          return s.doc.sliceString(styleVal.from, styleVal.to)
+        })
+        .join(",")
+        .replace(/(^"|^'|"$|'$)/g,'')
       styleDeclarations.set(propName, styleVals)
     }
   )

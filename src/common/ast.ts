@@ -239,12 +239,10 @@ export class StyleTreeNode extends BaseTreeNode {
   }
 
   formatValue(): string {
-    return "StyleTagList: [" + this.styleTagList.join(' ')
-      + "] StyleMap: {"
-      + Array.from(this.keyValueMap.entries())
-          .map(([k, v]) => k + ":" + v)
-          .join(' ')
-      + "}"
+    return "StyleTagList: ["
+      + this.styleTagList.toString()
+      + "] StyleMap: "
+      + JSON.stringify(Object.fromEntries(this.keyValueMap))
   }
 
   isComplete(): boolean {

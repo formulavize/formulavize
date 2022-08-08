@@ -146,7 +146,7 @@ export function makeDag(recipe: RecipeTreeNode): Dag {
         }
         // any locally defined properties will overwrite referenced styles
         mergeMap(workingStyleMap, styleNode.KeyValueMap)
-        const thisStyleTag = "#" + namedStyleStmt.StyleName
+        const thisStyleTag = namedStyleStmt.StyleName
         styleTagToFlatStyleMap.set(thisStyleTag, workingStyleMap)
         resultDag.addStyle(thisStyleTag, workingStyleMap)
         break

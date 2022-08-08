@@ -80,7 +80,7 @@ describe("style nodes", () => {
           new Map<string, string>([
             ["x", "1px"],
             ["y", "#abc"],
-            ["z", "\"w\""],
+            ["z", "w"],
           ])
         ))
       ])
@@ -105,7 +105,7 @@ describe("style nodes", () => {
         new Assignment(
           [
             new Variable("a", new Style(new Map<string, string>([["b", "1"]]))),
-            new Variable("c", new Style(undefined, ["#d", "#e"]))
+            new Variable("c", new Style(undefined, ["d", "e"]))
           ],
           new Call("f", []),
         )
@@ -117,7 +117,7 @@ describe("style nodes", () => {
     expect(makeTree(input)).toEqual(
       new Recipe([
         new Alias(
-          new Variable("x", new Style(undefined, ["#y"])),
+          new Variable("x", new Style(undefined, ["y"])),
           new Variable("z"),
         )
       ])
@@ -134,7 +134,7 @@ describe("style nodes", () => {
               ["c--d", "2"],
               ["e_f", "3,4,5"]
             ]),
-            ["#x", "#y", "#z"]
+            ["x", "y", "z"]
           )
         )
       ])
