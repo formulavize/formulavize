@@ -21,7 +21,7 @@ import {
   keymap, lineNumbers, rectangularSelection
 } from "@codemirror/view"
 
-import { fizLanguage } from 'lang-fiz'
+import { fizLanguage } from '@formulavize/lang-fiz'
 
 
 export default defineComponent({

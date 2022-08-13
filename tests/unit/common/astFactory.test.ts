@@ -9,7 +9,7 @@ import { RecipeTreeNode as Recipe,
          NamedStyleTreeNode as NamedStyle,
          BaseTreeNode } from "../../../src/common/ast"
 import { EditorState } from "@codemirror/state"
-import { fizLanguage } from 'lang-fiz'
+import { fizLanguage } from '@formulavize/lang-fiz'
 
 function makeTree(input: string): BaseTreeNode {
   return fillTree(EditorState.create({
