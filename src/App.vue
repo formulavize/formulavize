@@ -1,7 +1,4 @@
 <template>
-  <header>
-    <HelloWorld msg="Hello World!" />
-  </header>
   <splitpanes id="panes" class="default-theme">
     <pane>
       <tabs :options="{ useUrlFragment: false }">
@@ -37,7 +34,6 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import HelloWorld from './components/HelloWorld.vue'
 import TextEditor from './components/TextEditor.vue'
 import GraphView from './components/GraphView.vue'
 import TextDumpView from './components/TextDumpView.vue'
@@ -54,7 +50,6 @@ import './tabs-component.css';
 export default defineComponent({
   name: 'App',
   components: {
-    HelloWorld,
     Splitpanes,
     Pane,
     TextEditor,
