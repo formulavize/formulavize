@@ -76,6 +76,8 @@ export function makeCyStylesheets(dag: Dag): Stylesheet[] {
       selector: "node",
       style: {
         "label": "data(name)",
+        "text-valign": "bottom",
+        "text-wrap": "wrap",
       }
     },
   ]

@@ -33,8 +33,9 @@ function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
       const styleVals = candidateStyleVal.map((styleVal) => {
           return s.doc.sliceString(styleVal.from, styleVal.to)
         })
-        .join(",")
-        .replace(/(^"|^'|"$|'$)/g,'')
+        .join(",") // comma delimit multiple values
+        .replace(/(^"|^'|"$|'$)/g, "") // remove captured bounding quotes
+        .replace(/\\n/g, "\n") // for enabling cytoscape text-wrap
       styleDeclarations.set(propName, styleVals)
     }
   )
