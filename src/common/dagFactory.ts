@@ -2,7 +2,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import { RecipeTreeNode, CallTreeNode, AssignmentTreeNode,
          AliasTreeNode, VariableTreeNode, NodeType,
-         StyleTreeNode, NamedStyleTreeNode } from "./ast"
+         StyleTreeNode, NamedStyleTreeNode, StyleBindingTreeNode } from "./ast"
 import { Dag } from "./dag" 
 
 function processCall(callStmt: CallTreeNode,
@@ -149,6 +149,14 @@ export function makeDag(recipe: RecipeTreeNode): Dag {
         const thisStyleTag = namedStyleStmt.StyleName
         styleTagToFlatStyleMap.set(thisStyleTag, workingStyleMap)
         resultDag.addStyle(thisStyleTag, workingStyleMap)
+        break
+      }
+      case NodeType.StyleBinding: {
+        const styleBindingStmt = stmt as StyleBindingTreeNode
+        resultDag.addStyleBinding(
+          styleBindingStmt.Keyword,
+          styleBindingStmt.StyleTagList
+        )
         break
       }
     }

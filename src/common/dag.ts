@@ -19,15 +19,18 @@ export class Dag {
   private nodeMap: Map<string, DagNode>
   private edgeMap: Map<string, DagEdge>
   private flatStyleMap: Map<string, Map<string, string>>
+  private styleBinding: Map<string, string[]>
 
   constructor(
     nodeMap: Map<string, DagNode> = new Map(),
     edgeMap: Map<string, DagEdge> = new Map(),
-    flatStyleMap: Map<string, Map<string, string>> = new Map()
+    flatStyleMap: Map<string, Map<string, string>> = new Map(),
+    styleBindingMap: Map<string, string[]> = new Map()
   ) {
     this.nodeMap = nodeMap
     this.edgeMap = edgeMap
     this.flatStyleMap = flatStyleMap
+    this.styleBinding = styleBindingMap
   }
 
   addNode(node: DagNode): void {
@@ -48,6 +51,10 @@ export class Dag {
 
   addStyle(styleName: string, styleMap: Map<string, string>): void {
     this.flatStyleMap.set(styleName, styleMap)
+  }
+
+  addStyleBinding(keyword: string, styleTags: string[]): void {
+    this.styleBinding.set(keyword, styleTags)
   }
 
   getNodeList(): Array<DagNode> {
@@ -75,6 +82,10 @@ export class Dag {
 
   getFlattenedStyles(): Map<string, Map<string, string>> {
     return this.flatStyleMap
+  }
+
+  getStyleBindings(): Map<string, string[]> {
+    return this.styleBinding
   }
 
   formatDag(): string {
@@ -112,6 +123,9 @@ export class Dag {
     }
     for (const [styleName, style] of this.flatStyleMap) {
       result += "Style: " + styleName + styleMapDump(style) + "\n"
+    }
+    for (const [keyword, styleTags] of this.styleBinding) {
+      result += "StyleBinding: " + keyword + styleTagDump(styleTags) + "\n"
     }
     return result
   }

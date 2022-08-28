@@ -6,6 +6,7 @@ export enum NodeType {
   Recipe,
   Style,
   NamedStyle,
+  StyleBinding
 }
 
 export abstract class BaseTreeNode {
@@ -40,6 +41,7 @@ export type StatementTreeNode = CallTreeNode
   | AssignmentTreeNode 
   | AliasTreeNode 
   | NamedStyleTreeNode
+  | StyleBindingTreeNode
 
 export class RecipeTreeNode extends BaseTreeNode {
   private statements: Array<StatementTreeNode>
@@ -289,5 +291,40 @@ export class NamedStyleTreeNode extends BaseTreeNode {
 
   get StyleNode(): StyleTreeNode {
     return this.styleNode
+  }
+}
+
+export class StyleBindingTreeNode extends BaseTreeNode {
+  private keyword: string
+  private styleTagList: Array<string>
+
+  constructor(
+    keyword: string = "",
+    styleTagList: Array<string> = []
+  ) {
+    super(NodeType.StyleBinding)
+    this.keyword = keyword
+    this.styleTagList = styleTagList
+  }
+
+  getChildren(): Array<BaseTreeNode> {
+    return []
+  }
+
+  formatValue(): string {
+    return "StyleBinding: " + this.keyword
+      + " StyleTagList: [" + this.styleTagList.toString() + "]"
+  }
+
+  isComplete(): boolean {
+    return true
+  }
+
+  get Keyword(): string {
+    return this.keyword
+  }
+
+  get StyleTagList(): Array<string> {
+    return this.styleTagList
   }
 }

@@ -63,6 +63,25 @@ export function makeClassStyleSheets(dag: Dag): Stylesheet[] {
   return classStyles
 }
 
+export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
+  const nameStyles: Stylesheet[] = []
+  const flatStyleMap = dag.getFlattenedStyles()
+  dag.getStyleBindings().forEach((styleTags, keyword) => {
+    styleTags.forEach((styleTag) => {
+      const styleMap = flatStyleMap.get(styleTag)
+      if (styleMap) {
+        nameStyles.push({
+          selector: `[name ='${keyword}']`,
+          style: Object.fromEntries(styleMap)
+        })
+      } else {
+        console.log(`keyword ${keyword} could not be bound to ${styleTag}`)
+      }
+    })
+  })
+  return nameStyles
+}
+
 export function makeCyStylesheets(dag: Dag): Stylesheet[] {
   const workingStylesheets : Stylesheet[] = [
     { 
@@ -89,6 +108,9 @@ export function makeCyStylesheets(dag: Dag): Stylesheet[] {
 
   const classStyles = makeClassStyleSheets(dag)
   workingStylesheets.push(...classStyles)
+
+  const nameStyles = makeNameStyleSheets(dag)
+  workingStylesheets.push(...nameStyles)
 
   return workingStylesheets
 }

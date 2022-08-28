@@ -3,19 +3,23 @@ import { syntaxTree } from "@codemirror/language"
 import { TreeCursor } from "@lezer/common"
 import { RecipeTreeNode, StatementTreeNode, ValueTreeNode, CallTreeNode,
          AssignmentTreeNode, AliasTreeNode, VariableTreeNode,
-         StyleTreeNode, NamedStyleTreeNode
+         StyleTreeNode, NamedStyleTreeNode, StyleBindingTreeNode
         } from "./ast"
+
+function fillStyleTag(c: TreeCursor, s: EditorState): string {
+  let styleTagIdent = ""
+  const childTagId = c.node.getChild("Identifier")
+  if (childTagId) {
+    styleTagIdent = s.doc.sliceString(childTagId.from, childTagId.to)
+  }
+  return styleTagIdent
+}
 
 function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
   const styleTags: Array<string> = []
   c.node.getChildren("StyleTag").forEach(
     (styleTag) => {
-      const childTagId = styleTag.getChild("Identifier")
-      let styleTagIdent = ""
-      if (childTagId)
-      {
-        styleTagIdent = s.doc.sliceString(childTagId.from, childTagId.to)
-      }
+      const styleTagIdent = fillStyleTag(styleTag.cursor(), s)
       styleTags.push(styleTagIdent)
     }
   )
@@ -56,6 +60,22 @@ function fillNamedStyle(c: TreeCursor, s: EditorState): NamedStyleTreeNode {
   }
 
   return new NamedStyleTreeNode(styleName, styleNode)
+}
+
+function fillStyleBinding(c: TreeCursor, s: EditorState): StyleBindingTreeNode {
+  let keyword = ""
+  const candidateIdent = c.node.getChild("Identifier")
+  if (candidateIdent) {
+    keyword = s.doc.sliceString(candidateIdent.from, candidateIdent.to)
+  }
+  let styleTagList: Array<string> = []
+  const candidateTagList = c.node.getChild("StyleTagList")
+  if (candidateTagList) {
+    styleTagList = candidateTagList.getChildren("StyleTag").map(
+      (styleTag) => fillStyleTag(styleTag.cursor(), s)
+    )
+  }
+  return new StyleBindingTreeNode(keyword, styleTagList)
 }
 
 function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
@@ -152,6 +172,9 @@ function fillStatement(c: TreeCursor, s: EditorState): StatementTreeNode | null 
       break
     case "StyleTagDeclaration":
       stmtNode = fillNamedStyle(c, s)
+      break
+    case "StyleBinding":
+      stmtNode = fillStyleBinding(c, s)
       break
     case "⚠": // Error token for incomplete trees
       break

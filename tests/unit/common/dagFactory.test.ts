@@ -6,6 +6,7 @@ import { RecipeTreeNode as Recipe,
   VariableTreeNode as Variable,
   StyleTreeNode as Style,
   NamedStyleTreeNode as NamedStyle,
+  StyleBindingTreeNode as StyleBinding,
 } from '../../../src/common/ast'
 import { Dag } from "../../../src/common/dag"
 import { makeDag } from "../../../src/common/dagFactory"
@@ -270,5 +271,29 @@ describe("edge tests", () => {
     expect(dagEdge1.styleTags).toEqual(["s"])
     expect(dagEdge2.styleMap).toEqual(sampleMap2)
     expect(dagEdge2.styleTags).toEqual([])
+  })
+
+  describe("style binding tests", () => {
+    test("no style binding", () => {
+      const recipe = new Recipe([])
+      const defaultBindings = makeDag(recipe).getStyleBindings()
+      expect(defaultBindings).toEqual(new Map<string, string[]>())
+    })
+    test("empty style binding", () => {
+      const recipe = new Recipe([
+        new StyleBinding("x", [])
+      ])
+      const styleBindings = makeDag(recipe).getStyleBindings()
+      const expectedBinding = new Map<string, string[]>([["x", []]])
+      expect(styleBindings).toEqual(expectedBinding)
+    })
+    test("style bind multiple styles", () => {
+      const recipe = new Recipe([
+        new StyleBinding("x", ["a", "b"])
+      ])
+      const styleBindings = makeDag(recipe).getStyleBindings()
+      const expectedBinding = new Map<string, string[]>([["x", ["a", "b"]]])
+      expect(styleBindings).toEqual(expectedBinding)
+    })
   })
 })

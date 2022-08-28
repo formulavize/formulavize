@@ -1,7 +1,7 @@
 import { describe, test, expect } from 'vitest'
 import {
   makeCyNodes, makeCyEdges,
-  makeNodeStylesheets, makeEdgeStyleSheets, makeClassStyleSheets
+  makeNodeStylesheets, makeEdgeStyleSheets, makeClassStyleSheets, makeNameStyleSheets
 } from '../../../src/common/cyGraphFactory'
 import { Dag } from '../../../src/common/dag'
 
@@ -95,4 +95,27 @@ describe("makes cytoscape stylesheets", () => {
     }]
     expect(makeClassStyleSheets(testDag)).toEqual(expectedCyClassStyles)
   })
+  test("name style on undeclared styleTags", () => {
+    const testDag = new Dag()
+    testDag.addStyleBinding("x", ["a", "b"])
+    expect(makeNameStyleSheets(testDag)).toEqual([])
+  })
+  test("name styles", () => {
+    const testDag = new Dag()
+    testDag.addStyleBinding("x", ["a", "b"])
+    testDag.addStyle("a", new Map<string, string>([["i", "1"]]))
+    testDag.addStyle("b", new Map<string, string>([["j", "2"], ["k", "3"]]))
+    const expectedCyNameStyles= [
+      {
+        selector: "[name ='x']",
+        style: {"i": "1"}
+      },
+      {
+        selector: "[name ='x']",
+        style: {"j": "2", "k":"3"}
+      },
+    ]
+    expect(makeNameStyleSheets(testDag)).toEqual(expectedCyNameStyles)
+  })
+
 })

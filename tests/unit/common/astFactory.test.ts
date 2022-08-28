@@ -7,7 +7,9 @@ import { RecipeTreeNode as Recipe,
          VariableTreeNode as Variable,
          StyleTreeNode as Style,
          NamedStyleTreeNode as NamedStyle,
-         BaseTreeNode } from "../../../src/common/ast"
+         StyleBindingTreeNode as StyleBinding,
+         BaseTreeNode,
+        } from "../../../src/common/ast"
 import { EditorState } from "@codemirror/state"
 import { fizLanguage } from '@formulavize/lang-fiz'
 
@@ -137,6 +139,33 @@ describe("style nodes", () => {
             ["x", "y", "z"]
           )
         )
+      ])
+    )
+  })
+})
+
+describe("style bindings", () => {
+  test("incomplete style binding", () => {
+    const input = "%x"
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new StyleBinding("x", [])
+      ])
+    )
+  })
+  test("empty style binding", () => {
+    const input = "%x{}"
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new StyleBinding("x", [])
+      ])
+    )
+  })
+  test("style bind multiple styles", () => {
+    const input = "%x{#a #b #c}"
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new StyleBinding("x", ["a", "b", "c"])
       ])
     )
   })
