@@ -126,7 +126,7 @@ describe("style nodes", () => {
     )
   })
   test("style with mixed types", () => {
-    const input = '#s{a-b:1\nc--d:2;e_f:3,4 5\n #x #y; #z}'
+    const input = '#s{a-b:1\nc--d:2;e_f:3,4,5\n #x #y; #z}'
     expect(makeTree(input)).toEqual(
       new Recipe([
         new NamedStyle("s",
