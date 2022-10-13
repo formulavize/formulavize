@@ -1,5 +1,6 @@
 import { describe, test, expect } from 'vitest'
 import { fillTree } from '../../../src/common/astFactory'
+import { DESCRIPTOR_PROPERTY } from '../../../src/common/constants'
 import { RecipeTreeNode as Recipe,
          CallTreeNode as Call,
          AssignmentTreeNode as Assignment,
@@ -139,6 +140,43 @@ describe("style nodes", () => {
             ["x", "y", "z"]
           )
         )
+      ])
+    )
+  })
+  test("single descriptor line", () => {
+    const input = "f(){'test'}"
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new Call("f", [], new Style(
+          new Map<string, string>([
+            [ DESCRIPTOR_PROPERTY, "test" ],
+          ])
+        ))
+      ])
+    )
+  })
+  test("multiple descriptor lines", () => {
+    const input = 'f(){"one"\n"two"}'
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new Call("f", [], new Style(
+          new Map<string, string>([
+            [ DESCRIPTOR_PROPERTY, "one\ntwo" ],
+          ])
+        ))
+      ])
+    )
+  })
+  test("descriptor and properties", () => {
+    const input = 'f(){foo:"bar"\n"test"}'
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new Call("f", [], new Style(
+          new Map<string, string>([
+            [ DESCRIPTOR_PROPERTY, "test" ],
+            [ "foo", "bar" ]
+          ])
+        ))
       ])
     )
   })
