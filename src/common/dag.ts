@@ -107,13 +107,13 @@ export class Dag {
     }
 
     let result = ""
-    for (const [_, node] of this.nodeMap) {
+    for (const node of this.nodeMap.values()) {
       result += "Node: " + node.name
         + styleTagDump(node.styleTags)
         + styleMapDump(node.styleMap)
         + "\n"
     }
-    for (const [_, edge] of this.edgeMap) {
+    for (const edge of this.edgeMap.values()) {
       result += "Edge: " + this.nodeMap.get(edge.srcNodeId)?.name
         + " -(" + edge.name + ")-> " 
         + this.nodeMap.get(edge.destNodeId)?.name
