@@ -1,3 +1,3 @@
 // Special properties for styles
-export const DESCRIPTOR_PROPERTY: string = "descriptors"
+export const DESCRIPTION_PROPERTY: string = "description"
 export const LABEL_PROPERTY: string = "label"

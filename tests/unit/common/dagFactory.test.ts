@@ -9,7 +9,7 @@ import { RecipeTreeNode as Recipe,
   StyleBindingTreeNode as StyleBinding,
 } from '../../../src/common/ast'
 import {
-  DESCRIPTOR_PROPERTY, LABEL_PROPERTY
+  DESCRIPTION_PROPERTY, LABEL_PROPERTY
 } from "../../../src/common/constants"
 import { Dag } from "../../../src/common/dag"
 import { makeDag } from "../../../src/common/dagFactory"
@@ -275,11 +275,11 @@ describe("style tests", () => {
     expect(dagEdge2.styleMap).toEqual(sampleMap2)
     expect(dagEdge2.styleTags).toEqual([])
   })
-  test("descriptor makes node label", () => {
+  test("description makes node label", () => {
     const recipe = new Recipe([
       new Call("name", [], new Style(
         new Map<string, string>([
-          [ DESCRIPTOR_PROPERTY, "my_desc" ],
+          [ DESCRIPTION_PROPERTY, "my_desc" ],
         ])
       ))
     ])
@@ -287,7 +287,7 @@ describe("style tests", () => {
     expect(dagNodeList).toHaveLength(1)
     const dagNode = dagNodeList[0]
     const expectedStyleMap = new Map<string, string>([
-      [ DESCRIPTOR_PROPERTY, "my_desc" ],
+      [ DESCRIPTION_PROPERTY, "my_desc" ],
       [ LABEL_PROPERTY, "name\nmy_desc" ]
     ])
     expect(dagNode.styleMap).toEqual(expectedStyleMap)
@@ -296,7 +296,7 @@ describe("style tests", () => {
     const recipe = new Recipe([
       new Call("name", [], new Style(
         new Map<string, string>([
-          [ DESCRIPTOR_PROPERTY, "my_desc" ],
+          [ DESCRIPTION_PROPERTY, "my_desc" ],
           [ LABEL_PROPERTY, "unchanged" ],
         ])
       ))
@@ -305,16 +305,16 @@ describe("style tests", () => {
     expect(dagNodeList).toHaveLength(1)
     const dagNode = dagNodeList[0]
     const expectedStyleMap = new Map<string, string>([
-      [ DESCRIPTOR_PROPERTY, "my_desc" ],
+      [ DESCRIPTION_PROPERTY, "my_desc" ],
       [ LABEL_PROPERTY, "unchanged" ]
     ])
     expect(dagNode.styleMap).toEqual(expectedStyleMap)
   })
-  test("descriptor makes edge label", () => {
+  test("description makes edge label", () => {
     const recipe = new Recipe([
       new Assignment(
         [new Variable("x", new Style(new Map<string, string>([
-          [ DESCRIPTOR_PROPERTY, "my_desc" ],
+          [ DESCRIPTION_PROPERTY, "my_desc" ],
         ])))],
         new Call("f", [])
       ),
@@ -324,7 +324,7 @@ describe("style tests", () => {
     expect(dagEdgeList).toHaveLength(1)
     const dagEdge = dagEdgeList[0]
     const expectedStyleMap = new Map<string, string>([
-      [ DESCRIPTOR_PROPERTY, "my_desc" ],
+      [ DESCRIPTION_PROPERTY, "my_desc" ],
       [ LABEL_PROPERTY, "my_desc" ]
     ])
     expect(dagEdge.styleMap).toEqual(expectedStyleMap)
@@ -333,7 +333,7 @@ describe("style tests", () => {
     const recipe = new Recipe([
       new Assignment(
         [new Variable("x", new Style(new Map<string, string>([
-          [ DESCRIPTOR_PROPERTY, "my_desc" ],
+          [ DESCRIPTION_PROPERTY, "my_desc" ],
           [ LABEL_PROPERTY, "unchanged" ],
         ])))],
         new Call("f", [])
@@ -344,7 +344,7 @@ describe("style tests", () => {
     expect(dagEdgeList).toHaveLength(1)
     const dagEdge = dagEdgeList[0]
     const expectedStyleMap = new Map<string, string>([
-      [ DESCRIPTOR_PROPERTY, "my_desc" ],
+      [ DESCRIPTION_PROPERTY, "my_desc" ],
       [ LABEL_PROPERTY, "unchanged" ]
     ])
     expect(dagEdge.styleMap).toEqual(expectedStyleMap)
