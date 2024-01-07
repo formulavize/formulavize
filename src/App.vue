@@ -70,10 +70,10 @@ export default defineComponent({
     curDag(): Dag {
       return makeDag(this.curRecipeTree)
     },
-    astTextDump(): String {
+    astTextDump(): string {
       return this.curRecipeTree.formatTree()
     },
-    dagTextDump(): String {
+    dagTextDump(): string {
       return this.curDag.formatDag()
     }
   },
