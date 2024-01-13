@@ -1,6 +1,6 @@
 import { EditorState } from "@codemirror/state"
 import { syntaxTree } from "@codemirror/language"
-import { DESCRIPTOR_PROPERTY } from "./constants"
+import { DESCRIPTION_PROPERTY } from "./constants"
 import { TreeCursor } from "@lezer/common"
 import { RecipeTreeNode, StatementTreeNode, ValueTreeNode, CallTreeNode,
          AssignmentTreeNode, AliasTreeNode, VariableTreeNode,
@@ -25,21 +25,21 @@ function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
     }
   )
 
-  const descriptors: Array<string> = []
+  const descriptions: Array<string> = []
   c.node.getChildren("StringLiteral").forEach(
     (stringLiteral) => {
       // trims quotes from the start and end
       const desc = s.doc.sliceString(stringLiteral.from+1, stringLiteral.to-1)
-      descriptors.push(desc)
+      descriptions.push(desc)
     }
   )
 
   const styleDeclarations: Map<string, string> = new Map<string, string>()
 
-  // If there are descriptor strings, store them in a descriptor property
+  // If there are description strings, store them in a description property
   // so that they can be used to make a label later
-  if (descriptors.length > 0) {
-    styleDeclarations.set(DESCRIPTOR_PROPERTY, descriptors.join('\n'))
+  if (descriptions.length > 0) {
+    styleDeclarations.set(DESCRIPTION_PROPERTY, descriptions.join('\n'))
   }
 
   c.node.getChildren("StyleDeclaration").forEach(
