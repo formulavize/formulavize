@@ -43,6 +43,7 @@ import { RecipeTreeNode } from "./common/ast"
 import { Dag } from './common/dag'
 import { makeDag } from './common/dagFactory'
 import { fillTree } from './common/astFactory'
+// @ts-ignore: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from 'splitpanes'
 import 'splitpanes/dist/splitpanes.css'
 import './tabs-component.css';
@@ -70,10 +71,10 @@ export default defineComponent({
     curDag(): Dag {
       return makeDag(this.curRecipeTree)
     },
-    astTextDump(): String {
+    astTextDump(): string {
       return this.curRecipeTree.formatTree()
     },
-    dagTextDump(): String {
+    dagTextDump(): string {
       return this.curDag.formatDag()
     }
   },
