@@ -275,11 +275,12 @@ describe("style tests", () => {
     expect(dagEdge2.styleMap).toEqual(sampleMap2)
     expect(dagEdge2.styleTags).toEqual([])
   })
-  test("description makes node label", () => {
+  test("node description and label property", () => {
     const recipe = new Recipe([
       new Call("name", [], new Style(
         new Map<string, string>([
           [ DESCRIPTION_PROPERTY, "my_desc" ],
+          [ LABEL_PROPERTY, "my_label" ],
         ])
       ))
     ])
@@ -288,33 +289,16 @@ describe("style tests", () => {
     const dagNode = dagNodeList[0]
     const expectedStyleMap = new Map<string, string>([
       [ DESCRIPTION_PROPERTY, "my_desc" ],
-      [ LABEL_PROPERTY, "name\nmy_desc" ]
+      [ LABEL_PROPERTY, "my_label" ]
     ])
     expect(dagNode.styleMap).toEqual(expectedStyleMap)
   })
-  test("existing node label takes precedence", () => {
-    const recipe = new Recipe([
-      new Call("name", [], new Style(
-        new Map<string, string>([
-          [ DESCRIPTION_PROPERTY, "my_desc" ],
-          [ LABEL_PROPERTY, "unchanged" ],
-        ])
-      ))
-    ])
-    const dagNodeList = makeDag(recipe).getNodeList()
-    expect(dagNodeList).toHaveLength(1)
-    const dagNode = dagNodeList[0]
-    const expectedStyleMap = new Map<string, string>([
-      [ DESCRIPTION_PROPERTY, "my_desc" ],
-      [ LABEL_PROPERTY, "unchanged" ]
-    ])
-    expect(dagNode.styleMap).toEqual(expectedStyleMap)
-  })
-  test("description makes edge label", () => {
+  test("edge description and label property", () => {
     const recipe = new Recipe([
       new Assignment(
         [new Variable("x", new Style(new Map<string, string>([
           [ DESCRIPTION_PROPERTY, "my_desc" ],
+          [ LABEL_PROPERTY, "my_label" ],
         ])))],
         new Call("f", [])
       ),
@@ -325,27 +309,7 @@ describe("style tests", () => {
     const dagEdge = dagEdgeList[0]
     const expectedStyleMap = new Map<string, string>([
       [ DESCRIPTION_PROPERTY, "my_desc" ],
-      [ LABEL_PROPERTY, "my_desc" ]
-    ])
-    expect(dagEdge.styleMap).toEqual(expectedStyleMap)
-  })
-  test("existing edge label takes precedence", () => {
-    const recipe = new Recipe([
-      new Assignment(
-        [new Variable("x", new Style(new Map<string, string>([
-          [ DESCRIPTION_PROPERTY, "my_desc" ],
-          [ LABEL_PROPERTY, "unchanged" ],
-        ])))],
-        new Call("f", [])
-      ),
-      new Call("g", [new Variable("x")])
-    ])
-    const dagEdgeList = makeDag(recipe).getEdgeList()
-    expect(dagEdgeList).toHaveLength(1)
-    const dagEdge = dagEdgeList[0]
-    const expectedStyleMap = new Map<string, string>([
-      [ DESCRIPTION_PROPERTY, "my_desc" ],
-      [ LABEL_PROPERTY, "unchanged" ]
+      [ LABEL_PROPERTY, "my_label" ]
     ])
     expect(dagEdge.styleMap).toEqual(expectedStyleMap)
   })

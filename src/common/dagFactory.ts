@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { RecipeTreeNode, CallTreeNode, AssignmentTreeNode,
          AliasTreeNode, VariableTreeNode, NodeType,
          StyleTreeNode, NamedStyleTreeNode, StyleBindingTreeNode } from "./ast"
-import { DESCRIPTION_PROPERTY, LABEL_PROPERTY } from "./constants"
 import { Dag } from "./dag"
 
 function processCall(callStmt: CallTreeNode,
@@ -60,16 +59,6 @@ function processCall(callStmt: CallTreeNode,
     styleMap: callStmt.Styling?.KeyValueMap ?? new Map<string, string>(),
   }
 
-  // if there is a description, construct a label with it
-  // ignore if label is already present - existing label takes precedence
-  if (thisNode.styleMap.has(DESCRIPTION_PROPERTY)
-    && !thisNode.styleMap.has(LABEL_PROPERTY)) {
-      const thisNodeName = thisNode.name
-      const thisNodeDesc = thisNode.styleMap.get(DESCRIPTION_PROPERTY) ?? ""
-      const thisNodeLabel = thisNodeName + "\n" + thisNodeDesc
-      thisNode.styleMap.set(LABEL_PROPERTY, thisNodeLabel)
-  }
-
   workingDag.addNode(thisNode) 
 
   for (const incomingEdge of incomingEdgeInfoList) {
@@ -81,13 +70,6 @@ function processCall(callStmt: CallTreeNode,
       destNodeId: thisNodeId,
       styleTags: incomingEdge.varStyle?.StyleTagList ?? [],
       styleMap: incomingEdge.varStyle?.KeyValueMap ?? new Map<string, string>(),
-    }
-    // if there is a description, make a label with it
-    // ignore if label is already present - existing label takes precedence
-    if (thisEdge.styleMap.has(DESCRIPTION_PROPERTY)
-      && !thisEdge.styleMap.has(LABEL_PROPERTY)) {
-        const thisEdgeDesc = thisEdge.styleMap.get(DESCRIPTION_PROPERTY) ?? ""
-        thisEdge.styleMap.set(LABEL_PROPERTY, thisEdgeDesc)
     }
     workingDag.addEdge(thisEdge)
   }
