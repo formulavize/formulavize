@@ -47,6 +47,7 @@ export default defineComponent({
     // entirely new graph but still has a noticeable delay.
     reDrawDag() {
       this.cy.elements().remove()
+      this.cy.removeAllListeners()
       
       const newElements = makeCyElements(this.curDag)
       this.cy.add(newElements)

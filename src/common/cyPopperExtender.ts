@@ -1,6 +1,6 @@
 import cytoscape from 'cytoscape'
 import popper from 'cytoscape-popper'
-import { DESCRIPTION_PROPERTY } from "./constants"
+import { DESCRIPTION_PROPERTY, POPPER_DIV_CLASS, POPPER_BASE_FONT_SIZE } from "./constants"
 import { Dag, DagElement } from "./dag" 
 
 export function getStyleDescriptions(dag: Dag): Map<string, string> {
@@ -46,15 +46,15 @@ export function getEdgeDescriptions(dag: Dag): Map<string, string> {
 }
 
 function clearAllPopperDivs() {
-  const popperDivArr = Array.from(document.getElementsByClassName('popper-div'))
-  for (const popperDiv of popperDivArr) {
+  const popperDivArray = Array.from(document.getElementsByClassName(POPPER_DIV_CLASS))
+  for (const popperDiv of popperDivArray) {
     popperDiv.parentNode?.removeChild(popperDiv)
   }
 }
 
 function makePopperDiv(description: string): HTMLDivElement {
   const div = document.createElement('div')
-  div.classList.add('popper-div')
+  div.classList.add(POPPER_DIV_CLASS)
   
   const text = document.createElement('p')
   text.innerHTML = description.replace(/(?:\r\n|\r|\n)/g, '<br />');
@@ -105,5 +105,16 @@ export function extendCyPopperElements(cy: cytoscape.Core, dag: Dag) {
 
   styleDescriptions.forEach((description, styleTag) => {
     addDescriptionPopper(cy, canvasElement, `.${styleTag}`, description)
+  })
+
+  // scale popper font size with zoom level
+  cy.on("zoom", () => {
+    const zoomLevel = cy.zoom()
+    const scaledFontSize = POPPER_BASE_FONT_SIZE * zoomLevel
+    const popperDivArray = Array.from(document.getElementsByClassName(POPPER_DIV_CLASS))
+    for (const popperDiv of popperDivArray) {
+      const popperDivElement = popperDiv as HTMLElement;
+      popperDivElement.style.fontSize = `${scaledFontSize}px`
+    }
   })
 }
