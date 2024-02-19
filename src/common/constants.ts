@@ -1,6 +1,6 @@
 // Special properties for styles
-export const DESCRIPTION_PROPERTY: string = "description"
 export const LABEL_PROPERTY: string = "label"
+export const DESCRIPTION_PROPERTY: string = "description"
 
 // Popper constants
 export const POPPER_DIV_CLASS: string = "popper-div"

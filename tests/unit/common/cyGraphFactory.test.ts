@@ -1,9 +1,27 @@
 import { describe, test, expect } from 'vitest'
 import {
-  makeCyNodes, makeCyEdges,
+  filterCytoscapeProperties, makeCyNodes, makeCyEdges,
   makeNodeStylesheets, makeEdgeStyleSheets, makeClassStyleSheets, makeNameStyleSheets
 } from '../../../src/common/cyGraphFactory'
+import { LABEL_PROPERTY, DESCRIPTION_PROPERTY } from '../../../src/common/constants'
 import { Dag } from '../../../src/common/dag'
+
+describe("filters for cytoscape properties", () => {
+  test("filters out description", () => {
+    const testMap = new Map<string, string>([
+      [LABEL_PROPERTY, "label"],
+      [DESCRIPTION_PROPERTY, "description"],
+      ["a", "1"],
+      ["b", "2"],
+    ])
+    const expectedMap = new Map<string, string>([
+      [LABEL_PROPERTY, "label"],
+      ["a", "1"],
+      ["b", "2"],
+    ])
+    expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap)
+  })
+})
 
 describe("makes cytoscape elements", () => {
   test("with two nodes", () => {
