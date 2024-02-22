@@ -17,7 +17,7 @@ function fillStyleTag(c: TreeCursor, s: EditorState): string {
 }
 
 function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
-  const styleTags: Array<string> = []
+  const styleTags: string[] = []
   c.node.getChildren("StyleTag").forEach(
     (styleTag) => {
       const styleTagIdent = fillStyleTag(styleTag.cursor(), s)
@@ -25,7 +25,7 @@ function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
     }
   )
 
-  const descriptions: Array<string> = []
+  const descriptions: string[] = []
   c.node.getChildren("StringLiteral").forEach(
     (stringLiteral) => {
       // trims quotes from the start and end
@@ -86,7 +86,7 @@ function fillStyleBinding(c: TreeCursor, s: EditorState): StyleBindingTreeNode {
   if (candidateIdent) {
     keyword = s.doc.sliceString(candidateIdent.from, candidateIdent.to)
   }
-  let styleTagList: Array<string> = []
+  let styleTagList: string[] = []
   const candidateTagList = c.node.getChild("StyleTagList")
   if (candidateTagList) {
     styleTagList = candidateTagList.getChildren("StyleTag").map(
@@ -102,7 +102,7 @@ function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
   if (candidateIdent) {
     functionName = s.doc.sliceString(candidateIdent.from, candidateIdent.to)
   }
-  const argList: Array<ValueTreeNode> = []
+  const argList: ValueTreeNode[] = []
   const candidateArgList = c.node.getChild("ArgList")
   if (candidateArgList) {
     const valueNodes = candidateArgList.getChildren("Value")

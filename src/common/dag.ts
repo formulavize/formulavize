@@ -61,11 +61,11 @@ export class Dag {
     this.styleBinding.set(keyword, styleTags)
   }
 
-  getNodeList(): Array<DagNode> {
+  getNodeList(): DagNode[] {
     return Array.from(this.nodeMap.values())
   }
 
-  getEdgeList(): Array<DagEdge> {
+  getEdgeList(): DagEdge[] {
     return Array.from(this.edgeMap.values())
   }
 
@@ -78,7 +78,7 @@ export class Dag {
   }
 
   formatDag(): string {
-    function styleTagDump(styleTagList: Array<StyleTag>): string {
+    function styleTagDump(styleTagList: StyleTag[]): string {
       let resultDump = ""
       if (styleTagList.length > 0) {
         resultDump = "\n\tStyleTags: [" + styleTagList.toString() + "]"

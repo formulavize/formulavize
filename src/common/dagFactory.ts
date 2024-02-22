@@ -14,7 +14,7 @@ function processCall(callStmt: CallTreeNode,
     varName: string,
     varStyle: StyleTreeNode | null
   }
-  const incomingEdgeInfoList: Array<IncomingEdgeInfo> = []
+  const incomingEdgeInfoList: IncomingEdgeInfo[] = []
   for (const arg of callStmt.ArgList) {
     switch(arg.Type) {
       case NodeType.Call: {
