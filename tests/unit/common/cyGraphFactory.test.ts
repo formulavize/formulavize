@@ -47,11 +47,11 @@ describe("makes cytoscape elements", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: ["s", "t"], styleMap: new Map<string, string>([["a", "1"]]),
+      styleTags: ["s", "t"], styleProperties: new Map<string, string>([["a", "1"]]),
     })
     const expectedCyNodes = [
       { data: { id: "idX", name: "nameX"} },
@@ -63,16 +63,16 @@ describe("makes cytoscape elements", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addEdge({
       id: "idZ", name: "nameZ", srcNodeId: "idX", destNodeId: "idY",
       styleTags: ["s", "t"],
-      styleMap: new Map<string, string>([["a", "1"]]),
+      styleProperties: new Map<string, string>([["a", "1"]]),
     })
     const expectedCyEdges = [{
       data: {
@@ -90,11 +90,11 @@ describe("makes cytoscape stylesheets", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: ["s"], styleMap: new Map<string, string>(),
+      styleTags: ["s"], styleProperties: new Map<string, string>(),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: [], styleMap: new Map<string, string>([["a", "1"]]),
+      styleTags: [], styleProperties: new Map<string, string>([["a", "1"]]),
     })
     const expectedCyNodeStyles= [{
       selector: "node#idY",
@@ -106,16 +106,16 @@ describe("makes cytoscape stylesheets", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addEdge({
       id: "idZ", name: "nameZ", srcNodeId: "idX", destNodeId: "idY",
       styleTags: ["s"],
-      styleMap: new Map<string, string>([["a", "1"]]),
+      styleProperties: new Map<string, string>([["a", "1"]]),
     })
     const expectedCyEdgeStyles= [{
       selector: "edge#idZ",

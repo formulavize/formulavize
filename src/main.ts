@@ -1,6 +1,6 @@
 import { createApp } from 'vue'
 //@ts-ignore
-import { Tabs, Tab } from 'vue3-tabs-component';
+import { Tabs, Tab } from 'vue3-tabs-component'
 import App from './App.vue'
 
 createApp(App)

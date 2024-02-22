@@ -4,17 +4,13 @@ import {
   getNamesWithStyleDescriptionData,
   getNodeDescriptionData,
   getEdgeDescriptionData,
-  StyleTag,
-  Keyword,
-  NodeId,
-  EdgeId,
   DescriptionData
 } from '../../../src/common/cyPopperExtender'
 import { DESCRIPTION_PROPERTY } from '../../../src/common/constants'
-import { Dag } from '../../../src/common/dag'
+import { Dag, NodeId, EdgeId, StyleTag, Keyword } from '../../../src/common/dag'
 
 function makeDescriptionData(description: string, descriptionStyleMap?: Map<string, string>): DescriptionData {
-  return { description: description, descriptionStyleMap: descriptionStyleMap ?? new Map<string, string>() }
+  return { description: description, descriptionStyleProperties: descriptionStyleMap ?? new Map() }
 }
 
 describe("makes style descriptions", () => {
@@ -111,7 +107,7 @@ describe("makes element descriptions", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleMap: new Map<string, string>([["a", "1"]]),
+      styleTags: [], styleProperties: new Map<string, string>([["a", "1"]]),
     })
 
     const expectedMap = new Map<NodeId, DescriptionData>()
@@ -121,7 +117,7 @@ describe("makes element descriptions", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleMap: new Map<string, string>([
+      styleTags: [], styleProperties: new Map<string, string>([
         [DESCRIPTION_PROPERTY, "d1"],
         [DESCRIPTION_PROPERTY+"-color", "red"]
       ]),
@@ -136,11 +132,11 @@ describe("makes element descriptions", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleMap: new Map<string, string>([[DESCRIPTION_PROPERTY, "d1"]]),
+      styleTags: [], styleProperties: new Map<string, string>([[DESCRIPTION_PROPERTY, "d1"]]),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: [], styleMap: new Map<string, string>([[DESCRIPTION_PROPERTY, "d2"]]),
+      styleTags: [], styleProperties: new Map<string, string>([[DESCRIPTION_PROPERTY, "d2"]]),
     })
 
     const expectedMap = new Map<NodeId, DescriptionData>([
@@ -153,16 +149,16 @@ describe("makes element descriptions", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addEdge({
       id: "id1", name: "name1", srcNodeId: "idX", destNodeId: "idY",
       styleTags: ["s", "t"],
-      styleMap: new Map<string, string>([["a", "1"]]),
+      styleProperties: new Map<string, string>([["a", "1"]]),
     })
 
     const expectedMap = new Map<EdgeId, DescriptionData>()
@@ -172,16 +168,16 @@ describe("makes element descriptions", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addEdge({
       id: "id1", name: "name1", srcNodeId: "idX", destNodeId: "idY",
       styleTags: [],
-      styleMap: new Map<string, string>([
+      styleProperties: new Map<string, string>([
         [DESCRIPTION_PROPERTY, "d1"],
         [DESCRIPTION_PROPERTY+"-color", "red"]
       ]),
@@ -196,25 +192,25 @@ describe("makes element descriptions", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addNode({
       id: "idZ", name: "nameZ",
-      styleTags: [], styleMap: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map<string, string>(),
     })
     testDag.addEdge({
       id: "id1", name: "name1", srcNodeId: "idX", destNodeId: "idZ",
       styleTags: [],
-      styleMap: new Map<string, string>([[DESCRIPTION_PROPERTY, "d1"]]),
+      styleProperties: new Map<string, string>([[DESCRIPTION_PROPERTY, "d1"]]),
     })
     testDag.addEdge({
       id: "id2", name: "name2", srcNodeId: "idY", destNodeId: "idZ",
       styleTags: [],
-      styleMap: new Map<string, string>([[DESCRIPTION_PROPERTY, "d2"]]),
+      styleProperties: new Map<string, string>([[DESCRIPTION_PROPERTY, "d2"]]),
     })
 
     const expectedMap = new Map<EdgeId, DescriptionData>([

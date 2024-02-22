@@ -1,16 +1,16 @@
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid'
 
 import { RecipeTreeNode, CallTreeNode, AssignmentTreeNode,
          AliasTreeNode, VariableTreeNode, NodeType,
          StyleTreeNode, NamedStyleTreeNode, StyleBindingTreeNode } from "./ast"
-import { Dag } from "./dag"
+import { Dag, NodeId, StyleTag, StyleProperties} from "./dag"
 
 function processCall(callStmt: CallTreeNode,
-                     varNameToNodeIdMap: Map<string, string>,
+                     varNameToNodeIdMap: Map<string, NodeId>,
                      varNameToStyleNode: Map<string, StyleTreeNode>,
                      workingDag: Dag) : string {
   type IncomingEdgeInfo = {
-    nodeId: string,
+    nodeId: NodeId,
     varName: string,
     varStyle: StyleTreeNode | null
   }
@@ -56,7 +56,7 @@ function processCall(callStmt: CallTreeNode,
     id: thisNodeId,
     name: callStmt.Name,
     styleTags: callStmt.Styling?.StyleTagList ?? [],
-    styleMap: callStmt.Styling?.KeyValueMap ?? new Map<string, string>(),
+    styleProperties: callStmt.Styling?.KeyValueMap ?? new Map<string, string>(),
   }
 
   workingDag.addNode(thisNode) 
@@ -69,7 +69,7 @@ function processCall(callStmt: CallTreeNode,
       srcNodeId: incomingEdge.nodeId,
       destNodeId: thisNodeId,
       styleTags: incomingEdge.varStyle?.StyleTagList ?? [],
-      styleMap: incomingEdge.varStyle?.KeyValueMap ?? new Map<string, string>(),
+      styleProperties: incomingEdge.varStyle?.KeyValueMap ?? new Map<string, string>(),
     }
     workingDag.addEdge(thisEdge)
   }
@@ -78,14 +78,12 @@ function processCall(callStmt: CallTreeNode,
 }
 
 export function makeDag(recipe: RecipeTreeNode): Dag {
-  const varNameToNodeIdMap = new Map<string, string>()
+  const varNameToNodeIdMap = new Map<string, NodeId>()
   const varNameToStyleNode = new Map<string, StyleTreeNode>()
-  const styleTagToFlatStyleMap = new Map<string, Map<string, string>>()
+  const styleTagToFlatStyleMap = new Map<StyleTag, StyleProperties>()
   const resultDag = new Dag()
 
-  function mergeMap(
-    mutableMap: Map<string, string>, mapToAdd: Map<string, string>
-  ): void {
+  function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
     mapToAdd.forEach((value, key) => {
       mutableMap.set(key, value)
     })
@@ -136,20 +134,20 @@ export function makeDag(recipe: RecipeTreeNode): Dag {
       case NodeType.NamedStyle: {
         const namedStyleStmt = stmt as NamedStyleTreeNode
         const styleNode = namedStyleStmt.StyleNode
-        const workingStyleMap = new Map<string, string>()
+        const workingStyleProperties: StyleProperties = new Map()
         for (const styleTag of styleNode.StyleTagList) {
           const referentStyle = styleTagToFlatStyleMap.get(styleTag)
           if (referentStyle) {
-            mergeMap(workingStyleMap, referentStyle)
+            mergeMap(workingStyleProperties, referentStyle)
           } else { // styles must be declared before usage
             console.log('styleTag ' + styleTag + ' not found')
           }
         }
         // any locally defined properties will overwrite referenced styles
-        mergeMap(workingStyleMap, styleNode.KeyValueMap)
+        mergeMap(workingStyleProperties, styleNode.KeyValueMap)
         const thisStyleTag = namedStyleStmt.StyleName
-        styleTagToFlatStyleMap.set(thisStyleTag, workingStyleMap)
-        resultDag.addStyle(thisStyleTag, workingStyleMap)
+        styleTagToFlatStyleMap.set(thisStyleTag, workingStyleProperties)
+        resultDag.addStyle(thisStyleTag, workingStyleProperties)
         break
       }
       case NodeType.StyleBinding: {

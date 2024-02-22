@@ -243,7 +243,7 @@ export class StyleTreeNode extends BaseTreeNode {
   formatValue(): string {
     return "StyleTagList: ["
       + this.styleTagList.toString()
-      + "] StyleMap: "
+      + "] StyleKeyValueMap: "
       + JSON.stringify(Object.fromEntries(this.keyValueMap))
   }
 

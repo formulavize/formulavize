@@ -1,31 +1,35 @@
+export type NodeId = string
+export type EdgeId = string
+export type ElementId = NodeId | EdgeId
+export type StyleTag = string
+export type Keyword = string
+export type StyleProperties = Map<string, string>
+
 export interface DagElement {
-  id: string
+  id: ElementId
   name: string
-  styleTags: Array<string>
-  styleMap: Map<string, string>
+  styleTags: StyleTag[]
+  styleProperties: StyleProperties
 }
 
 export interface DagNode extends DagElement {
 }
 
 export interface DagEdge extends DagElement {
-  srcNodeId: string
-  destNodeId: string
+  srcNodeId: NodeId
+  destNodeId: NodeId
 }
-
-export type NodeNamePair = [ string, string ]
-
 export class Dag {
-  private nodeMap: Map<string, DagNode>
-  private edgeMap: Map<string, DagEdge>
-  private flatStyleMap: Map<string, Map<string, string>>
-  private styleBinding: Map<string, string[]>
+  private nodeMap: Map<NodeId, DagNode>
+  private edgeMap: Map<EdgeId, DagEdge>
+  private flatStyleMap: Map<StyleTag, StyleProperties>
+  private styleBinding: Map<Keyword, StyleTag[]>
 
   constructor(
-    nodeMap: Map<string, DagNode> = new Map(),
-    edgeMap: Map<string, DagEdge> = new Map(),
-    flatStyleMap: Map<string, Map<string, string>> = new Map(),
-    styleBindingMap: Map<string, string[]> = new Map()
+    nodeMap: Map<NodeId, DagNode> = new Map(),
+    edgeMap: Map<EdgeId, DagEdge> = new Map(),
+    flatStyleMap: Map<StyleTag, StyleProperties> = new Map(),
+    styleBindingMap: Map<Keyword, StyleTag[]> = new Map()
   ) {
     this.nodeMap = nodeMap
     this.edgeMap = edgeMap
@@ -49,11 +53,11 @@ export class Dag {
     this.edgeMap.set(edge.id, edge)
   }
 
-  addStyle(styleName: string, styleMap: Map<string, string>): void {
-    this.flatStyleMap.set(styleName, styleMap)
+  addStyle(styleTag: StyleTag, styleProperties: StyleProperties): void {
+    this.flatStyleMap.set(styleTag, styleProperties)
   }
 
-  addStyleBinding(keyword: string, styleTags: string[]): void {
+  addStyleBinding(keyword: Keyword, styleTags: StyleTag[]): void {
     this.styleBinding.set(keyword, styleTags)
   }
 
@@ -65,31 +69,16 @@ export class Dag {
     return Array.from(this.edgeMap.values())
   }
 
-  getNodeNameList(): Array<string> {
-    return Array.from(this.nodeMap.values())
-            .map(node => node.name)
-            .sort()
-  }
-
-  getEdgeNamesList(): Array<NodeNamePair> {
-    return Array.from(this.edgeMap.values())
-            .map(edge => [
-              this.nodeMap.get(edge.srcNodeId)?.name,
-              this.nodeMap.get(edge.destNodeId)?.name
-            ] as NodeNamePair)
-            .sort()
-  }
-
-  getFlattenedStyles(): Map<string, Map<string, string>> {
+  getFlattenedStyles(): Map<StyleTag, StyleProperties> {
     return this.flatStyleMap
   }
 
-  getStyleBindings(): Map<string, string[]> {
+  getStyleBindings(): Map<Keyword, StyleTag[]> {
     return this.styleBinding
   }
 
   formatDag(): string {
-    function styleTagDump(styleTagList: Array<string>): string {
+    function styleTagDump(styleTagList: Array<StyleTag>): string {
       let resultDump = ""
       if (styleTagList.length > 0) {
         resultDump = "\n\tStyleTags: [" + styleTagList.toString() + "]"
@@ -97,11 +86,11 @@ export class Dag {
       return resultDump
     }
 
-    function styleMapDump(styleMap: Map<string, string>): string {
+    function stylePropertiesDump(styleProperties: StyleProperties): string {
       let resultDump = ""
-      if (styleMap.size > 0) {
-        resultDump = "\n\tStyleMap: "
-          + JSON.stringify(Object.fromEntries(styleMap))
+      if (styleProperties.size > 0) {
+        resultDump = "\n\tStyleProperties: "
+          + JSON.stringify(Object.fromEntries(styleProperties))
       }
       return resultDump
     }
@@ -110,7 +99,7 @@ export class Dag {
     for (const node of this.nodeMap.values()) {
       result += "Node: " + node.name
         + styleTagDump(node.styleTags)
-        + styleMapDump(node.styleMap)
+        + stylePropertiesDump(node.styleProperties)
         + "\n"
     }
     for (const edge of this.edgeMap.values()) {
@@ -118,11 +107,11 @@ export class Dag {
         + " -(" + edge.name + ")-> " 
         + this.nodeMap.get(edge.destNodeId)?.name
         + styleTagDump(edge.styleTags)
-        + styleMapDump(edge.styleMap)
+        + stylePropertiesDump(edge.styleProperties)
         + "\n"
     }
-    for (const [styleName, style] of this.flatStyleMap) {
-      result += "Style: " + styleName + styleMapDump(style) + "\n"
+    for (const [styleTag, style] of this.flatStyleMap) {
+      result += "Style: " + styleTag + stylePropertiesDump(style) + "\n"
     }
     for (const [keyword, styleTags] of this.styleBinding) {
       result += "StyleBinding: " + keyword + styleTagDump(styleTags) + "\n"

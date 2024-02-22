@@ -1,6 +1,6 @@
 import { EdgeDefinition, ElementsDefinition, NodeDefinition, Stylesheet } from 'cytoscape'
 import { DESCRIPTION_PROPERTY } from './constants'
-import { Dag } from "./dag"
+import { Dag, StyleProperties } from "./dag"
 
 // a list of known property prefixes that should not be passed to cytoscape
 const NON_CYTOSCAPE_PROPERTY_PREFIXES: string[] = [
@@ -13,9 +13,9 @@ export function keyStartsWithNonCytoscapePrefix(key: string): boolean {
   )
 }
 
-export function filterCytoscapeProperties(styleMap: Map<string, string>): Map<string, string>{
+export function filterCytoscapeProperties(styleProperties: StyleProperties): StyleProperties{
   return new Map(
-    [...styleMap.entries()].filter(
+    [...styleProperties.entries()].filter(
       ([key, _]) => !keyStartsWithNonCytoscapePrefix(key)
     )
   )
@@ -56,28 +56,28 @@ export function makeCyElements(dag: Dag): ElementsDefinition {
 
 export function makeNodeStylesheets(dag: Dag): Stylesheet[] {
   return dag.getNodeList()
-    .filter(node => node.styleMap.size > 0)
+    .filter(node => node.styleProperties.size > 0)
     .map((node) => ({
       selector: `node#${node.id}`,
-      style: Object.fromEntries(filterCytoscapeProperties(node.styleMap))
+      style: Object.fromEntries(filterCytoscapeProperties(node.styleProperties))
     }))
 }
 
 export function makeEdgeStyleSheets(dag: Dag): Stylesheet[] {
   return dag.getEdgeList()
-    .filter(edge => edge.styleMap.size > 0)
+    .filter(edge => edge.styleProperties.size > 0)
     .map((edge) => ({
       selector: `edge#${edge.id}`,
-      style: Object.fromEntries(filterCytoscapeProperties(edge.styleMap))
+      style: Object.fromEntries(filterCytoscapeProperties(edge.styleProperties))
     }))
 }
 
 export function makeClassStyleSheets(dag: Dag): Stylesheet[] {
   const classStyles: Stylesheet[] = []
-  dag.getFlattenedStyles().forEach((styleMap, styleName) => {
+  dag.getFlattenedStyles().forEach((styleProperties, styleTag) => {
     classStyles.push({
-      selector: '.' + styleName,
-      style: Object.fromEntries(filterCytoscapeProperties(styleMap))
+      selector: '.' + styleTag,
+      style: Object.fromEntries(filterCytoscapeProperties(styleProperties))
     })
   })
   return classStyles
@@ -88,11 +88,11 @@ export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
   const flatStyleMap = dag.getFlattenedStyles()
   dag.getStyleBindings().forEach((styleTags, keyword) => {
     styleTags.forEach((styleTag) => {
-      const styleMap = flatStyleMap.get(styleTag)
-      if (styleMap) {
+      const styleProperties = flatStyleMap.get(styleTag)
+      if (styleProperties) {
         nameStyles.push({
           selector: `[name ='${keyword}']`,
-          style: Object.fromEntries(filterCytoscapeProperties(styleMap))
+          style: Object.fromEntries(filterCytoscapeProperties(styleProperties))
         })
       } else {
         console.log(`keyword ${keyword} could not be bound to ${styleTag}`)

@@ -5,24 +5,22 @@ import {
   DESCRIPTION_PREFIX,
   POPPER_INNER_DIV_CLASS,
 } from "./constants"
-import { Dag, DagElement } from "./dag" 
-
-export type NodeId = string
-export type EdgeId = string
-export type ElementId = NodeId | EdgeId
-export type StyleTag = string
-export type Keyword = string
+import {
+  Dag, DagElement,
+  NodeId, EdgeId, ElementId,
+  StyleTag, Keyword, StyleProperties
+} from "./dag" 
 
 export interface DescriptionData {
   description: string,
-  descriptionStyleMap: Map<string, string>
+  descriptionStyleProperties: StyleProperties
 }
 
-export function getDescriptionProperties(styleMap: Map<string, string>): Map<string, string>{
-  // get only properties that starts with DESCRIPTION_PREFIX from styleMap and remove the prefix
+export function getDescriptionProperties(styleProperties: StyleProperties): StyleProperties{
+  // get only properties that starts with DESCRIPTION_PREFIX from styleProperties and remove the prefix
   // e.g. Map(["description-color", "black"]) -> Map(["color", "black"])
   return new Map(
-    [...styleMap.entries()].filter(
+    [...styleProperties.entries()].filter(
       ([key, _]) => key.startsWith(DESCRIPTION_PREFIX)
     ).map(
       ([key, value]) => [key.slice(DESCRIPTION_PREFIX.length), value]
@@ -30,18 +28,18 @@ export function getDescriptionProperties(styleMap: Map<string, string>): Map<str
   )
 }
 
-export function getDescriptionData(styleMap: Map<string, string>): DescriptionData | null {
-  const description = styleMap.get(DESCRIPTION_PROPERTY)
+export function getDescriptionData(styleProperties: StyleProperties): DescriptionData | null {
+  const description = styleProperties.get(DESCRIPTION_PROPERTY)
   // return early if there is no description to apply styles to
   if (!description) return null
-  const descriptionStyleMap = getDescriptionProperties(styleMap)
-  return { description, descriptionStyleMap }
+  const descriptionStyleMap = getDescriptionProperties(styleProperties)
+  return { description, descriptionStyleProperties: descriptionStyleMap }
 }
 
 export function getStyleDescriptionData(dag: Dag): Map<StyleTag, DescriptionData> {
   return new Map<StyleTag, DescriptionData>(
     Array.from(dag.getFlattenedStyles().entries())
-      .map(([styleTag, styleMap]) => [styleTag, getDescriptionData(styleMap)])
+      .map(([styleTag, styleProperties]) => [styleTag, getDescriptionData(styleProperties)])
       .filter(([_, descriptionData]) => !!descriptionData) as Iterable<[StyleTag, DescriptionData]>
   )
 }
@@ -65,7 +63,7 @@ function getElementDescriptionData(dagElements: DagElement[] ): Map<ElementId, D
   return new Map<ElementId, DescriptionData>(
     dagElements
       .map((dagElement) => {
-        const descriptionData = getDescriptionData(dagElement.styleMap)
+        const descriptionData = getDescriptionData(dagElement.styleProperties)
         if (!descriptionData) return null
         return [dagElement.id, descriptionData]
       })
@@ -99,8 +97,8 @@ function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
   // add popper class to inner div to allow for manipulation later
   innerDiv.classList.add(POPPER_INNER_DIV_CLASS)
   // add custom description styles to inner div
-  for (const [key, value] of descriptionData.descriptionStyleMap) {
-    innerDiv.style.setProperty(key, value)
+  for (const [property, value] of descriptionData.descriptionStyleProperties) {
+    innerDiv.style.setProperty(property, value)
   }
   
   const text = document.createElement('p')
@@ -165,7 +163,7 @@ export function extendCyPopperElements(cy: cytoscape.Core, dag: Dag) {
     const zoomLevel = cy.zoom()
     const popperDivArray = Array.from(document.getElementsByClassName(POPPER_INNER_DIV_CLASS))
     for (const popperDiv of popperDivArray) {
-      const popperDivElement = popperDiv as HTMLElement;
+      const popperDivElement = popperDiv as HTMLElement
       popperDivElement.style.transform = `scale(${zoomLevel})`
     }
   })

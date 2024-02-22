@@ -52,7 +52,7 @@ export default defineComponent({
         EditorView.updateListener.of((v:ViewUpdate): void => {
           if (v.docChanged) {
             // delay until typing finishes so we don't process on every keystroke
-            clearTimeout(this.prevTimeoutId);
+            clearTimeout(this.prevTimeoutId)
             let timeOut = 500 // ms
             this.prevTimeoutId = setTimeout(() => {
               this.$emit("update-editorstate", v.state)
