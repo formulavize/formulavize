@@ -2,17 +2,23 @@ import { EdgeDefinition, ElementsDefinition, NodeDefinition, Stylesheet } from '
 import { DESCRIPTION_PROPERTY } from './constants'
 import { Dag } from "./dag"
 
-// a list of known properties that should not be passed to cytoscape
-const NON_CYTOSCAPE_PROPERTIES: string[] = [
-  DESCRIPTION_PROPERTY
+// a list of known property prefixes that should not be passed to cytoscape
+const NON_CYTOSCAPE_PROPERTY_PREFIXES: string[] = [
+  DESCRIPTION_PROPERTY // this captures description and all description-*
 ]
 
-export function filterCytoscapeProperties(styleMap: Map<string, string>): Map<string, string> {
-  const filteredMap = new Map<string, string>(styleMap)
-  for (const key of NON_CYTOSCAPE_PROPERTIES) {
-    filteredMap.delete(key)
-  }
-  return filteredMap
+export function keyStartsWithNonCytoscapePrefix(key: string): boolean {
+  return NON_CYTOSCAPE_PROPERTY_PREFIXES.some(
+    (nonCytoscapePropertyPrefix) => key.startsWith(nonCytoscapePropertyPrefix)
+  )
+}
+
+export function filterCytoscapeProperties(styleMap: Map<string, string>): Map<string, string>{
+  return new Map(
+    [...styleMap.entries()].filter(
+      ([key, _]) => !keyStartsWithNonCytoscapePrefix(key)
+    )
+  )
 }
 
 export function makeCyNodes(dag : Dag): NodeDefinition[] {

@@ -1,120 +1,172 @@
 import cytoscape from 'cytoscape'
 import popper from 'cytoscape-popper'
-import { DESCRIPTION_PROPERTY, POPPER_DIV_CLASS, POPPER_BASE_FONT_SIZE } from "./constants"
+import {
+  DESCRIPTION_PROPERTY,
+  DESCRIPTION_PREFIX,
+  POPPER_INNER_DIV_CLASS,
+} from "./constants"
 import { Dag, DagElement } from "./dag" 
 
-export function getStyleDescriptions(dag: Dag): Map<string, string> {
-  const styeTagToDesription: Map<string, string> = new Map<string, string>()
-  dag.getFlattenedStyles().forEach((styleMap, styleName) => {
-    const description = styleMap.get(DESCRIPTION_PROPERTY)
-    if (description !== undefined) {
-      styeTagToDesription.set(styleName, description)
-    }
-  })
-  return styeTagToDesription
+export type NodeId = string
+export type EdgeId = string
+export type ElementId = NodeId | EdgeId
+export type StyleTag = string
+export type Keyword = string
+
+export interface DescriptionData {
+  description: string,
+  descriptionStyleMap: Map<string, string>
 }
 
-export function getNamesWithStyleDescriptions(dag: Dag, styleDesc: Map<string, string>): Map<string, string>  {
-  const nameToDescription: Map<string, string> = new Map<string, string>()
-  // usage order takes precedence - take first style with a description
-  dag.getStyleBindings().forEach((styleTags, keyword) => {
-    const usedTag = styleTags.find((tag) => styleDesc.has(tag))
-    if (usedTag !== undefined) {
-      nameToDescription.set(keyword, styleDesc.get(usedTag) ?? "")
-    }
-  })
-  return nameToDescription
+export function getDescriptionProperties(styleMap: Map<string, string>): Map<string, string>{
+  // get only properties that starts with DESCRIPTION_PREFIX from styleMap and remove the prefix
+  // e.g. Map(["description-color", "black"]) -> Map(["color", "black"])
+  return new Map(
+    [...styleMap.entries()].filter(
+      ([key, _]) => key.startsWith(DESCRIPTION_PREFIX)
+    ).map(
+      ([key, value]) => [key.slice(DESCRIPTION_PREFIX.length), value]
+    )
+  )
 }
 
-function getElementDescriptions(dagElements: DagElement[] ): Map<string, string> {
-  const elementIdToDescription: Map<string, string> = new Map<string, string>()
-  dagElements.forEach((dagElement) => {
-    const description = dagElement.styleMap.get(DESCRIPTION_PROPERTY)
-    if (description !== undefined) {
-      elementIdToDescription.set(dagElement.id, description)
-    }
-  })
-  return elementIdToDescription
+export function getDescriptionData(styleMap: Map<string, string>): DescriptionData | null {
+  const description = styleMap.get(DESCRIPTION_PROPERTY)
+  // return early if there is no description to apply styles to
+  if (!description) return null
+  const descriptionStyleMap = getDescriptionProperties(styleMap)
+  return { description, descriptionStyleMap }
 }
 
-export function getNodeDescriptions(dag: Dag): Map<string, string> {
-  return getElementDescriptions(dag.getNodeList())
+export function getStyleDescriptionData(dag: Dag): Map<StyleTag, DescriptionData> {
+  return new Map<StyleTag, DescriptionData>(
+    Array.from(dag.getFlattenedStyles().entries())
+      .map(([styleTag, styleMap]) => [styleTag, getDescriptionData(styleMap)])
+      .filter(([_, descriptionData]) => !!descriptionData) as Iterable<[StyleTag, DescriptionData]>
+  )
 }
 
-export function getEdgeDescriptions(dag: Dag): Map<string, string> {
-  return getElementDescriptions(dag.getEdgeList())
+export function getNamesWithStyleDescriptionData(
+  dag: Dag, styleTagDescriptions: Map<StyleTag, DescriptionData>
+): Map<Keyword, DescriptionData>  {
+  return new Map<Keyword, DescriptionData>(
+    Array.from(dag.getStyleBindings().entries())
+      .map(([keyword, styleTags]) => {
+        // find the first style tag that has a description (tag usage order takes precedence)
+        const usedTag = styleTags.find((tag) => styleTagDescriptions.has(tag))
+        if (!usedTag) return null
+        return [keyword, styleTagDescriptions.get(usedTag)]
+      })
+      .filter((entry) => !!entry) as Iterable<[Keyword, DescriptionData]>
+  )
+}
+
+function getElementDescriptionData(dagElements: DagElement[] ): Map<ElementId, DescriptionData> {
+  return new Map<ElementId, DescriptionData>(
+    dagElements
+      .map((dagElement) => {
+        const descriptionData = getDescriptionData(dagElement.styleMap)
+        if (!descriptionData) return null
+        return [dagElement.id, descriptionData]
+      })
+      .filter((descriptionData) => !!descriptionData) as Iterable<[ElementId, DescriptionData]>
+  )
+}
+
+export function getNodeDescriptionData(dag: Dag): Map<NodeId, DescriptionData> {
+  return getElementDescriptionData(dag.getNodeList())
+}
+
+export function getEdgeDescriptionData(dag: Dag): Map<EdgeId, DescriptionData> {
+  return getElementDescriptionData(dag.getEdgeList())
 }
 
 function clearAllPopperDivs() {
-  const popperDivArray = Array.from(document.getElementsByClassName(POPPER_DIV_CLASS))
+  const popperDivArray = Array.from(document.getElementsByClassName(POPPER_INNER_DIV_CLASS))
   for (const popperDiv of popperDivArray) {
     popperDiv.parentNode?.removeChild(popperDiv)
   }
 }
 
-function makePopperDiv(description: string): HTMLDivElement {
-  const div = document.createElement('div')
-  div.classList.add(POPPER_DIV_CLASS)
+function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
+  // create an inner div to separate our styles from popper css properties
+  const innerDiv = document.createElement('div')
+  // inner div styles required for correct zoom sizing
+  innerDiv.style.position = "relative"
+  innerDiv.style.transformOrigin = "top"
+  innerDiv.style.display = "inline-block"
+
+  // add popper class to inner div to allow for manipulation later
+  innerDiv.classList.add(POPPER_INNER_DIV_CLASS)
+  // add custom description styles to inner div
+  for (const [key, value] of descriptionData.descriptionStyleMap) {
+    innerDiv.style.setProperty(key, value)
+  }
   
   const text = document.createElement('p')
-  text.innerHTML = description.replace(/(?:\r\n|\r|\n)/g, '<br />');
+  text.innerHTML = descriptionData.description.replace(/(?:\r\n|\r|\n)/g, '<br />')
+  text.style.margin = "1em"
 
-  div.appendChild(text)
-  return div
+  innerDiv.appendChild(text)
+
+  // outer div will receive popper css properties
+  const outerDiv = document.createElement('div')
+  outerDiv.appendChild(innerDiv)
+
+  return outerDiv
 }
 
 function addDescriptionPopper(
   cy: cytoscape.Core,
   canvasElement: HTMLElement,
   cySelection: string,
-  description: string)
+  descriptionData: DescriptionData)
 {
   cy.elements(cySelection).forEach((cyElement) => {
     const popperElement = cyElement.popper({
       content: () => {
-        const popperDiv = makePopperDiv(description)
+        const popperDiv = makePopperDiv(descriptionData)
         canvasElement.appendChild(popperDiv)
         return popperDiv
       }
     })
     cy.on("pan zoom resize", () => { popperElement.update() })
   })
-  }
+}
 
 export function extendCyPopperElements(cy: cytoscape.Core, dag: Dag) {
   clearAllPopperDivs()
 
   const canvasElement = document.getElementById('canvas') ?? document.body
 
-  const nodeDescriptions = getNodeDescriptions(dag)
-  nodeDescriptions.forEach((description, nodeId) => {
-    addDescriptionPopper(cy, canvasElement, `node#${nodeId}`, description)
+  const nodeDescriptionData = getNodeDescriptionData(dag)
+  nodeDescriptionData.forEach((descriptionData, nodeId) => {
+    addDescriptionPopper(cy, canvasElement, `node#${nodeId}`, descriptionData)
   })
 
-  const edgeDescriptions = getEdgeDescriptions(dag)
-  edgeDescriptions.forEach((description, edgeId) => {
-    addDescriptionPopper(cy, canvasElement, `edge#${edgeId}`, description)
+  const edgeDescriptionData = getEdgeDescriptionData(dag)
+  edgeDescriptionData.forEach((descriptionData, edgeId) => {
+    addDescriptionPopper(cy, canvasElement, `edge#${edgeId}`, descriptionData)
   })
 
-  const styleDescriptions = getStyleDescriptions(dag)
-  const nameDescriptions = getNamesWithStyleDescriptions(dag, styleDescriptions)
+  const styleDescriptionData = getStyleDescriptionData(dag)
+  const nameDescriptionData = getNamesWithStyleDescriptionData(dag, styleDescriptionData)
 
-  nameDescriptions.forEach((description, keyword) => {
-    addDescriptionPopper(cy, canvasElement, `[name ='${keyword}']`, description)
+  nameDescriptionData.forEach((descriptionData, keyword) => {
+    addDescriptionPopper(cy, canvasElement, `[name ='${keyword}']`, descriptionData)
   })
 
-  styleDescriptions.forEach((description, styleTag) => {
-    addDescriptionPopper(cy, canvasElement, `.${styleTag}`, description)
+  styleDescriptionData.forEach((descriptionData, styleTag) => {
+    addDescriptionPopper(cy, canvasElement, `.${styleTag}`, descriptionData)
   })
 
-  // scale popper font size with zoom level
+  // scale popper divs with zoom level
   cy.on("zoom", () => {
     const zoomLevel = cy.zoom()
-    const scaledFontSize = POPPER_BASE_FONT_SIZE * zoomLevel
-    const popperDivArray = Array.from(document.getElementsByClassName(POPPER_DIV_CLASS))
+    const popperDivArray = Array.from(document.getElementsByClassName(POPPER_INNER_DIV_CLASS))
     for (const popperDiv of popperDivArray) {
       const popperDivElement = popperDiv as HTMLElement;
-      popperDivElement.style.fontSize = `${scaledFontSize}px`
+      popperDivElement.style.transform = `scale(${zoomLevel})`
     }
   })
 }

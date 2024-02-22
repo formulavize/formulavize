@@ -1,24 +1,43 @@
 import { describe, test, expect } from 'vitest'
 import {
-  filterCytoscapeProperties, makeCyNodes, makeCyEdges,
+  keyStartsWithNonCytoscapePrefix, filterCytoscapeProperties, makeCyNodes, makeCyEdges,
   makeNodeStylesheets, makeEdgeStyleSheets, makeClassStyleSheets, makeNameStyleSheets
 } from '../../../src/common/cyGraphFactory'
-import { LABEL_PROPERTY, DESCRIPTION_PROPERTY } from '../../../src/common/constants'
+import { DESCRIPTION_PROPERTY } from '../../../src/common/constants'
 import { Dag } from '../../../src/common/dag'
 
-describe("filters for cytoscape properties", () => {
-  test("filters out description", () => {
-    const testMap = new Map<string, string>([
-      [LABEL_PROPERTY, "label"],
-      [DESCRIPTION_PROPERTY, "description"],
-      ["a", "1"],
-      ["b", "2"],
-    ])
-    const expectedMap = new Map<string, string>([
-      [LABEL_PROPERTY, "label"],
-      ["a", "1"],
-      ["b", "2"],
-    ])
+describe("filters out non-cytoscape properties", () => {
+  test("property with non-cytoscape prefix", () => {
+    expect(keyStartsWithNonCytoscapePrefix(DESCRIPTION_PROPERTY+"-font-size")).toBe(true)
+  })
+  test("property without non-cytoscape prefix", () => {
+    expect(keyStartsWithNonCytoscapePrefix("test")).toBe(false)
+  })
+  test("empty map", () => {
+    const testMap = new Map<string, string>()
+    const expectedMap = new Map<string, string>()
+    expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap)
+  })
+  test("map without description property", () => {
+    const testMap = new Map<string, string>([["a", "1"], ["b", "2"]])
+    const expectedMap = new Map<string, string>([["a", "1"], ["b", "2"]])
+    expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap)
+  })
+  test("map with only description property", () => {
+    const testMap = new Map<string, string>([[DESCRIPTION_PROPERTY, "desc"]])
+    const expectedMap = new Map<string, string>()
+    expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap)
+  })
+  test("map with multiple properties and a description property", () => {
+    const testMap = new Map<string, string>([["a", "1"], [DESCRIPTION_PROPERTY, "desc"], ["b", "2"]])
+    const expectedMap = new Map<string, string>([["a", "1"], ["b", "2"]])
+    expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap)
+  })
+  test("map with multiple properties and a prefixed description properties", () => {
+    const testMap = new Map<string, string>(
+      [["a", "1"], [DESCRIPTION_PROPERTY, "desc"], [DESCRIPTION_PROPERTY+"-font-size", "12"]]
+    )
+    const expectedMap = new Map<string, string>([["a", "1"]])
     expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap)
   })
 })
