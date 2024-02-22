@@ -5,12 +5,14 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import cytoscape from 'cytoscape'
-import { makeCyElements, makeCyStylesheets } from '../common/cyGraphFactory'
-import { Dag } from '../common/dag'
-//@ts-ignore
 import dagre from 'cytoscape-dagre'
+import popper from 'cytoscape-popper'
+import { makeCyElements, makeCyStylesheets } from '../common/cyGraphFactory'
+import { extendCyPopperElements } from '../common/cyPopperExtender'
+import { Dag } from '../common/dag'
 
 cytoscape.use(dagre)
+cytoscape.use(popper)
 
 export default defineComponent({
   name: 'GraphView',
@@ -44,12 +46,16 @@ export default defineComponent({
     // graph with just one added node has better performance than running on an
     // entirely new graph but still has a noticeable delay.
     reDrawDag() {
-      const newElements = makeCyElements(this.curDag)
       this.cy.elements().remove()
+      this.cy.removeAllListeners()
+      
+      const newElements = makeCyElements(this.curDag)
       this.cy.add(newElements)
       
       const newStylesheets = makeCyStylesheets(this.curDag)
       this.cy.style(newStylesheets)
+
+      extendCyPopperElements(this.cy, this.curDag)
 
       Promise.resolve().then(() => {
         this.cy.layout({ name: 'dagre' }).run() // most expensive operation

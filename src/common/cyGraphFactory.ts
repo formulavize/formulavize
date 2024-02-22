@@ -1,5 +1,25 @@
 import { EdgeDefinition, ElementsDefinition, NodeDefinition, Stylesheet } from 'cytoscape'
-import { Dag } from "./dag" 
+import { DESCRIPTION_PROPERTY } from './constants'
+import { Dag } from "./dag"
+
+// a list of known property prefixes that should not be passed to cytoscape
+const NON_CYTOSCAPE_PROPERTY_PREFIXES: string[] = [
+  DESCRIPTION_PROPERTY // this captures description and all description-*
+]
+
+export function keyStartsWithNonCytoscapePrefix(key: string): boolean {
+  return NON_CYTOSCAPE_PROPERTY_PREFIXES.some(
+    (nonCytoscapePropertyPrefix) => key.startsWith(nonCytoscapePropertyPrefix)
+  )
+}
+
+export function filterCytoscapeProperties(styleMap: Map<string, string>): Map<string, string>{
+  return new Map(
+    [...styleMap.entries()].filter(
+      ([key, _]) => !keyStartsWithNonCytoscapePrefix(key)
+    )
+  )
+}
 
 export function makeCyNodes(dag : Dag): NodeDefinition[] {
   return dag.getNodeList().map((node) => (
@@ -39,7 +59,7 @@ export function makeNodeStylesheets(dag: Dag): Stylesheet[] {
     .filter(node => node.styleMap.size > 0)
     .map((node) => ({
       selector: `node#${node.id}`,
-      style: Object.fromEntries(node.styleMap)
+      style: Object.fromEntries(filterCytoscapeProperties(node.styleMap))
     }))
 }
 
@@ -48,7 +68,7 @@ export function makeEdgeStyleSheets(dag: Dag): Stylesheet[] {
     .filter(edge => edge.styleMap.size > 0)
     .map((edge) => ({
       selector: `edge#${edge.id}`,
-      style: Object.fromEntries(edge.styleMap)
+      style: Object.fromEntries(filterCytoscapeProperties(edge.styleMap))
     }))
 }
 
@@ -57,7 +77,7 @@ export function makeClassStyleSheets(dag: Dag): Stylesheet[] {
   dag.getFlattenedStyles().forEach((styleMap, styleName) => {
     classStyles.push({
       selector: '.' + styleName,
-      style: Object.fromEntries(styleMap)
+      style: Object.fromEntries(filterCytoscapeProperties(styleMap))
     })
   })
   return classStyles
@@ -72,7 +92,7 @@ export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
       if (styleMap) {
         nameStyles.push({
           selector: `[name ='${keyword}']`,
-          style: Object.fromEntries(styleMap)
+          style: Object.fromEntries(filterCytoscapeProperties(styleMap))
         })
       } else {
         console.log(`keyword ${keyword} could not be bound to ${styleTag}`)

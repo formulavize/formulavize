@@ -1,4 +1,4 @@
-interface DagElement {
+export interface DagElement {
   id: string
   name: string
   styleTags: Array<string>
