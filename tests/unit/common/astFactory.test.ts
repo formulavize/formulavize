@@ -80,7 +80,7 @@ describe("style nodes", () => {
     expect(makeTree(input)).toEqual(
       new Recipe([
         new NamedStyle("s", new Style(
-          new Map<string, string>([
+          new Map([
             ["x", "1px"],
             ["y", "#abc"],
             ["z", "w"],
@@ -94,7 +94,7 @@ describe("style nodes", () => {
     expect(makeTree(input)).toEqual(
       new Recipe([
         new Call("f", [], new Style(
-          new Map<string, string>([
+          new Map([
             ["x", "1"],
           ])
         ))
@@ -107,7 +107,7 @@ describe("style nodes", () => {
       new Recipe([
         new Assignment(
           [
-            new Variable("a", new Style(new Map<string, string>([["b", "1"]]))),
+            new Variable("a", new Style(new Map([["b", "1"]]))),
             new Variable("c", new Style(undefined, ["d", "e"]))
           ],
           new Call("f", []),
@@ -132,7 +132,7 @@ describe("style nodes", () => {
       new Recipe([
         new NamedStyle("s",
           new Style(
-            new Map<string, string>([
+            new Map([
               ["a-b", "1"],
               ["c--d", "2"],
               ["e_f", "3,4,5"]
@@ -148,7 +148,7 @@ describe("style nodes", () => {
     expect(makeTree(input)).toEqual(
       new Recipe([
         new Call("f", [], new Style(
-          new Map<string, string>([
+          new Map([
             [ DESCRIPTION_PROPERTY, "test" ],
           ])
         ))
@@ -160,7 +160,7 @@ describe("style nodes", () => {
     expect(makeTree(input)).toEqual(
       new Recipe([
         new Call("f", [], new Style(
-          new Map<string, string>([
+          new Map([
             [ DESCRIPTION_PROPERTY, "one\ntwo" ],
           ])
         ))
@@ -172,7 +172,7 @@ describe("style nodes", () => {
     expect(makeTree(input)).toEqual(
       new Recipe([
         new Call("f", [], new Style(
-          new Map<string, string>([
+          new Map([
             [ DESCRIPTION_PROPERTY, "test" ],
             [ "foo", "bar" ]
           ])

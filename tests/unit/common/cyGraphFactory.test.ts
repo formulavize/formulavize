@@ -14,30 +14,30 @@ describe("filters out non-cytoscape properties", () => {
     expect(keyStartsWithNonCytoscapePrefix("test")).toBe(false)
   })
   test("empty map", () => {
-    const testMap = new Map<string, string>()
-    const expectedMap = new Map<string, string>()
+    const testMap = new Map()
+    const expectedMap = new Map()
     expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap)
   })
   test("map without description property", () => {
-    const testMap = new Map<string, string>([["a", "1"], ["b", "2"]])
-    const expectedMap = new Map<string, string>([["a", "1"], ["b", "2"]])
+    const testMap = new Map([["a", "1"], ["b", "2"]])
+    const expectedMap = new Map([["a", "1"], ["b", "2"]])
     expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap)
   })
   test("map with only description property", () => {
-    const testMap = new Map<string, string>([[DESCRIPTION_PROPERTY, "desc"]])
-    const expectedMap = new Map<string, string>()
+    const testMap = new Map([[DESCRIPTION_PROPERTY, "desc"]])
+    const expectedMap = new Map()
     expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap)
   })
   test("map with multiple properties and a description property", () => {
-    const testMap = new Map<string, string>([["a", "1"], [DESCRIPTION_PROPERTY, "desc"], ["b", "2"]])
-    const expectedMap = new Map<string, string>([["a", "1"], ["b", "2"]])
+    const testMap = new Map([["a", "1"], [DESCRIPTION_PROPERTY, "desc"], ["b", "2"]])
+    const expectedMap = new Map([["a", "1"], ["b", "2"]])
     expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap)
   })
   test("map with multiple properties and a prefixed description properties", () => {
-    const testMap = new Map<string, string>(
+    const testMap = new Map(
       [["a", "1"], [DESCRIPTION_PROPERTY, "desc"], [DESCRIPTION_PROPERTY+"-font-size", "12"]]
     )
-    const expectedMap = new Map<string, string>([["a", "1"]])
+    const expectedMap = new Map([["a", "1"]])
     expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap)
   })
 })
@@ -47,11 +47,11 @@ describe("makes cytoscape elements", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleProperties: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map(),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: ["s", "t"], styleProperties: new Map<string, string>([["a", "1"]]),
+      styleTags: ["s", "t"], styleProperties: new Map([["a", "1"]]),
     })
     const expectedCyNodes = [
       { data: { id: "idX", name: "nameX"} },
@@ -63,16 +63,16 @@ describe("makes cytoscape elements", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleProperties: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map(),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: [], styleProperties: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map(),
     })
     testDag.addEdge({
       id: "idZ", name: "nameZ", srcNodeId: "idX", destNodeId: "idY",
       styleTags: ["s", "t"],
-      styleProperties: new Map<string, string>([["a", "1"]]),
+      styleProperties: new Map([["a", "1"]]),
     })
     const expectedCyEdges = [{
       data: {
@@ -90,11 +90,11 @@ describe("makes cytoscape stylesheets", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: ["s"], styleProperties: new Map<string, string>(),
+      styleTags: ["s"], styleProperties: new Map(),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: [], styleProperties: new Map<string, string>([["a", "1"]]),
+      styleTags: [], styleProperties: new Map([["a", "1"]]),
     })
     const expectedCyNodeStyles= [{
       selector: "node#idY",
@@ -106,16 +106,16 @@ describe("makes cytoscape stylesheets", () => {
     const testDag = new Dag()
     testDag.addNode({
       id: "idX", name: "nameX",
-      styleTags: [], styleProperties: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map(),
     })
     testDag.addNode({
       id: "idY", name: "nameY",
-      styleTags: [], styleProperties: new Map<string, string>(),
+      styleTags: [], styleProperties: new Map(),
     })
     testDag.addEdge({
       id: "idZ", name: "nameZ", srcNodeId: "idX", destNodeId: "idY",
       styleTags: ["s"],
-      styleProperties: new Map<string, string>([["a", "1"]]),
+      styleProperties: new Map([["a", "1"]]),
     })
     const expectedCyEdgeStyles= [{
       selector: "edge#idZ",
@@ -125,7 +125,7 @@ describe("makes cytoscape stylesheets", () => {
   })
   test("class styles", () => {
     const testDag = new Dag()
-    testDag.addStyle("s", new Map<string, string>([["a", "1"], ["b", "2"]]))
+    testDag.addStyle("s", new Map([["a", "1"], ["b", "2"]]))
     const expectedCyClassStyles= [{
       selector: ".s",
       style: {"a": "1", "b": "2"}
@@ -140,8 +140,8 @@ describe("makes cytoscape stylesheets", () => {
   test("name styles", () => {
     const testDag = new Dag()
     testDag.addStyleBinding("x", ["a", "b"])
-    testDag.addStyle("a", new Map<string, string>([["i", "1"]]))
-    testDag.addStyle("b", new Map<string, string>([["j", "2"], ["k", "3"]]))
+    testDag.addStyle("a", new Map([["i", "1"]]))
+    testDag.addStyle("b", new Map([["j", "2"], ["k", "3"]]))
     const expectedCyNameStyles= [
       {
         selector: "[name ='x']",

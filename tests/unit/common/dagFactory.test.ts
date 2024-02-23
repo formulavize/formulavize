@@ -286,7 +286,7 @@ describe("style tests", () => {
   test("node description and label property", () => {
     const recipe = new Recipe([
       new Call("name", [], new Style(
-        new Map<string, string>([
+        new Map([
           [ DESCRIPTION_PROPERTY, "my_desc" ],
           [ "label", "my_label" ],
         ])
@@ -304,7 +304,7 @@ describe("style tests", () => {
   test("edge description and label property", () => {
     const recipe = new Recipe([
       new Assignment(
-        [new Variable("x", new Style(new Map<string, string>([
+        [new Variable("x", new Style(new Map([
           [ DESCRIPTION_PROPERTY, "my_desc" ],
           [ "label", "my_label" ],
         ])))],

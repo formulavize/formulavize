@@ -34,12 +34,11 @@ function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
     }
   )
 
-  const styleDeclarations: Map<string, string> = new Map<string, string>()
+  const styleDeclaredPropertyValues = new Map<string, string>()
 
   // If there are description strings, store them in a description property
-  // so that they can be used to make a label later
   if (descriptions.length > 0) {
-    styleDeclarations.set(DESCRIPTION_PROPERTY, descriptions.join('\n'))
+    styleDeclaredPropertyValues.set(DESCRIPTION_PROPERTY, descriptions.join('\n'))
   }
 
   c.node.getChildren("StyleDeclaration").forEach(
@@ -57,11 +56,11 @@ function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
         .join(",") // comma delimit multiple values
         .replace(/(^"|^'|"$|'$)/g, "") // remove captured bounding quotes
         .replace(/\\n/g, "\n") // for enabling cytoscape text-wrap
-      styleDeclarations.set(propName, styleVals)
+      styleDeclaredPropertyValues.set(propName, styleVals)
     }
   )
 
-  return new StyleTreeNode(styleDeclarations, styleTags)
+  return new StyleTreeNode(styleDeclaredPropertyValues, styleTags)
 }
 
 function fillNamedStyle(c: TreeCursor, s: EditorState): NamedStyleTreeNode {
