@@ -22,7 +22,7 @@ export function filterCytoscapeProperties(styleProperties: StyleProperties): Sty
 }
 
 export function makeCyNodes(dag : Dag): NodeDefinition[] {
-  return dag.getNodeList().map((node) => (
+  return dag.getNodeList().map(node => (
     { 
       data: { id: node.id, name: node.name },
       ...(node.styleTags.length > 0 && {
@@ -57,7 +57,7 @@ export function makeCyElements(dag: Dag): ElementsDefinition {
 export function makeNodeStylesheets(dag: Dag): Stylesheet[] {
   return dag.getNodeList()
     .filter(node => node.styleProperties.size > 0)
-    .map((node) => ({
+    .map(node => ({
       selector: `node#${node.id}`,
       style: Object.fromEntries(filterCytoscapeProperties(node.styleProperties))
     }))
@@ -66,7 +66,7 @@ export function makeNodeStylesheets(dag: Dag): Stylesheet[] {
 export function makeEdgeStyleSheets(dag: Dag): Stylesheet[] {
   return dag.getEdgeList()
     .filter(edge => edge.styleProperties.size > 0)
-    .map((edge) => ({
+    .map(edge => ({
       selector: `edge#${edge.id}`,
       style: Object.fromEntries(filterCytoscapeProperties(edge.styleProperties))
     }))
@@ -87,7 +87,7 @@ export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
   const nameStyles: Stylesheet[] = []
   const flatStyleMap = dag.getFlattenedStyles()
   dag.getStyleBindings().forEach((styleTags, keyword) => {
-    styleTags.forEach((styleTag) => {
+    styleTags.forEach(styleTag => {
       const styleProperties = flatStyleMap.get(styleTag)
       if (styleProperties) {
         nameStyles.push({

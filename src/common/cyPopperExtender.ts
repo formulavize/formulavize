@@ -51,23 +51,23 @@ export function getNamesWithStyleDescriptionData(
     Array.from(dag.getStyleBindings().entries())
       .map(([keyword, styleTags]) => {
         // find the first style tag that has a description (tag usage order takes precedence)
-        const usedTag = styleTags.find((tag) => styleTagDescriptions.has(tag))
+        const usedTag = styleTags.find(tag => styleTagDescriptions.has(tag))
         if (!usedTag) return null
         return [keyword, styleTagDescriptions.get(usedTag)]
       })
-      .filter((entry) => !!entry) as Iterable<[Keyword, DescriptionData]>
+      .filter(entry => !!entry) as Iterable<[Keyword, DescriptionData]>
   )
 }
 
 function getElementDescriptionData(dagElements: DagElement[] ): Map<ElementId, DescriptionData> {
   return new Map<ElementId, DescriptionData>(
     dagElements
-      .map((dagElement) => {
+      .map(dagElement => {
         const descriptionData = getDescriptionData(dagElement.styleProperties)
         if (!descriptionData) return null
         return [dagElement.id, descriptionData]
       })
-      .filter((descriptionData) => !!descriptionData) as Iterable<[ElementId, DescriptionData]>
+      .filter(descriptionData => !!descriptionData) as Iterable<[ElementId, DescriptionData]>
   )
 }
 
@@ -120,7 +120,7 @@ function addDescriptionPopper(
   cySelection: string,
   descriptionData: DescriptionData)
 {
-  cy.elements(cySelection).forEach((cyElement) => {
+  cy.elements(cySelection).forEach(cyElement => {
     const popperElement = cyElement.popper({
       content: () => {
         const popperDiv = makePopperDiv(descriptionData)

@@ -1,3 +1,4 @@
+import { match } from 'ts-pattern'
 import { EditorState } from "@codemirror/state"
 import { syntaxTree } from "@codemirror/language"
 import { DESCRIPTION_PROPERTY } from "./constants"
@@ -7,204 +8,134 @@ import { RecipeTreeNode, StatementTreeNode, ValueTreeNode, CallTreeNode,
          StyleTreeNode, NamedStyleTreeNode, StyleBindingTreeNode
         } from "./ast"
 
-function fillStyleTag(c: TreeCursor, s: EditorState): string {
-  let styleTagIdent = ""
-  const childTagId = c.node.getChild("Identifier")
-  if (childTagId) {
-    styleTagIdent = s.doc.sliceString(childTagId.from, childTagId.to)
-  }
-  return styleTagIdent
+function getTextFromChild(childName: string, c: TreeCursor, s: EditorState): string {
+  // Get the child node with the given name from the cursor
+  // and retrieve the text from the EditorState using the syntax node's positions.
+  // If the child is not found, return an empty string
+  const candidateChild = c.node.getChild(childName)
+  return candidateChild ? s.doc.sliceString(candidateChild.from, candidateChild.to) : ""
+}
+
+function getDescription(c: TreeCursor, s: EditorState): string | null {
+  // Get all child StringLiterals with quotes trimmed
+  // from the start and end then join them with newlines
+  const descriptionLines: string[] = c.node.getChildren("StringLiteral").map(
+    stringLiteral => stringLiteral ? s.doc.sliceString(stringLiteral.from+1, stringLiteral.to-1) : ""
+  )
+  return descriptionLines.length > 0 ? descriptionLines.join('\n') : null
 }
 
 function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
-  const styleTags: string[] = []
-  c.node.getChildren("StyleTag").forEach(
-    (styleTag) => {
-      const styleTagIdent = fillStyleTag(styleTag.cursor(), s)
-      styleTags.push(styleTagIdent)
-    }
+  const styleTags: string[] = c.node.getChildren("StyleTag").map(
+    styleTag => getTextFromChild("Identifier", styleTag.cursor(), s)
   )
-
-  const descriptions: string[] = []
-  c.node.getChildren("StringLiteral").forEach(
-    (stringLiteral) => {
-      // trims quotes from the start and end
-      const desc = s.doc.sliceString(stringLiteral.from+1, stringLiteral.to-1)
-      descriptions.push(desc)
-    }
+  const styleDeclaredPropertyValues = new Map<string, string>(
+    c.node.getChildren("StyleDeclaration").map(
+      styleDec => {
+        const propName = getTextFromChild("PropertyName", styleDec.cursor(), s)
+        const styleVals = styleDec.getChildren("StyleValue").map(
+            styleVal => s.doc.sliceString(styleVal.from, styleVal.to)
+          )
+          .join(",") // comma delimit multiple values
+          .replace(/(^"|^'|"$|'$)/g, "") // remove captured bounding quotes
+          .replace(/\\n/g, "\n") // for enabling cytoscape text-wrap
+        return [propName, styleVals]
+      }
+    )
   )
-
-  const styleDeclaredPropertyValues = new Map<string, string>()
 
   // If there are description strings, store them in a description property
-  if (descriptions.length > 0) {
-    styleDeclaredPropertyValues.set(DESCRIPTION_PROPERTY, descriptions.join('\n'))
-  }
-
-  c.node.getChildren("StyleDeclaration").forEach(
-    (styleDec) => {
-      const candidatePropName = styleDec.getChild("PropertyName")
-      let propName = ""
-      if (candidatePropName) {
-        propName = s.doc.sliceString(candidatePropName.from, candidatePropName.to)
-      }
-
-      const candidateStyleVal = styleDec.getChildren("StyleValue")
-      const styleVals = candidateStyleVal.map((styleVal) => {
-          return s.doc.sliceString(styleVal.from, styleVal.to)
-        })
-        .join(",") // comma delimit multiple values
-        .replace(/(^"|^'|"$|'$)/g, "") // remove captured bounding quotes
-        .replace(/\\n/g, "\n") // for enabling cytoscape text-wrap
-      styleDeclaredPropertyValues.set(propName, styleVals)
-    }
-  )
+  const description = getDescription(c, s)
+  if (description) styleDeclaredPropertyValues.set(DESCRIPTION_PROPERTY, description)
 
   return new StyleTreeNode(styleDeclaredPropertyValues, styleTags)
 }
 
 function fillNamedStyle(c: TreeCursor, s: EditorState): NamedStyleTreeNode {
-  let styleName = ""
-  const candidateIdent = c.node.getChild("StyleTag")?.getChild("Identifier")
-  if (candidateIdent) {
-    styleName = s.doc.sliceString(candidateIdent.from, candidateIdent.to)
-  }
+  const candidateStyleTag = c.node.getChild("StyleTag")
+  const styleName = candidateStyleTag ? getTextFromChild("Identifier", candidateStyleTag.cursor(), s) : ""
 
-  let styleNode: StyleTreeNode = new StyleTreeNode()
   const candidateStyleArgList = c.node.getChild("StyleArgList")
-  if (candidateStyleArgList) {
-    styleNode = fillStyle(candidateStyleArgList.cursor(), s)
-  }
+  const styleNode = candidateStyleArgList ? fillStyle(candidateStyleArgList.cursor(), s) : new StyleTreeNode()
 
   return new NamedStyleTreeNode(styleName, styleNode)
 }
 
 function fillStyleBinding(c: TreeCursor, s: EditorState): StyleBindingTreeNode {
-  let keyword = ""
-  const candidateIdent = c.node.getChild("Identifier")
-  if (candidateIdent) {
-    keyword = s.doc.sliceString(candidateIdent.from, candidateIdent.to)
-  }
-  let styleTagList: string[] = []
+  const keyword = getTextFromChild("Identifier", c, s)
+
   const candidateTagList = c.node.getChild("StyleTagList")
-  if (candidateTagList) {
-    styleTagList = candidateTagList.getChildren("StyleTag").map(
-      (styleTag) => fillStyleTag(styleTag.cursor(), s)
-    )
-  }
+  const styleTagList: string[] = candidateTagList ? candidateTagList.getChildren("StyleTag").map(
+    styleTag => getTextFromChild("Identifier", styleTag.cursor(), s)
+  ) : []
   return new StyleBindingTreeNode(keyword, styleTagList)
 }
 
 function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
-  let functionName = ""
-  const candidateIdent = c.node.getChild("Identifier")
-  if (candidateIdent) {
-    functionName = s.doc.sliceString(candidateIdent.from, candidateIdent.to)
-  }
-  const argList: ValueTreeNode[] = []
+  const functionName = getTextFromChild("Identifier", c, s)
+
   const candidateArgList = c.node.getChild("ArgList")
-  if (candidateArgList) {
-    const valueNodes = candidateArgList.getChildren("Value")
-    for (const valNode of valueNodes) {
-      switch(valNode.name) {
-        case "Call":
-          argList.push(fillCall(valNode.cursor(), s))
-          break
-        case "Variable":
-          argList.push(new VariableTreeNode(s.doc.sliceString(valNode.from, valNode.to)))
-          break
-        default:
-          console.log("Unknown node type " + valNode.name)
-      }
-    }
-  }
-  let styleNode: StyleTreeNode | null = null
+  const argList: ValueTreeNode[] = candidateArgList ? candidateArgList.getChildren("Value").map(
+    candidateValue => match(candidateValue.name)
+      .with("Call", () => fillCall(candidateValue.cursor(), s))
+      .with("Variable", () => new VariableTreeNode(s.doc.sliceString(candidateValue.from, candidateValue.to)))
+      .otherwise(() => {
+        console.error("Unknown value type ", candidateValue.name)
+        return null
+      })
+  ).filter(value => !!value) as ValueTreeNode[] : []
+
   const candidateStyleArgList = c.node.getChild("StyleArgList")
-  if (candidateStyleArgList) {
-    styleNode = fillStyle(candidateStyleArgList.cursor(), s)
-  }
+  const styleNode = candidateStyleArgList ? fillStyle(candidateStyleArgList.cursor(), s) : null
 
   return new CallTreeNode(functionName, argList, styleNode)
 }
 
 function fillLhsVariable(c: TreeCursor, s: EditorState): VariableTreeNode {
-  let ident = ""
-  const candidateIdent = c.node.getChild("Variable")
-  if (candidateIdent) {
-    ident = s.doc.sliceString(candidateIdent.from, candidateIdent.to)
-  }
+  const ident = getTextFromChild("Variable", c, s);
 
-  let styleNode: StyleTreeNode | null = null
   const candidateStyleArgList = c.node.getChild("StyleArgList")
-  if (candidateStyleArgList) {
-    styleNode = fillStyle(candidateStyleArgList.cursor(), s)
-  }
+  const styleNode = candidateStyleArgList ? fillStyle(candidateStyleArgList.cursor(), s) : null
 
   return new VariableTreeNode(ident, styleNode)
 }
 
 function fillAssignment(c: TreeCursor, s: EditorState): AssignmentTreeNode {
-  const candidateLhsVars = c.node.getChildren("LhsVariable")
-  const lhsVars = candidateLhsVars.map(
+  const lhsVars = c.node.getChildren("LhsVariable").map(
     candidateLhsVar => fillLhsVariable(candidateLhsVar.cursor(), s)
   )
-
-  let rhsCall: CallTreeNode | null = null
+  
   const candidateRhsIdent = c.node.getChild("Call")
-  if (candidateRhsIdent) {
-    rhsCall = fillCall(candidateRhsIdent.cursor(), s)
-  }
+  const rhsCall = candidateRhsIdent ? fillCall(candidateRhsIdent.cursor(), s) : null
 
   return new AssignmentTreeNode(lhsVars, rhsCall)
 }
 
 function fillAlias(c: TreeCursor, s: EditorState): AliasTreeNode {
-  let lhsVar : VariableTreeNode | null = null
   const candidateLhsVar = c.node.getChild("LhsVariable")
-  if (candidateLhsVar) {
-    lhsVar = fillLhsVariable(candidateLhsVar.cursor(), s)
-  }
+  const lhsVar = candidateLhsVar ? fillLhsVariable(candidateLhsVar.cursor(), s) : null
   
-  let rhsVar : VariableTreeNode | null = null
-  const candidateRhsIdent = c.node.getChild("Variable")
-  if (candidateRhsIdent) {
-    const rhsIdent = s.doc.sliceString(candidateRhsIdent.from, candidateRhsIdent.to)
-    rhsVar = new VariableTreeNode(rhsIdent)
-  }
+  const rhsIdent = getTextFromChild("Variable", c, s)
+  const rhsVar = rhsIdent !== "" ? new VariableTreeNode(rhsIdent) : null
 
   return new AliasTreeNode(lhsVar, rhsVar)
 }
 
 function fillStatement(c: TreeCursor, s: EditorState): StatementTreeNode | null {
-  let stmtNode: StatementTreeNode | null = null
-  switch(c.node.name) {
-    case "Call":
-      stmtNode = fillCall(c, s)
-      break
-    case "Alias":
-      stmtNode = fillAlias(c, s)
-      break
-    case "Assignment":
-      stmtNode = fillAssignment(c, s)
-      break
-    case "StyleTagDeclaration":
-      stmtNode = fillNamedStyle(c, s)
-      break
-    case "StyleBinding":
-      stmtNode = fillStyleBinding(c, s)
-      break
-    case "⚠": // Error token for incomplete trees
-      break
-    case "Recipe":
-      break
-    case "LineComment":
-      break
-    case "BlockComment":
-      break
-    default:
-      console.warn("Unknown node type " + c.node.name)
-  }
-  return stmtNode
+  return match(c.node.name)
+    .with("Call", () => fillCall(c, s))
+    .with("Alias", () => fillAlias(c, s))
+    .with("Assignment", () => fillAssignment(c, s))
+    .with("StyleTagDeclaration", () => fillNamedStyle(c, s))
+    .with("StyleBinding", () => fillStyleBinding(c, s))
+    .with("⚠", () => null) // Error token for incomplete trees
+    .with("Recipe", () => null)
+    .with("LineComment", () => null)
+    .with("BlockComment", () => null)
+    .otherwise(() => {
+      console.warn("Unknown node type ", c.node.name)
+      return null
+    })
 }
 
 /*
@@ -219,13 +150,10 @@ export function fillTree(s: EditorState): RecipeTreeNode {
   const editorStateTree = syntaxTree(s)
   const cursor = editorStateTree.cursor()
 
-  if (cursor.name == "") {
-    return new RecipeTreeNode()
-  }
+  if (cursor.name === "") return new RecipeTreeNode()
 
-  if (cursor.name !== "Recipe") {
-    console.error("Failed to parse " + cursor.name)
-  }
+  if (cursor.name !== "Recipe") console.error("Failed to parse ", cursor.name)
+  
   const stRoot = new RecipeTreeNode()
   cursor.firstChild()
   do {
