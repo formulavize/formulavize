@@ -3,34 +3,40 @@
 </template>
 
 <script lang="ts">
+import { defineComponent } from "vue";
 
-import { defineComponent } from 'vue'
+import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
+import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import {
+  bracketMatching,
+  defaultHighlightStyle,
+  foldGutter,
+  foldKeymap,
+  syntaxHighlighting,
+} from "@codemirror/language";
+import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
+import { EditorState } from "@codemirror/state";
+import {
+  EditorView,
+  ViewUpdate,
+  drawSelection,
+  highlightActiveLine,
+  highlightActiveLineGutter,
+  highlightSpecialChars,
+  keymap,
+  lineNumbers,
+  rectangularSelection,
+} from "@codemirror/view";
 
-import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete"
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands"
-import { 
-  bracketMatching, defaultHighlightStyle, 
-  foldGutter, foldKeymap,
-  syntaxHighlighting
-} from "@codemirror/language"
-import { highlightSelectionMatches, searchKeymap } from "@codemirror/search"
-import { EditorState } from "@codemirror/state"
-import { 
-  EditorView, ViewUpdate, drawSelection,
-  highlightActiveLine, highlightActiveLineGutter, highlightSpecialChars,
-  keymap, lineNumbers, rectangularSelection
-} from "@codemirror/view"
-
-import { fizLanguage } from '@formulavize/lang-fiz'
-
+import { fizLanguage } from "@formulavize/lang-fiz";
 
 export default defineComponent({
-  name: 'TextEditor',
+  name: "TextEditor",
   emits: ["update-editorstate"],
   data() {
     return {
-      prevTimeoutId: setTimeout(() => {})
-    }
+      prevTimeoutId: setTimeout(() => {}),
+    };
   },
   mounted() {
     let state = EditorState.create({
@@ -49,14 +55,14 @@ export default defineComponent({
         syntaxHighlighting(defaultHighlightStyle),
         highlightSpecialChars(),
         EditorView.lineWrapping,
-        EditorView.updateListener.of((v:ViewUpdate): void => {
+        EditorView.updateListener.of((v: ViewUpdate): void => {
           if (v.docChanged) {
             // delay until typing finishes so we don't process on every keystroke
             clearTimeout(this.prevTimeoutId);
-            let timeOut = 500 // ms
+            let timeOut = 500; // ms
             this.prevTimeoutId = setTimeout(() => {
-              this.$emit("update-editorstate", v.state)
-            }, timeOut)
+              this.$emit("update-editorstate", v.state);
+            }, timeOut);
           }
         }),
         keymap.of([
@@ -67,20 +73,28 @@ export default defineComponent({
           ...closeBracketsKeymap,
         ]),
         fizLanguage,
-      ]
-    })
+      ],
+    });
     let view: EditorView = new EditorView({
       state: state,
       parent: this.$refs.editorview as Element,
-    })
-    view.focus()
+    });
+    view.focus();
   },
-})
+});
 </script>
 
 <style>
-  #editorview { height: 100%; }
-  .cm-editor { height: 100%; }
-  .cm-wrap { height: 100%; }
-  .cm-scroller { overflow: auto }
+#editorview {
+  height: 100%;
+}
+.cm-editor {
+  height: 100%;
+}
+.cm-wrap {
+  height: 100%;
+}
+.cm-scroller {
+  overflow: auto;
+}
 </style>

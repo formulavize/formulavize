@@ -3,7 +3,7 @@
     <pane>
       <tabs :options="{ useUrlFragment: false }">
         <tab name="Recipe">
-          <TextEditor @update-editorstate="updateEditorState"/>
+          <TextEditor @update-editorstate="updateEditorState" />
         </tab>
         <tab name="Operators">
           <OperatorsView />
@@ -14,86 +14,89 @@
       </tabs>
     </pane>
     <pane>
-      <GraphView v-if="!debugMode" :cur-dag="curDag"/>
+      <GraphView v-if="!debugMode" :cur-dag="curDag" />
       <tabs v-else :options="{ useUrlFragment: false }">
         <tab name="Output">
-          <GraphView :cur-dag="curDag"/>
+          <GraphView :cur-dag="curDag" />
         </tab>
         <tab name="AST">
-          <TextDumpView title="AST Dump" :content="astTextDump"/>
+          <TextDumpView title="AST Dump" :content="astTextDump" />
         </tab>
         <tab name="DAG">
-          <TextDumpView title="DAG Dump" :content="dagTextDump"/>
+          <TextDumpView title="DAG Dump" :content="dagTextDump" />
         </tab>
       </tabs>
     </pane>
   </splitpanes>
-  <footer>
-  </footer>
+  <footer></footer>
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
-import TextEditor from './components/TextEditor.vue'
-import GraphView from './components/GraphView.vue'
-import TextDumpView from './components/TextDumpView.vue'
-import OperatorsView from './components/OperatorsView.vue'
-import { EditorState } from "@codemirror/state"
-import { RecipeTreeNode } from "./common/ast"
-import { Dag } from './common/dag'
-import { makeDag } from './common/dagFactory'
-import { fillTree } from './common/astFactory'
+import { defineComponent } from "vue";
+import TextEditor from "./components/TextEditor.vue";
+import GraphView from "./components/GraphView.vue";
+import TextDumpView from "./components/TextDumpView.vue";
+import OperatorsView from "./components/OperatorsView.vue";
+import { EditorState } from "@codemirror/state";
+import { RecipeTreeNode } from "./common/ast";
+import { Dag } from "./common/dag";
+import { makeDag } from "./common/dagFactory";
+import { fillTree } from "./common/astFactory";
 // @ts-ignore: remove once @types/splitpanes upgrades dependency to vue 3
-import { Splitpanes, Pane } from 'splitpanes'
-import 'splitpanes/dist/splitpanes.css'
-import './tabs-component.css';
+import { Splitpanes, Pane } from "splitpanes";
+import "splitpanes/dist/splitpanes.css";
+import "./tabs-component.css";
 
 export default defineComponent({
-  name: 'App',
+  name: "App",
   components: {
     Splitpanes,
     Pane,
     TextEditor,
     GraphView,
     TextDumpView,
-    OperatorsView
+    OperatorsView,
   },
   data() {
     return {
       debugMode: true,
-      curEditorState: EditorState.create()
-    }
+      curEditorState: EditorState.create(),
+    };
   },
   computed: {
     curRecipeTree(): RecipeTreeNode {
-      return fillTree(this.curEditorState as EditorState)
+      return fillTree(this.curEditorState as EditorState);
     },
     curDag(): Dag {
-      return makeDag(this.curRecipeTree)
+      return makeDag(this.curRecipeTree);
     },
     astTextDump(): string {
-      return this.curRecipeTree.formatTree()
+      return this.curRecipeTree.formatTree();
     },
     dagTextDump(): string {
-      return this.curDag.formatDag()
-    }
+      return this.curDag.formatDag();
+    },
   },
   methods: {
     updateEditorState(editorState: EditorState) {
-      this.curEditorState = editorState
-    }
-  }
-})
+      this.curEditorState = editorState;
+    },
+  },
+});
 </script>
 
 <style>
-  html, body, #app {
-    height: 100%;
-    width: 100%;
-    margin: 0;
-  }
+html,
+body,
+#app {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+}
 </style>
 
 <style scoped>
-  #panes { height: 80%; }
+#panes {
+  height: 80%;
+}
 </style>
