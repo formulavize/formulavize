@@ -1,10 +1,5 @@
 import cytoscape from "cytoscape";
-import {
-  DESCRIPTION_PROPERTY,
-  DESCRIPTION_PREFIX,
-  POPPER_OUTER_DIV_CLASS,
-  POPPER_INNER_DIV_CLASS,
-} from "./constants";
+import { DESCRIPTION_PROPERTY, DESCRIPTION_PREFIX } from "./constants";
 import {
   Dag,
   DagElement,
@@ -15,6 +10,9 @@ import {
   Keyword,
   StyleProperties,
 } from "./dag";
+
+const POPPER_OUTER_DIV_CLASS: string = "popper-outer-div";
+const POPPER_INNER_DIV_CLASS: string = "popper-inner-div";
 
 export interface DescriptionData {
   description: string;
