@@ -15,7 +15,7 @@ export function keyStartsWithNonCytoscapePrefix(key: string): boolean {
 
 export function filterCytoscapeProperties(styleProperties: StyleProperties): StyleProperties{
   return new Map(
-    [...styleProperties.entries()].filter(
+    Array.from(styleProperties.entries()).filter(
       ([key, _]) => !keyStartsWithNonCytoscapePrefix(key)
     )
   )
@@ -73,33 +73,31 @@ export function makeEdgeStyleSheets(dag: Dag): Stylesheet[] {
 }
 
 export function makeClassStyleSheets(dag: Dag): Stylesheet[] {
-  const classStyles: Stylesheet[] = []
-  dag.getFlattenedStyles().forEach((styleProperties, styleTag) => {
-    classStyles.push({
+  return Array.from(dag.getFlattenedStyles())
+    .map(([styleTag, styleProperties]) => ({
       selector: '.' + styleTag,
       style: Object.fromEntries(filterCytoscapeProperties(styleProperties))
-    })
-  })
-  return classStyles
+    }))
 }
 
 export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
-  const nameStyles: Stylesheet[] = []
   const flatStyleMap = dag.getFlattenedStyles()
-  dag.getStyleBindings().forEach((styleTags, keyword) => {
-    styleTags.forEach(styleTag => {
-      const styleProperties = flatStyleMap.get(styleTag)
-      if (styleProperties) {
-        nameStyles.push({
-          selector: `[name ='${keyword}']`,
-          style: Object.fromEntries(filterCytoscapeProperties(styleProperties))
-        })
-      } else {
-        console.log(`keyword ${keyword} could not be bound to ${styleTag}`)
-      }
-    })
-  })
-  return nameStyles
+  return Array.from(dag.getStyleBindings())
+    .flatMap(([keyword, styleTags]) =>
+      styleTags.map(styleTag => {
+        const styleProperties = flatStyleMap.get(styleTag)
+        if (styleProperties) {
+          return {
+            selector: `[name ='${keyword}']`,
+            style: Object.fromEntries(filterCytoscapeProperties(styleProperties))
+          }
+        } else {
+          console.log(`keyword ${keyword} could not be bound to ${styleTag}`)
+          return null
+        }
+      })
+    )
+    .filter(Boolean) as Stylesheet[]
 }
 
 export function makeCyStylesheets(dag: Dag): Stylesheet[] {

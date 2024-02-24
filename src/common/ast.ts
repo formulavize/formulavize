@@ -31,7 +31,7 @@ export abstract class BaseTreeNode {
       return node.formatValue() + "\n"
         + node.getChildren()
               .map(child => "\t".repeat(lvl+1) + formatTreeHelper(child, lvl+1))
-              .reduce((x, y) => x + y, "")
+              .join("")
     }
     return formatTreeHelper(this, 0)
   }

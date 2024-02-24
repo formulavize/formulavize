@@ -1,5 +1,4 @@
 import cytoscape from 'cytoscape'
-import popper from 'cytoscape-popper'
 import {
   DESCRIPTION_PROPERTY,
   DESCRIPTION_PREFIX,
@@ -55,7 +54,7 @@ export function getNamesWithStyleDescriptionData(
         if (!usedTag) return null
         return [keyword, styleTagDescriptions.get(usedTag)]
       })
-      .filter(entry => !!entry) as Iterable<[Keyword, DescriptionData]>
+      .filter(Boolean) as Iterable<[Keyword, DescriptionData]>
   )
 }
 
@@ -67,7 +66,7 @@ function getElementDescriptionData(dagElements: DagElement[] ): Map<ElementId, D
         if (!descriptionData) return null
         return [dagElement.id, descriptionData]
       })
-      .filter(descriptionData => !!descriptionData) as Iterable<[ElementId, DescriptionData]>
+      .filter(Boolean) as Iterable<[ElementId, DescriptionData]>
   )
 }
 
@@ -81,9 +80,9 @@ export function getEdgeDescriptionData(dag: Dag): Map<EdgeId, DescriptionData> {
 
 function clearAllPopperDivs() {
   const popperDivArray = Array.from(document.getElementsByClassName(POPPER_INNER_DIV_CLASS))
-  for (const popperDiv of popperDivArray) {
+  popperDivArray.forEach(popperDiv => {
     popperDiv.parentNode?.removeChild(popperDiv)
-  }
+  })
 }
 
 function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
@@ -97,9 +96,9 @@ function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
   // add popper class to inner div to allow for manipulation later
   innerDiv.classList.add(POPPER_INNER_DIV_CLASS)
   // add custom description styles to inner div
-  for (const [property, value] of descriptionData.descriptionStyleProperties) {
-    innerDiv.style.setProperty(property, value)
-  }
+  descriptionData.descriptionStyleProperties.forEach((value, property) => {
+      innerDiv.style.setProperty(property, value)
+  })
   
   const text = document.createElement('p')
   text.innerHTML = descriptionData.description.replace(/(?:\r\n|\r|\n)/g, '<br />')
@@ -162,9 +161,9 @@ export function extendCyPopperElements(cy: cytoscape.Core, dag: Dag) {
   cy.on("zoom", () => {
     const zoomLevel = cy.zoom()
     const popperDivArray = Array.from(document.getElementsByClassName(POPPER_INNER_DIV_CLASS))
-    for (const popperDiv of popperDivArray) {
+    popperDivArray.forEach(popperDiv => {
       const popperDivElement = popperDiv as HTMLElement
       popperDivElement.style.transform = `scale(${zoomLevel})`
-    }
+    })
   })
 }

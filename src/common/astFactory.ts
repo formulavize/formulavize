@@ -83,7 +83,7 @@ function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
         console.error("Unknown value type ", candidateValue.name)
         return null
       })
-  ).filter(value => !!value) as ValueTreeNode[] : []
+  ).filter(Boolean) as ValueTreeNode[] : []
 
   const candidateStyleArgList = c.node.getChild("StyleArgList")
   const styleNode = candidateStyleArgList ? fillStyle(candidateStyleArgList.cursor(), s) : null
@@ -92,7 +92,7 @@ function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
 }
 
 function fillLhsVariable(c: TreeCursor, s: EditorState): VariableTreeNode {
-  const ident = getTextFromChild("Variable", c, s);
+  const ident = getTextFromChild("Variable", c, s)
 
   const candidateStyleArgList = c.node.getChild("StyleArgList")
   const styleNode = candidateStyleArgList ? fillStyle(candidateStyleArgList.cursor(), s) : null

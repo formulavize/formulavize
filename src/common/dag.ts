@@ -79,43 +79,39 @@ export class Dag {
 
   formatDag(): string {
     function styleTagDump(styleTagList: StyleTag[]): string {
-      let resultDump = ""
-      if (styleTagList.length > 0) {
-        resultDump = "\n\tStyleTags: [" + styleTagList.toString() + "]"
-      }
-      return resultDump
+      return styleTagList.length > 0
+        ? `\n\tStyleTags: [${styleTagList.toString()}]`
+        : ""
     }
 
     function stylePropertiesDump(styleProperties: StyleProperties): string {
-      let resultDump = ""
-      if (styleProperties.size > 0) {
-        resultDump = "\n\tStyleProperties: "
-          + JSON.stringify(Object.fromEntries(styleProperties))
-      }
-      return resultDump
+      return styleProperties.size > 0 
+        ? `\n\tStyleProperties: ${JSON.stringify(Object.fromEntries(styleProperties))}`
+        : ""
     }
 
     let result = ""
-    for (const node of this.nodeMap.values()) {
+    this.nodeMap.forEach((node) => {
       result += "Node: " + node.name
         + styleTagDump(node.styleTags)
         + stylePropertiesDump(node.styleProperties)
         + "\n"
-    }
-    for (const edge of this.edgeMap.values()) {
+    })
+    this.edgeMap.forEach((edge) => {
       result += "Edge: " + this.nodeMap.get(edge.srcNodeId)?.name
         + " -(" + edge.name + ")-> " 
         + this.nodeMap.get(edge.destNodeId)?.name
         + styleTagDump(edge.styleTags)
         + stylePropertiesDump(edge.styleProperties)
         + "\n"
-    }
-    for (const [styleTag, style] of this.flatStyleMap) {
+    })
+    this.flatStyleMap.forEach((style, styleTag) => {
       result += "Style: " + styleTag + stylePropertiesDump(style) + "\n"
-    }
-    for (const [keyword, styleTags] of this.styleBinding) {
+    })
+    this.styleBinding.forEach((styleTags, keyword) => {
       result += "StyleBinding: " + keyword + styleTagDump(styleTags) + "\n"
-    }
+    })
+
     return result
   }
 }

@@ -37,7 +37,7 @@ function processCall(callStmt: CallTreeNode,
         console.log("Unknown node type ", arg.Type)
         return null
       })
-  ).filter(incomingEdge => !!incomingEdge) as IncomingEdgeInfo[]
+  ).filter(Boolean) as IncomingEdgeInfo[]
 
   const thisNodeId = uuidv4()
   const thisNode = {
@@ -101,7 +101,7 @@ export function makeDag(recipe: RecipeTreeNode): Dag {
           if (RhsReferentNodeId) {
             varNameToNodeId.set(lhsName, RhsReferentNodeId)
           } else {
-            console.log(`var ${lhsName} not found`);
+            console.log(`var ${lhsName} not found`)
           }
           if (aliasStmt.Lhs.Styling) varNameToStyleNode.set(lhsName, aliasStmt.Lhs.Styling)
         }
@@ -115,7 +115,7 @@ export function makeDag(recipe: RecipeTreeNode): Dag {
           if (referentStyle) {
             mergeMap(workingStyleProperties, referentStyle)
           } else { // styles must be declared before usage
-            console.log(`styleTag ${styleTag} not found`);
+            console.log(`styleTag ${styleTag} not found`)
           }
         })
         // any locally defined properties will overwrite referenced styles
