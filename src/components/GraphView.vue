@@ -3,38 +3,38 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
-import cytoscape from 'cytoscape'
-import dagre from 'cytoscape-dagre'
-import popper from 'cytoscape-popper'
-import { makeCyElements, makeCyStylesheets } from '../common/cyGraphFactory'
-import { extendCyPopperElements } from '../common/cyPopperExtender'
-import { Dag } from '../common/dag'
+import { defineComponent } from "vue";
+import cytoscape from "cytoscape";
+import dagre from "cytoscape-dagre";
+import popper from "cytoscape-popper";
+import { makeCyElements, makeCyStylesheets } from "../common/cyGraphFactory";
+import { extendCyPopperElements } from "../common/cyPopperExtender";
+import { Dag } from "../common/dag";
 
-cytoscape.use(dagre)
-cytoscape.use(popper)
+cytoscape.use(dagre);
+cytoscape.use(popper);
 
 export default defineComponent({
-  name: 'GraphView',
+  name: "GraphView",
   props: {
     curDag: {
       type: Dag,
       default: new Dag(),
-    }
+    },
   },
   data() {
     return {
-      cy: cytoscape()
-    }
+      cy: cytoscape(),
+    };
   },
   watch: {
     curDag() {
-      this.reDrawDag()
-    }
+      this.reDrawDag();
+    },
   },
   mounted(): void {
-    this.cy.autoungrabify(true)
-    this.cy.mount(this.$refs.canvas as HTMLElement)
+    this.cy.autoungrabify(true);
+    this.cy.mount(this.$refs.canvas as HTMLElement);
   },
   methods: {
     // Re-painting the entire graph is an expensive operation.
@@ -46,23 +46,23 @@ export default defineComponent({
     // graph with just one added node has better performance than running on an
     // entirely new graph but still has a noticeable delay.
     reDrawDag() {
-      this.cy.elements().remove()
-      this.cy.removeAllListeners()
-      
-      const newElements = makeCyElements(this.curDag)
-      this.cy.add(newElements)
-      
-      const newStylesheets = makeCyStylesheets(this.curDag)
-      this.cy.style(newStylesheets)
+      this.cy.elements().remove();
+      this.cy.removeAllListeners();
 
-      extendCyPopperElements(this.cy, this.curDag)
+      const newElements = makeCyElements(this.curDag);
+      this.cy.add(newElements);
+
+      const newStylesheets = makeCyStylesheets(this.curDag);
+      this.cy.style(newStylesheets);
+
+      extendCyPopperElements(this.cy, this.curDag);
 
       Promise.resolve().then(() => {
-        this.cy.layout({ name: 'dagre' }).run() // most expensive operation
-      })
-    }
+        this.cy.layout({ name: "dagre" }).run(); // most expensive operation
+      });
+    },
   },
-})
+});
 </script>
 
 <style scoped>

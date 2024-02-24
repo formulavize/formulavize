@@ -4,10 +4,11 @@ module.exports = {
     node: true,
   },
   extends: [
-    'plugin:vue/vue3-recommended',
-    'eslint:recommended',
-    'prettier',
-    '@vue/typescript',
+    "plugin:vue/vue3-recommended",
+    "plugin:prettier/recommended",
+    "eslint:recommended",
+    "prettier",
+    "@vue/typescript",
   ],
-  plugins: ['vue'],
-}
+  plugins: ["vue"],
+};
