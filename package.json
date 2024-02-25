@@ -10,7 +10,7 @@
     "coverage": "vitest run --coverage",
     "lint": "eslint . --ext .ts,.vue",
     "format": "prettier .  --write",
-    "prepare": "husky install"
+    "prepare": "husky"
   },
   "lint-staged": {
     "*.{ts,tsx,vue}": [
