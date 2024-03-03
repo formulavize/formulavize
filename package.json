@@ -41,6 +41,8 @@
   },
   "devDependencies": {
     "@babel/types": "^7.23.9",
+    "@commitlint/cli": "^18.6.1",
+    "@commitlint/config-conventional": "^18.6.2",
     "@types/cytoscape": "^3.19.16",
     "@types/cytoscape-dagre": "^2.3.3",
     "@types/cytoscape-popper": "^2.0.4",
@@ -53,6 +55,8 @@
     "@vue/eslint-config-typescript": "^12.0.0",
     "@vue/test-utils": "^2.4.4",
     "c8": "^9.1.0",
+    "commitizen": "^4.3.0",
+    "cz-conventional-changelog": "^3.3.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.1.3",
