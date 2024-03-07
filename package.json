@@ -7,8 +7,9 @@
     "build": "vue-tsc --noEmit && vite build",
     "serve": "vite preview",
     "test": "vitest",
+    "test:lint": "eslint . --ext .ts,.vue",
+    "test:format": "prettier . --check",
     "coverage": "vitest run --coverage",
-    "lint": "eslint . --ext .ts,.vue",
     "format": "prettier .  --write",
     "prepare": "husky"
   },
