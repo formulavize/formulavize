@@ -1,4 +1,4 @@
-name: Lint
+name: Run Tests
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  lint:
+  test:
     runs-on: ubuntu-latest
 
     steps:
@@ -24,8 +24,5 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run lint check
-        run: npm run test:lint
-
-      - name: Run format check
-        run: npm run test:format
+      - name: Run tests
+        run: npm test
