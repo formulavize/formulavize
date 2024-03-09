@@ -3,6 +3,7 @@
 </template>
 
 <script lang="ts">
+import { debounce } from "lodash";
 import { defineComponent } from "vue";
 
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
@@ -32,14 +33,18 @@ import { fizLanguage } from "@formulavize/lang-fiz";
 
 export default defineComponent({
   name: "TextEditor",
-  emits: ["update-editorstate"],
-  data() {
-    return {
-      prevTimeoutId: setTimeout(() => {}),
-    };
+  props: {
+    editorDebounceDelay: {
+      type: Number,
+      default: 300, // ms
+    },
   },
+  emits: ["update-editorstate"],
   mounted() {
-    let state = EditorState.create({
+    const emitEditorState = debounce((updatedState: EditorState): void => {
+      this.$emit("update-editorstate", updatedState);
+    }, this.editorDebounceDelay);
+    const editorState = EditorState.create({
       extensions: [
         lineNumbers(),
         history(),
@@ -56,14 +61,7 @@ export default defineComponent({
         highlightSpecialChars(),
         EditorView.lineWrapping,
         EditorView.updateListener.of((v: ViewUpdate): void => {
-          if (v.docChanged) {
-            // delay until typing finishes so we don't process on every keystroke
-            clearTimeout(this.prevTimeoutId);
-            let timeOut = 500; // ms
-            this.prevTimeoutId = setTimeout(() => {
-              this.$emit("update-editorstate", v.state);
-            }, timeOut);
-          }
+          if (v.docChanged) emitEditorState(v.state);
         }),
         keymap.of([
           ...defaultKeymap,
@@ -75,8 +73,8 @@ export default defineComponent({
         fizLanguage,
       ],
     });
-    let view: EditorView = new EditorView({
-      state: state,
+    const view: EditorView = new EditorView({
+      state: editorState,
       parent: this.$refs.editorview as Element,
     });
     view.focus();
