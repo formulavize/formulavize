@@ -3,7 +3,10 @@
     <pane>
       <tabs :options="{ useUrlFragment: false }">
         <tab name="Recipe">
-          <TextEditor @update-editorstate="updateEditorState" />
+          <TextEditor
+            :editor-debounce-delay="editorDebounceDelay"
+            @update-editorstate="updateEditorState"
+          />
         </tab>
         <tab name="Operators">
           <OperatorsView />
@@ -60,6 +63,7 @@ export default defineComponent({
   data() {
     return {
       debugMode: true,
+      editorDebounceDelay: 300, // ms
       curEditorState: EditorState.create(),
     };
   },
