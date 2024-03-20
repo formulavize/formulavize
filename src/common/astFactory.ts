@@ -30,6 +30,21 @@ function getTextFromChild(
     : "";
 }
 
+function getQualifiedIdentifer(c: TreeCursor, s: EditorState): string[] {
+  const candidateIdentifierList = c.node.getChild("QualifiableIdentifier");
+  if (!candidateIdentifierList) return [];
+  return candidateIdentifierList
+    .getChildren("Identifier")
+    .map((identifier) => s.doc.sliceString(identifier.from, identifier.to));
+}
+
+function getLastIdentifier(qualifiedIdentifier: string[]): string {
+  // temporarily assume the last identifier as the function name
+  return qualifiedIdentifier.length > 0
+    ? qualifiedIdentifier[qualifiedIdentifier.length - 1]
+    : "";
+}
+
 function getDescription(c: TreeCursor, s: EditorState): string | null {
   // Get all child StringLiterals with quotes trimmed
   // from the start and end then join them with newlines
@@ -95,7 +110,8 @@ function fillStyleBinding(c: TreeCursor, s: EditorState): StyleBindingTreeNode {
 }
 
 function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
-  const functionName = getTextFromChild("Identifier", c, s);
+  const callQualifiedIdent = getQualifiedIdentifer(c, s);
+  const functionName = getLastIdentifier(callQualifiedIdent);
 
   const candidateArgList = c.node.getChild("ArgList");
   const argList: ValueTreeNode[] = candidateArgList
@@ -104,13 +120,14 @@ function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
         .map((candidateValue) =>
           match(candidateValue.name)
             .with("Call", () => fillCall(candidateValue.cursor(), s))
-            .with(
-              "Variable",
-              () =>
-                new VariableTreeNode(
-                  s.doc.sliceString(candidateValue.from, candidateValue.to),
-                ),
-            )
+            .with("RhsVariable", () => {
+              const varQualifiedIdent = getQualifiedIdentifer(
+                candidateValue.cursor(),
+                s,
+              );
+              const varName = getLastIdentifier(varQualifiedIdent);
+              return new VariableTreeNode(varName);
+            })
             .otherwise(() => {
               console.error("Unknown value type ", candidateValue.name);
               return null;
