@@ -109,6 +109,12 @@ function fillStyleBinding(c: TreeCursor, s: EditorState): StyleBindingTreeNode {
   return new StyleBindingTreeNode(keyword, styleTagList);
 }
 
+function fillRhsVariable(c: TreeCursor, s: EditorState): VariableTreeNode {
+  const varQualifiedIdent = getQualifiedIdentifer(c, s);
+  const varName = getLastIdentifier(varQualifiedIdent);
+  return new VariableTreeNode(varName);
+}
+
 function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
   const callQualifiedIdent = getQualifiedIdentifer(c, s);
   const functionName = getLastIdentifier(callQualifiedIdent);
@@ -120,14 +126,9 @@ function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
         .map((candidateValue) =>
           match(candidateValue.name)
             .with("Call", () => fillCall(candidateValue.cursor(), s))
-            .with("RhsVariable", () => {
-              const varQualifiedIdent = getQualifiedIdentifer(
-                candidateValue.cursor(),
-                s,
-              );
-              const varName = getLastIdentifier(varQualifiedIdent);
-              return new VariableTreeNode(varName);
-            })
+            .with("RhsVariable", () =>
+              fillRhsVariable(candidateValue.cursor(), s),
+            )
             .otherwise(() => {
               console.error("Unknown value type ", candidateValue.name);
               return null;
@@ -145,7 +146,7 @@ function fillCall(c: TreeCursor, s: EditorState): CallTreeNode {
 }
 
 function fillLhsVariable(c: TreeCursor, s: EditorState): VariableTreeNode {
-  const ident = getTextFromChild("Variable", c, s);
+  const ident = getTextFromChild("Identifier", c, s);
 
   const candidateStyleArgList = c.node.getChild("StyleArgList");
   const styleNode = candidateStyleArgList
@@ -174,8 +175,10 @@ function fillAlias(c: TreeCursor, s: EditorState): AliasTreeNode {
     ? fillLhsVariable(candidateLhsVar.cursor(), s)
     : null;
 
-  const rhsIdent = getTextFromChild("Variable", c, s);
-  const rhsVar = rhsIdent !== "" ? new VariableTreeNode(rhsIdent) : null;
+  const candidateRhsVar = c.node.getChild("RhsVariable");
+  const rhsVar = candidateRhsVar
+    ? fillRhsVariable(candidateRhsVar.cursor(), s)
+    : null;
 
   return new AliasTreeNode(lhsVar, rhsVar);
 }
