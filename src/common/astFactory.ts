@@ -58,10 +58,16 @@ function getDescription(c: TreeCursor, s: EditorState): string | null {
   return descriptionLines.length > 0 ? descriptionLines.join("\n") : null;
 }
 
+function fillStyleTag(c: TreeCursor, s: EditorState): string {
+  const styleQualifiedIdent = getQualifiedIdentifer(c, s);
+  const styleTagIdent = getLastIdentifier(styleQualifiedIdent);
+  return styleTagIdent;
+}
+
 function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
   const styleTags: string[] = c.node
     .getChildren("StyleTag")
-    .map((styleTag) => getTextFromChild("Identifier", styleTag.cursor(), s));
+    .map((styleTag) => fillStyleTag(styleTag.cursor(), s));
   const styleDeclaredPropertyValues = new Map<string, string>(
     c.node.getChildren("StyleDeclaration").map((styleDec) => {
       const propName = getTextFromChild("PropertyName", styleDec.cursor(), s);
@@ -84,10 +90,7 @@ function fillStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
 }
 
 function fillNamedStyle(c: TreeCursor, s: EditorState): NamedStyleTreeNode {
-  const candidateStyleTag = c.node.getChild("StyleTag");
-  const styleName = candidateStyleTag
-    ? getTextFromChild("Identifier", candidateStyleTag.cursor(), s)
-    : "";
+  const styleName = getTextFromChild("Identifier", c, s);
 
   const candidateStyleArgList = c.node.getChild("StyleArgList");
   const styleNode = candidateStyleArgList
@@ -104,7 +107,7 @@ function fillStyleBinding(c: TreeCursor, s: EditorState): StyleBindingTreeNode {
   const styleTagList: string[] = candidateTagList
     ? candidateTagList
         .getChildren("StyleTag")
-        .map((styleTag) => getTextFromChild("Identifier", styleTag.cursor(), s))
+        .map((styleTag) => fillStyleTag(styleTag.cursor(), s))
     : [];
   return new StyleBindingTreeNode(keyword, styleTagList);
 }
