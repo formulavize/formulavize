@@ -16,6 +16,16 @@ import {
   StyleBindingTreeNode,
 } from "./ast";
 
+function makeNullableChild<Result>(
+  childName: string,
+  childFactory: (c: TreeCursor, s: EditorState) => Result,
+  c: TreeCursor,
+  s: EditorState,
+): Result | null {
+  const candidateChild = c.node.getChild(childName);
+  return candidateChild ? childFactory(candidateChild.cursor(), s) : null;
+}
+
 function getTextFromChild(
   childName: string,
   c: TreeCursor,
@@ -64,10 +74,14 @@ function getStyleTagName(c: TreeCursor, s: EditorState): string {
   return styleTagIdent;
 }
 
-function makeStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
-  const styleTags: string[] = c.node
+function getStyleTagNames(c: TreeCursor, s: EditorState): string[] {
+  return c.node
     .getChildren("StyleTag")
     .map((styleTag) => getStyleTagName(styleTag.cursor(), s));
+}
+
+function makeStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
+  const styleTags: string[] = getStyleTagNames(c, s);
   const styleDeclaredPropertyValues = new Map<string, string>(
     c.node.getChildren("StyleDeclaration").map((styleDec) => {
       const propName = getTextFromChild("PropertyName", styleDec.cursor(), s);
@@ -92,10 +106,8 @@ function makeStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
 function makeNamedStyle(c: TreeCursor, s: EditorState): NamedStyleTreeNode {
   const styleName = getTextFromChild("Identifier", c, s);
 
-  const candidateStyleArgList = c.node.getChild("StyleArgList");
-  const styleNode = candidateStyleArgList
-    ? makeStyle(candidateStyleArgList.cursor(), s)
-    : new StyleTreeNode();
+  const styleNode =
+    makeNullableChild("StyleArgList", makeStyle, c, s) ?? new StyleTreeNode();
 
   return new NamedStyleTreeNode(styleName, styleNode);
 }
@@ -103,12 +115,8 @@ function makeNamedStyle(c: TreeCursor, s: EditorState): NamedStyleTreeNode {
 function makeStyleBinding(c: TreeCursor, s: EditorState): StyleBindingTreeNode {
   const keyword = getTextFromChild("Identifier", c, s);
 
-  const candidateTagList = c.node.getChild("StyleTagList");
-  const styleTagList: string[] = candidateTagList
-    ? candidateTagList
-        .getChildren("StyleTag")
-        .map((styleTag) => getStyleTagName(styleTag.cursor(), s))
-    : [];
+  const styleTagList: string[] =
+    makeNullableChild("StyleTagList", getStyleTagNames, c, s) ?? [];
   return new StyleBindingTreeNode(keyword, styleTagList);
 }
 
@@ -116,16 +124,6 @@ function makeRhsVariable(c: TreeCursor, s: EditorState): VariableTreeNode {
   const varQualifiedIdent = getQualifiedIdentifer(c, s);
   const varName = getLastIdentifier(varQualifiedIdent);
   return new VariableTreeNode(varName);
-}
-
-function makeNullableChild<Node>(
-  childName: string,
-  childFactory: (c: TreeCursor, s: EditorState) => Node,
-  c: TreeCursor,
-  s: EditorState,
-): Node | null {
-  const candidateChild = c.node.getChild(childName);
-  return candidateChild ? childFactory(candidateChild.cursor(), s) : null;
 }
 
 function makeCall(c: TreeCursor, s: EditorState): CallTreeNode {
