@@ -185,6 +185,7 @@ function makeStatement(
 ): StatementTreeNode | null {
   return match(c.node.name)
     .with("Call", () => makeCall(c, s))
+    .with("RhsVariable", () => makeRhsVariable(c, s))
     .with("Alias", () => makeAlias(c, s))
     .with("Assignment", () => makeAssignment(c, s))
     .with("StyleTagDeclaration", () => makeNamedStyle(c, s))
