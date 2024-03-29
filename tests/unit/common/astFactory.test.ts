@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { fillTree } from "../../../src/common/astFactory";
+import { makeRecipeTree } from "../../../src/common/astFactory";
 import { DESCRIPTION_PROPERTY } from "../../../src/common/constants";
 import {
   RecipeTreeNode as Recipe,
@@ -16,7 +16,7 @@ import { EditorState } from "@codemirror/state";
 import { fizLanguage } from "@formulavize/lang-fiz";
 
 function makeTree(input: string): BaseTreeNode {
-  return fillTree(
+  return makeRecipeTree(
     EditorState.create({
       doc: input,
       extensions: [fizLanguage],
