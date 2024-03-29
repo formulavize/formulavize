@@ -199,15 +199,13 @@ function makeStatement(
     });
 }
 
-/*
-Lezer's lightweight design means it doesn't store token values.
-https://discuss.codemirror.net/t/example-of-using-lezer-to-generate-a-traditional-ast/2907
-We need to fill in the AST values ourselves by looking up syntax tree nodes'
-text positions in the document. Though inefficient, reproducing the tree after
-every change is the cleanest approach. Memoize / optimize later.
-https://discuss.codemirror.net/t/efficient-reuse-of-productions-of-the-parse-tree/2944
-*/
-export function fillTree(s: EditorState): RecipeTreeNode {
+// Lezer's lightweight design means it doesn't store token values.
+// https://discuss.codemirror.net/t/example-of-using-lezer-to-generate-a-traditional-ast/2907
+// We need to fill in the AST values ourselves by looking up syntax tree nodes'
+// text positions in the document. Though inefficient, reproducing the tree after
+// every change is the cleanest approach. Memoize / optimize later.
+// https://discuss.codemirror.net/t/efficient-reuse-of-productions-of-the-parse-tree/2944
+export function makeRecipeTree(s: EditorState): RecipeTreeNode {
   const editorStateTree = syntaxTree(s);
   const cursor = editorStateTree.cursor();
 
@@ -215,11 +213,10 @@ export function fillTree(s: EditorState): RecipeTreeNode {
 
   if (cursor.name !== "Recipe") console.error("Failed to parse ", cursor.name);
 
-  const stRoot = new RecipeTreeNode();
-  cursor.firstChild();
-  do {
-    const stmtNode: StatementTreeNode | null = makeStatement(cursor, s);
-    if (stmtNode) stRoot.addChild(stmtNode);
-  } while (cursor.nextSibling());
-  return stRoot;
+  const statements = cursor.node
+    .getChildren("Statement")
+    .map((stmtNode) => makeStatement(stmtNode.cursor(), s))
+    .filter(Boolean) as StatementTreeNode[];
+
+  return new RecipeTreeNode(statements);
 }

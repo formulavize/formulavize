@@ -44,7 +44,7 @@ import { EditorState } from "@codemirror/state";
 import { RecipeTreeNode } from "./common/ast";
 import { Dag } from "./common/dag";
 import { makeDag } from "./common/dagFactory";
-import { fillTree } from "./common/astFactory";
+import { makeRecipeTree } from "./common/astFactory";
 // @ts-ignore: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -69,7 +69,7 @@ export default defineComponent({
   },
   computed: {
     curRecipeTree(): RecipeTreeNode {
-      return fillTree(this.curEditorState as EditorState);
+      return makeRecipeTree(this.curEditorState as EditorState);
     },
     curDag(): Dag {
       return makeDag(this.curRecipeTree);
