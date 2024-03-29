@@ -50,6 +50,10 @@ describe("single statements", () => {
       new Recipe([new Call("f", [new Variable("v")])]),
     );
   });
+  test("variable statement", () => {
+    const input = "x";
+    expect(makeTree(input)).toEqual(new Recipe([new Variable("x")]));
+  });
   test("alias statement", () => {
     const input = "y = x";
     expect(makeTree(input)).toEqual(

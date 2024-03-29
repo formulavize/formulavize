@@ -44,6 +44,7 @@ export abstract class BaseTreeNode {
 
 export type StatementTreeNode =
   | CallTreeNode
+  | VariableTreeNode
   | AssignmentTreeNode
   | AliasTreeNode
   | NamedStyleTreeNode
