@@ -10,6 +10,7 @@ import {
   StyleTreeNode as Style,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
+  NamespaceTreeNode as Namespace,
   BaseTreeNode,
 } from "../../../src/common/ast";
 import { EditorState } from "@codemirror/state";
@@ -75,6 +76,10 @@ describe("single statements", () => {
     const input = "#s{}";
     expect(makeTree(input)).toEqual(new Recipe([new NamedStyle("s")]));
   });
+  test("namespace declaration", () => {
+    const input = "n[]";
+    expect(makeTree(input)).toEqual(new Recipe([new Namespace("n")]));
+  });
 });
 
 describe("style nodes", () => {
@@ -124,6 +129,12 @@ describe("style nodes", () => {
           new Variable("z"),
         ),
       ]),
+    );
+  });
+  test("styled namespace", () => {
+    const input = "n[]{#s}";
+    expect(makeTree(input)).toEqual(
+      new Recipe([new Namespace("n", [], [], new Style(undefined, ["s"]))]),
     );
   });
   test("style with mixed types", () => {
@@ -184,10 +195,6 @@ describe("style nodes", () => {
 });
 
 describe("style bindings", () => {
-  test("incomplete style binding", () => {
-    const input = "%x";
-    expect(makeTree(input)).toEqual(new Recipe([new StyleBinding("x", [])]));
-  });
   test("empty style binding", () => {
     const input = "%x{}";
     expect(makeTree(input)).toEqual(new Recipe([new StyleBinding("x", [])]));
@@ -221,6 +228,22 @@ describe("multiple statements", () => {
       ]),
     );
   });
+  test("namespace with multiple statements", () => {
+    const input = "n[y=f();z=x](a, b()){#s}";
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new Namespace(
+          "n",
+          [
+            new Assignment([new Variable("y")], new Call("f", [])),
+            new Alias(new Variable("z"), new Variable("x")),
+          ],
+          [new Variable("a"), new Call("b", [])],
+          new Style(undefined, ["s"]),
+        ),
+      ]),
+    );
+  });
 });
 
 describe("incomplete statements", () => {
@@ -238,5 +261,19 @@ describe("incomplete statements", () => {
         new Assignment([new Variable("y")], new Call("f", [new Call("z", [])])),
       ]),
     );
+  });
+  test("incomplete style", () => {
+    const input = "f(){x:1";
+    expect(makeTree(input)).toEqual(
+      new Recipe([new Call("f", [], new Style(new Map([["x", "1"]])))]),
+    );
+  });
+  test("incomplete style binding", () => {
+    const input = "%x";
+    expect(makeTree(input)).toEqual(new Recipe([new StyleBinding("x", [])]));
+  });
+  test("incomplete namespace", () => {
+    const input = "n[";
+    expect(makeTree(input)).toEqual(new Recipe([new Namespace("n")]));
   });
 });
