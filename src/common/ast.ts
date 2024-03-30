@@ -48,7 +48,8 @@ export type StatementTreeNode =
   | AssignmentTreeNode
   | AliasTreeNode
   | NamedStyleTreeNode
-  | StyleBindingTreeNode;
+  | StyleBindingTreeNode
+  | NamespaceTreeNode;
 
 export class RecipeTreeNode extends BaseTreeNode {
   private statements: StatementTreeNode[];
@@ -328,5 +329,55 @@ export class StyleBindingTreeNode extends BaseTreeNode {
 
   get StyleTagList(): string[] {
     return this.styleTagList;
+  }
+}
+
+export class NamespaceTreeNode extends BaseTreeNode {
+  private name: string;
+  private statements: StatementTreeNode[];
+  private argList: ValueTreeNode[];
+  private styling: StyleTreeNode | null;
+
+  constructor(
+    name: string = "",
+    statements: StatementTreeNode[] = [],
+    argList: ValueTreeNode[] = [],
+    styling: StyleTreeNode | null = null,
+  ) {
+    super(NodeType.Recipe);
+    this.name = name;
+    this.statements = statements;
+    this.argList = argList;
+    this.styling = styling;
+  }
+
+  getChildren(): BaseTreeNode[] {
+    const childList: BaseTreeNode[] = this.statements.concat(this.argList);
+    if (this.styling) childList.push(this.styling);
+    return childList;
+  }
+
+  formatValue(): string {
+    return "Namespace: " + this.name;
+  }
+
+  isComplete(): boolean {
+    return true;
+  }
+
+  get Name(): string {
+    return this.name;
+  }
+
+  get Statements(): StatementTreeNode[] {
+    return this.statements;
+  }
+
+  get ArgList(): ValueTreeNode[] {
+    return this.argList;
+  }
+
+  get Styling(): StyleTreeNode | null {
+    return this.styling;
   }
 }

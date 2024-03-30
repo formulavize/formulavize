@@ -14,6 +14,7 @@ import {
   StyleTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
+  NamespaceTreeNode,
 } from "./ast";
 
 function makeNullableChild<Result>(
@@ -126,27 +127,26 @@ function makeRhsVariable(c: TreeCursor, s: EditorState): VariableTreeNode {
   return new VariableTreeNode(varName);
 }
 
+function getArgList(c: TreeCursor, s: EditorState): ValueTreeNode[] {
+  return c.node
+    .getChildren("Value")
+    .map((candidateValue) =>
+      match(candidateValue.name)
+        .with("Call", () => makeCall(candidateValue.cursor(), s))
+        .with("RhsVariable", () => makeRhsVariable(candidateValue.cursor(), s))
+        .otherwise(() => {
+          console.error("Unknown value type ", candidateValue.name);
+          return null;
+        }),
+    )
+    .filter(Boolean) as ValueTreeNode[];
+}
+
 function makeCall(c: TreeCursor, s: EditorState): CallTreeNode {
   const callQualifiedIdent = getQualifiedIdentifer(c, s);
   const functionName = getLastIdentifier(callQualifiedIdent);
 
-  const candidateArgList = c.node.getChild("ArgList");
-  const argList: ValueTreeNode[] = candidateArgList
-    ? (candidateArgList
-        .getChildren("Value")
-        .map((candidateValue) =>
-          match(candidateValue.name)
-            .with("Call", () => makeCall(candidateValue.cursor(), s))
-            .with("RhsVariable", () =>
-              makeRhsVariable(candidateValue.cursor(), s),
-            )
-            .otherwise(() => {
-              console.error("Unknown value type ", candidateValue.name);
-              return null;
-            }),
-        )
-        .filter(Boolean) as ValueTreeNode[])
-    : [];
+  const argList = makeNullableChild("ArgList", getArgList, c, s) ?? [];
 
   const styleNode = makeNullableChild("StyleArgList", makeStyle, c, s);
 
@@ -179,6 +179,31 @@ function makeAlias(c: TreeCursor, s: EditorState): AliasTreeNode {
   return new AliasTreeNode(lhsVar, rhsVar);
 }
 
+function getStatements(c: TreeCursor, s: EditorState): StatementTreeNode[] {
+  return c.node
+    .getChildren("Statement")
+    .map((stmtNode) => makeStatement(stmtNode.cursor(), s))
+    .filter(Boolean) as StatementTreeNode[];
+}
+
+function makeNamespace(c: TreeCursor, s: EditorState): NamespaceTreeNode {
+  const namespaceName = getTextFromChild("Identifier", c, s);
+
+  const namespaceStatements =
+    makeNullableChild("StatementList", getStatements, c, s) ?? [];
+
+  const argList = makeNullableChild("ArgList", getArgList, c, s) ?? [];
+
+  const styleNode = makeNullableChild("StyleArgList", makeStyle, c, s);
+
+  return new NamespaceTreeNode(
+    namespaceName,
+    namespaceStatements,
+    argList,
+    styleNode,
+  );
+}
+
 function makeStatement(
   c: TreeCursor,
   s: EditorState,
@@ -190,6 +215,7 @@ function makeStatement(
     .with("Assignment", () => makeAssignment(c, s))
     .with("StyleTagDeclaration", () => makeNamedStyle(c, s))
     .with("StyleBinding", () => makeStyleBinding(c, s))
+    .with("Namespace", () => makeNamespace(c, s))
     .with("⚠", () => null) // Error token for incomplete trees
     .with("Recipe", () => null)
     .with("LineComment", () => null)
@@ -214,10 +240,6 @@ export function makeRecipeTree(s: EditorState): RecipeTreeNode {
 
   if (cursor.name !== "Recipe") console.error("Failed to parse ", cursor.name);
 
-  const statements = cursor.node
-    .getChildren("Statement")
-    .map((stmtNode) => makeStatement(stmtNode.cursor(), s))
-    .filter(Boolean) as StatementTreeNode[];
-
+  const statements = getStatements(cursor, s);
   return new RecipeTreeNode(statements);
 }
