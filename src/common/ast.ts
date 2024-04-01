@@ -7,6 +7,7 @@ export enum NodeType {
   Style,
   NamedStyle,
   StyleBinding,
+  Namespace,
 }
 
 export abstract class BaseTreeNode {
@@ -73,6 +74,10 @@ export class RecipeTreeNode extends BaseTreeNode {
 
   isComplete(): boolean {
     return true;
+  }
+
+  get Statements(): StatementTreeNode[] {
+    return this.statements;
   }
 }
 
@@ -344,7 +349,7 @@ export class NamespaceTreeNode extends BaseTreeNode {
     argList: ValueTreeNode[] = [],
     styling: StyleTreeNode | null = null,
   ) {
-    super(NodeType.Recipe);
+    super(NodeType.Namespace);
     this.name = name;
     this.statements = statements;
     this.argList = argList;

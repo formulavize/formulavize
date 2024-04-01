@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 
 import {
   RecipeTreeNode,
+  StatementTreeNode,
   CallTreeNode,
   AssignmentTreeNode,
   AliasTreeNode,
@@ -11,8 +12,10 @@ import {
   StyleTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
+  NamespaceTreeNode,
 } from "./ast";
-import { Dag, NodeId, StyleTag, StyleProperties } from "./dag";
+import { Dag, NodeId, StyleTag, StyleProperties, DagId } from "./dag";
+import { TOP_LEVEL_DAG_ID } from "./constants";
 
 function processCall(
   callStmt: CallTreeNode,
@@ -84,11 +87,16 @@ function processCall(
   return thisNodeId;
 }
 
-export function makeDag(recipe: RecipeTreeNode): Dag {
+export function makeSubDag(
+  dagId: DagId,
+  dagName: string,
+  statements: StatementTreeNode[],
+  parentDag?: Dag,
+): Dag {
   const varNameToNodeId = new Map<string, NodeId>();
   const varNameToStyleNode = new Map<string, StyleTreeNode>();
   const styleTagToFlatStyleMap = new Map<StyleTag, StyleProperties>();
-  const resultDag = new Dag();
+  const curLevelDag = new Dag(dagId, parentDag, dagName);
 
   function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
     mapToAdd.forEach((value, key) => {
@@ -96,11 +104,11 @@ export function makeDag(recipe: RecipeTreeNode): Dag {
     });
   }
 
-  recipe.getChildren().forEach((stmt) => {
+  statements.forEach((stmt) => {
     match(stmt.Type)
       .with(NodeType.Call, () => {
         const callStmt = stmt as CallTreeNode;
-        processCall(callStmt, varNameToNodeId, varNameToStyleNode, resultDag);
+        processCall(callStmt, varNameToNodeId, varNameToStyleNode, curLevelDag);
       })
       .with(NodeType.Assignment, () => {
         const assignmentStmt = stmt as AssignmentTreeNode;
@@ -109,7 +117,7 @@ export function makeDag(recipe: RecipeTreeNode): Dag {
             assignmentStmt.Rhs,
             varNameToNodeId,
             varNameToStyleNode,
-            resultDag,
+            curLevelDag,
           );
           assignmentStmt.Lhs.forEach((lhsVar) => {
             varNameToNodeId.set(lhsVar.Value, thisNodeId);
@@ -150,18 +158,34 @@ export function makeDag(recipe: RecipeTreeNode): Dag {
         mergeMap(workingStyleProperties, styleNode.KeyValueMap);
         const thisStyleTag = namedStyleStmt.StyleName;
         styleTagToFlatStyleMap.set(thisStyleTag, workingStyleProperties);
-        resultDag.addStyle(thisStyleTag, workingStyleProperties);
+        curLevelDag.addStyle(thisStyleTag, workingStyleProperties);
       })
       .with(NodeType.StyleBinding, () => {
         const styleBindingStmt = stmt as StyleBindingTreeNode;
-        resultDag.addStyleBinding(
+        curLevelDag.addStyleBinding(
           styleBindingStmt.Keyword,
           styleBindingStmt.StyleTagList,
         );
+      })
+      .with(NodeType.Variable, () => null)
+      .with(NodeType.Namespace, () => {
+        const namespaceStmt = stmt as NamespaceTreeNode;
+        const thisNamespaceId = uuidv4();
+        const childDag = makeSubDag(
+          thisNamespaceId,
+          namespaceStmt.Name,
+          namespaceStmt.Statements,
+          curLevelDag,
+        );
+        curLevelDag.addChildDag(childDag);
       })
       .otherwise(() => {
         console.log("Unknown node type ", stmt.Type);
       });
   });
-  return resultDag;
+  return curLevelDag;
+}
+
+export function makeDag(recipe: RecipeTreeNode): Dag {
+  return makeSubDag(TOP_LEVEL_DAG_ID, "", recipe.Statements);
 }

@@ -1,5 +1,6 @@
 export type NodeId = string;
 export type EdgeId = string;
+export type DagId = string;
 export type ElementId = NodeId | EdgeId;
 export type StyleTag = string;
 export type Keyword = string;
@@ -18,22 +19,35 @@ export interface DagEdge extends DagElement {
   srcNodeId: NodeId;
   destNodeId: NodeId;
 }
+
 export class Dag {
+  private id: DagId;
+  private parent: Dag | null;
+  private name: string;
   private nodeMap: Map<NodeId, DagNode>;
   private edgeMap: Map<EdgeId, DagEdge>;
   private flatStyleMap: Map<StyleTag, StyleProperties>;
   private styleBinding: Map<Keyword, StyleTag[]>;
+  private childDags: Map<DagId, Dag>;
 
   constructor(
+    id: DagId,
+    parent: Dag | null = null,
+    name: string = "",
     nodeMap: Map<NodeId, DagNode> = new Map(),
     edgeMap: Map<EdgeId, DagEdge> = new Map(),
     flatStyleMap: Map<StyleTag, StyleProperties> = new Map(),
     styleBindingMap: Map<Keyword, StyleTag[]> = new Map(),
+    childDags: Map<DagId, Dag> = new Map(),
   ) {
+    this.id = id;
+    this.parent = parent;
+    this.name = name;
     this.nodeMap = nodeMap;
     this.edgeMap = edgeMap;
     this.flatStyleMap = flatStyleMap;
     this.styleBinding = styleBindingMap;
+    this.childDags = childDags;
   }
 
   addNode(node: DagNode): void {
@@ -60,6 +74,10 @@ export class Dag {
     this.styleBinding.set(keyword, styleTags);
   }
 
+  addChildDag(childDag: Dag): void {
+    this.childDags.set(childDag.id, childDag);
+  }
+
   getNodeList(): DagNode[] {
     return Array.from(this.nodeMap.values());
   }
@@ -76,22 +94,27 @@ export class Dag {
     return this.styleBinding;
   }
 
-  formatDag(): string {
+  formatDag(level: number = 0): string {
+    const leftPad = "\t".repeat(level);
+    const childLeftPad = leftPad + "\t";
+    const grandchildLeftPad = childLeftPad + "\t";
+
     function styleTagDump(styleTagList: StyleTag[]): string {
       return styleTagList.length > 0
-        ? `\n\tStyleTags: [${styleTagList.toString()}]`
+        ? `\n${grandchildLeftPad}StyleTags: [${styleTagList.toString()}]`
         : "";
     }
 
     function stylePropertiesDump(styleProperties: StyleProperties): string {
       return styleProperties.size > 0
-        ? `\n\tStyleProperties: ${JSON.stringify(Object.fromEntries(styleProperties))}`
+        ? `\n${grandchildLeftPad}StyleProperties: ${JSON.stringify(Object.fromEntries(styleProperties))}`
         : "";
     }
 
-    let result = "";
+    let result = leftPad + "Dag: " + this.name + "\n";
     this.nodeMap.forEach((node) => {
       result +=
+        childLeftPad +
         "Node: " +
         node.name +
         styleTagDump(node.styleTags) +
@@ -100,6 +123,7 @@ export class Dag {
     });
     this.edgeMap.forEach((edge) => {
       result +=
+        childLeftPad +
         "Edge: " +
         this.nodeMap.get(edge.srcNodeId)?.name +
         ` -(${edge.name})-> ` +
@@ -109,10 +133,19 @@ export class Dag {
         "\n";
     });
     this.flatStyleMap.forEach((style, styleTag) => {
-      result += "Style: " + styleTag + stylePropertiesDump(style) + "\n";
+      result +=
+        childLeftPad + "Style: " + styleTag + stylePropertiesDump(style) + "\n";
     });
     this.styleBinding.forEach((styleTags, keyword) => {
-      result += "StyleBinding: " + keyword + styleTagDump(styleTags) + "\n";
+      result +=
+        childLeftPad +
+        "StyleBinding: " +
+        keyword +
+        styleTagDump(styleTags) +
+        "\n";
+    });
+    this.childDags.forEach((subDag) => {
+      result += subDag.formatDag(level + 1);
     });
 
     return result;
