@@ -9,7 +9,10 @@ import {
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
 } from "../../../src/common/ast";
-import { DESCRIPTION_PROPERTY } from "../../../src/common/constants";
+import {
+  DESCRIPTION_PROPERTY,
+  TOP_LEVEL_DAG_ID,
+} from "../../../src/common/constants";
 import {
   Dag,
   StyleTag,
@@ -28,7 +31,7 @@ describe("node tests", () => {
 
   test("empty recipe", () => {
     const recipe = new Recipe();
-    expect(makeDag(recipe)).toEqual(new Dag());
+    expect(makeDag(recipe)).toEqual(new Dag(TOP_LEVEL_DAG_ID));
   });
   test("one node", () => {
     const recipe = new Recipe([new Call("a", [])]);
