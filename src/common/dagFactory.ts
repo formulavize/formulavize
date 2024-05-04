@@ -17,10 +17,45 @@ import {
 import { Dag, NodeId, StyleTag, StyleProperties, DagId } from "./dag";
 import { TOP_LEVEL_DAG_ID } from "./constants";
 
+class NamespaceContext {
+  private varNameToNodeId: Map<string, NodeId>;
+  private varNameToStyleNode: Map<string, StyleTreeNode>;
+  private styleTagToFlatStyleMap: Map<StyleTag, StyleProperties>;
+
+  constructor() {
+    this.varNameToNodeId = new Map<string, NodeId>();
+    this.varNameToStyleNode = new Map<string, StyleTreeNode>();
+    this.styleTagToFlatStyleMap = new Map<StyleTag, StyleProperties>();
+  }
+
+  setVarNode(varName: string, nodeId: NodeId): void {
+    this.varNameToNodeId.set(varName, nodeId);
+  }
+
+  setVarStyle(varName: string, styleNode: StyleTreeNode): void {
+    this.varNameToStyleNode.set(varName, styleNode);
+  }
+
+  setStyle(styleTag: StyleTag, styleProperties: StyleProperties): void {
+    this.styleTagToFlatStyleMap.set(styleTag, styleProperties);
+  }
+
+  getVarNode(varName: string): NodeId | undefined {
+    return this.varNameToNodeId.get(varName);
+  }
+
+  getVarStyle(varName: string): StyleTreeNode | undefined {
+    return this.varNameToStyleNode.get(varName);
+  }
+
+  getStyle(styleTag: StyleTag): StyleProperties | undefined {
+    return this.styleTagToFlatStyleMap.get(styleTag);
+  }
+}
+
 function processCall(
   callStmt: CallTreeNode,
-  varNameToNodeId: Map<string, NodeId>,
-  varNameToStyleNode: Map<string, StyleTreeNode>,
+  context: NamespaceContext,
   workingDag: Dag,
 ): NodeId {
   type IncomingEdgeInfo = {
@@ -31,19 +66,14 @@ function processCall(
   const incomingEdgeInfoList: IncomingEdgeInfo[] = callStmt.ArgList.map((arg) =>
     match(arg.Type)
       .with(NodeType.Call, () => {
-        const argNodeId = processCall(
-          arg as CallTreeNode,
-          varNameToNodeId,
-          varNameToStyleNode,
-          workingDag,
-        );
+        const argNodeId = processCall(arg as CallTreeNode, context, workingDag);
         return { nodeId: argNodeId, varName: "", varStyle: null };
       })
       .with(NodeType.Variable, () => {
         const argVarName = arg as VariableTreeNode;
         const varName = argVarName.Value;
-        const varStyle = varNameToStyleNode.get(varName) ?? null;
-        const candidateSrcNodeId = varNameToNodeId.get(varName);
+        const varStyle = context.getVarStyle(varName) ?? null;
+        const candidateSrcNodeId = context.getVarNode(varName);
         if (candidateSrcNodeId) {
           return {
             nodeId: candidateSrcNodeId,
@@ -93,9 +123,7 @@ export function makeSubDag(
   statements: StatementTreeNode[],
   parentDag?: Dag,
 ): Dag {
-  const varNameToNodeId = new Map<string, NodeId>();
-  const varNameToStyleNode = new Map<string, StyleTreeNode>();
-  const styleTagToFlatStyleMap = new Map<StyleTag, StyleProperties>();
+  const namespaceContext = new NamespaceContext();
   const curLevelDag = new Dag(dagId, parentDag, dagName);
 
   function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
@@ -108,21 +136,20 @@ export function makeSubDag(
     match(stmt.Type)
       .with(NodeType.Call, () => {
         const callStmt = stmt as CallTreeNode;
-        processCall(callStmt, varNameToNodeId, varNameToStyleNode, curLevelDag);
+        processCall(callStmt, namespaceContext, curLevelDag);
       })
       .with(NodeType.Assignment, () => {
         const assignmentStmt = stmt as AssignmentTreeNode;
         if (assignmentStmt.Lhs && assignmentStmt.Rhs) {
           const thisNodeId = processCall(
             assignmentStmt.Rhs,
-            varNameToNodeId,
-            varNameToStyleNode,
+            namespaceContext,
             curLevelDag,
           );
           assignmentStmt.Lhs.forEach((lhsVar) => {
-            varNameToNodeId.set(lhsVar.Value, thisNodeId);
+            namespaceContext.setVarNode(lhsVar.Value, thisNodeId);
             if (lhsVar.Styling)
-              varNameToStyleNode.set(lhsVar.Value, lhsVar.Styling);
+              namespaceContext.setVarStyle(lhsVar.Value, lhsVar.Styling);
           });
         }
       })
@@ -131,14 +158,14 @@ export function makeSubDag(
         if (aliasStmt.Lhs && aliasStmt.Rhs) {
           const lhsName = aliasStmt.Lhs!.Value;
           const rhsName = aliasStmt.Rhs!.Value;
-          const RhsReferentNodeId = varNameToNodeId.get(rhsName);
+          const RhsReferentNodeId = namespaceContext.getVarNode(rhsName);
           if (RhsReferentNodeId) {
-            varNameToNodeId.set(lhsName, RhsReferentNodeId);
+            namespaceContext.setVarNode(lhsName, RhsReferentNodeId);
           } else {
             console.log(`var ${lhsName} not found`);
           }
           if (aliasStmt.Lhs.Styling)
-            varNameToStyleNode.set(lhsName, aliasStmt.Lhs.Styling);
+            namespaceContext.setVarStyle(lhsName, aliasStmt.Lhs.Styling);
         }
       })
       .with(NodeType.NamedStyle, () => {
@@ -146,7 +173,7 @@ export function makeSubDag(
         const styleNode = namedStyleStmt.StyleNode;
         const workingStyleProperties: StyleProperties = new Map();
         styleNode.StyleTagList.forEach((styleTag) => {
-          const referentStyle = styleTagToFlatStyleMap.get(styleTag);
+          const referentStyle = namespaceContext.getStyle(styleTag);
           if (referentStyle) {
             mergeMap(workingStyleProperties, referentStyle);
           } else {
@@ -157,7 +184,7 @@ export function makeSubDag(
         // any locally defined properties will overwrite referenced styles
         mergeMap(workingStyleProperties, styleNode.KeyValueMap);
         const thisStyleTag = namedStyleStmt.StyleName;
-        styleTagToFlatStyleMap.set(thisStyleTag, workingStyleProperties);
+        namespaceContext.setStyle(thisStyleTag, workingStyleProperties);
         curLevelDag.addStyle(thisStyleTag, workingStyleProperties);
       })
       .with(NodeType.StyleBinding, () => {
