@@ -8,8 +8,12 @@ import {
   makeEdgeStyleSheets,
   makeClassStyleSheets,
   makeNameStyleSheets,
+  makeCyElements,
 } from "../../../src/common/cyGraphFactory";
-import { DESCRIPTION_PROPERTY } from "../../../src/common/constants";
+import {
+  DESCRIPTION_PROPERTY,
+  TOP_LEVEL_DAG_ID,
+} from "../../../src/common/constants";
 import { Dag } from "../../../src/common/dag";
 
 describe("filters out non-cytoscape properties", () => {
@@ -67,7 +71,7 @@ describe("filters out non-cytoscape properties", () => {
 
 describe("makes cytoscape elements", () => {
   test("with two nodes", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -87,7 +91,7 @@ describe("makes cytoscape elements", () => {
     expect(makeCyNodes(testDag)).toEqual(expectedCyNodes);
   });
   test("with one edge", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -121,11 +125,133 @@ describe("makes cytoscape elements", () => {
     ];
     expect(makeCyEdges(testDag)).toEqual(expectedCyEdges);
   });
+  test("with top level dag only", () => {
+    const topLevelDag = new Dag(TOP_LEVEL_DAG_ID);
+    topLevelDag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+    const expectedCyNodes = {
+      edges: [],
+      nodes: [{ data: { id: "idX", name: "nameX" } }],
+    };
+    expect(makeCyElements(topLevelDag)).toEqual(expectedCyNodes);
+  });
+  test("with empty child dag", () => {
+    const parentDag = new Dag(TOP_LEVEL_DAG_ID);
+    parentDag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+
+    const childDag = new Dag("childDag");
+    parentDag.addChildDag(childDag);
+
+    const expectedCyNodes = {
+      edges: [],
+      nodes: [{ data: { id: "idX", name: "nameX" } }],
+    };
+    expect(makeCyElements(parentDag)).toEqual(expectedCyNodes);
+  });
+  test("with child dag", () => {
+    const parentDag = new Dag(TOP_LEVEL_DAG_ID);
+    parentDag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+
+    const childDag = new Dag("childDag");
+    childDag.addNode({
+      id: "idY",
+      name: "nameY",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+
+    parentDag.addChildDag(childDag);
+
+    const expectedCyNodes = {
+      edges: [],
+      nodes: [
+        { data: { id: "idX", name: "nameX" } },
+        { data: { id: "idY", name: "nameY", parent: "childDag" } },
+        { data: { id: "childDag", name: "" } },
+      ],
+    };
+    expect(makeCyElements(parentDag)).toEqual(expectedCyNodes);
+  });
+  test("with multiple child dags", () => {
+    const parentDag = new Dag(TOP_LEVEL_DAG_ID);
+    parentDag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+
+    const childDag1 = new Dag("childDag1");
+    childDag1.addNode({
+      id: "idY",
+      name: "nameY",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+    parentDag.addChildDag(childDag1);
+
+    const childDag2 = new Dag("childDag2", parentDag);
+    childDag2.addNode({
+      id: "idZ",
+      name: "nameZ",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+
+    const expectedCyNodes = {
+      edges: [],
+      nodes: [
+        { data: { id: "idX", name: "nameX" } },
+        { data: { id: "idY", name: "nameY", parent: "childDag1" } },
+        { data: { id: "childDag1", name: "" } },
+        { data: { id: "idZ", name: "nameZ", parent: "childDag2" } },
+        { data: { id: "childDag2", name: "" } },
+      ],
+    };
+    expect(makeCyElements(parentDag)).toEqual(expectedCyNodes);
+  });
+  test("with nested child dag", () => {
+    const parentDag = new Dag(TOP_LEVEL_DAG_ID);
+
+    const childDag = new Dag("childDag", parentDag);
+
+    const grandChildDag = new Dag("grandChildDag", childDag);
+    grandChildDag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+
+    const expectedCyNodes = {
+      edges: [],
+      nodes: [
+        { data: { id: "idX", name: "nameX", parent: "grandChildDag" } },
+        { data: { id: "grandChildDag", name: "", parent: "childDag" } },
+        { data: { id: "childDag", name: "" } },
+      ],
+    };
+    expect(makeCyElements(parentDag)).toEqual(expectedCyNodes);
+  });
 });
 
 describe("makes cytoscape stylesheets", () => {
   test("node styles", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -147,7 +273,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeNodeStylesheets(testDag)).toEqual(expectedCyNodeStyles);
   });
   test("edge styles", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -177,7 +303,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeEdgeStyleSheets(testDag)).toEqual(expectedCyEdgeStyles);
   });
   test("class styles", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyle(
       "s",
       new Map([
@@ -194,12 +320,12 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeClassStyleSheets(testDag)).toEqual(expectedCyClassStyles);
   });
   test("name style on undeclared styleTags", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyleBinding("x", ["a", "b"]);
     expect(makeNameStyleSheets(testDag)).toEqual([]);
   });
   test("name styles", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyleBinding("x", ["a", "b"]);
     testDag.addStyle("a", new Map([["i", "1"]]));
     testDag.addStyle(
