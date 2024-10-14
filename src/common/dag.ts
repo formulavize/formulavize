@@ -48,6 +48,9 @@ export class Dag {
     this.flatStyleMap = flatStyleMap;
     this.styleBinding = styleBindingMap;
     this.childDags = childDags;
+    if (parent !== null) {
+      parent.addChildDag(this);
+    }
   }
 
   addNode(node: DagNode): void {
@@ -76,6 +79,33 @@ export class Dag {
 
   addChildDag(childDag: Dag): void {
     this.childDags.set(childDag.id, childDag);
+    childDag.Parent = this;
+  }
+
+  get Id(): DagId {
+    return this.id;
+  }
+
+  get Parent(): Dag | null {
+    return this.parent;
+  }
+
+  set Parent(newParent: Dag) {
+    if (this.parent && this.parent.Id !== newParent.Id) {
+      console.warn(
+        "Overwriting dag",
+        this.id,
+        "parent",
+        this.parent.Id,
+        "with new parent",
+        newParent.Id,
+      );
+    }
+    this.parent = newParent;
+  }
+
+  get Name(): string {
+    return this.name;
   }
 
   getNodeList(): DagNode[] {
@@ -92,6 +122,10 @@ export class Dag {
 
   getStyleBindings(): Map<Keyword, StyleTag[]> {
     return this.styleBinding;
+  }
+
+  getChildDags(): Dag[] {
+    return Array.from(this.childDags.values());
   }
 
   formatDag(level: number = 0): string {

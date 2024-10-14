@@ -6,7 +6,10 @@ import {
   getEdgeDescriptionData,
   DescriptionData,
 } from "../../../src/common/cyPopperExtender";
-import { DESCRIPTION_PROPERTY } from "../../../src/common/constants";
+import {
+  DESCRIPTION_PROPERTY,
+  TOP_LEVEL_DAG_ID,
+} from "../../../src/common/constants";
 import {
   Dag,
   NodeId,
@@ -28,7 +31,7 @@ function makeDescriptionData(
 
 describe("makes style descriptions", () => {
   test("no matching styles", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyle("empty", new Map());
     testDag.addStyle("x", new Map([["color", "red"]]));
 
@@ -36,7 +39,7 @@ describe("makes style descriptions", () => {
     expect(getStyleDescriptionData(testDag)).toEqual(expectedMap);
   });
   test("two matching styles", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyle("empty", new Map());
     testDag.addStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
     testDag.addStyle(
@@ -60,7 +63,7 @@ describe("makes name descriptions", () => {
     const styleDescriptions = new Map<StyleTag, DescriptionData>([
       ["x", makeDescriptionData("d1")],
     ]);
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyleBinding("name", ["y"]);
 
     const expectedMap = new Map<Keyword, DescriptionData>();
@@ -76,7 +79,7 @@ describe("makes name descriptions", () => {
     const styleDescriptions = new Map<StyleTag, DescriptionData>([
       ["x", redDescriptionData],
     ]);
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyleBinding("name", ["x"]);
 
     const expectedMap = new Map<Keyword, DescriptionData>([
@@ -91,7 +94,7 @@ describe("makes name descriptions", () => {
       ["x", makeDescriptionData("d1")],
       ["y", makeDescriptionData("d2")],
     ]);
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyleBinding("name", ["y", "x"]);
 
     // usage order takes precedence
@@ -106,7 +109,7 @@ describe("makes name descriptions", () => {
     const styleDescriptions = new Map<StyleTag, DescriptionData>([
       ["x", makeDescriptionData("d1")],
     ]);
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyleBinding("name1", ["x"]);
     testDag.addStyleBinding("name2", ["x"]);
 
@@ -123,7 +126,7 @@ describe("makes name descriptions", () => {
       ["x", makeDescriptionData("d1")],
       ["y", makeDescriptionData("d2")],
     ]);
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyleBinding("name1", ["x"]);
     testDag.addStyleBinding("name2", ["y"]);
 
@@ -139,7 +142,7 @@ describe("makes name descriptions", () => {
 
 describe("makes element descriptions", () => {
   test("no matching nodes", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -151,7 +154,7 @@ describe("makes element descriptions", () => {
     expect(getNodeDescriptionData(testDag)).toEqual(expectedMap);
   });
   test("one matching node", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -168,7 +171,7 @@ describe("makes element descriptions", () => {
     expect(getNodeDescriptionData(testDag)).toEqual(expectedMap);
   });
   test("two matching nodes", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -189,7 +192,7 @@ describe("makes element descriptions", () => {
     expect(getNodeDescriptionData(testDag)).toEqual(expectedMap);
   });
   test("no matching edges", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -215,7 +218,7 @@ describe("makes element descriptions", () => {
     expect(getEdgeDescriptionData(testDag)).toEqual(expectedMap);
   });
   test("one matching edge", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -246,7 +249,7 @@ describe("makes element descriptions", () => {
     expect(getEdgeDescriptionData(testDag)).toEqual(expectedMap);
   });
   test("two matching edges", () => {
-    const testDag = new Dag();
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addNode({
       id: "idX",
       name: "nameX",

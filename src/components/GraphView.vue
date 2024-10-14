@@ -10,6 +10,7 @@ import popper from "cytoscape-popper";
 import { makeCyElements, makeCyStylesheets } from "../common/cyGraphFactory";
 import { extendCyPopperElements } from "../common/cyPopperExtender";
 import { Dag } from "../common/dag";
+import { TOP_LEVEL_DAG_ID } from "../common/constants";
 
 cytoscape.use(dagre);
 cytoscape.use(popper);
@@ -19,7 +20,7 @@ export default defineComponent({
   props: {
     curDag: {
       type: Dag,
-      default: new Dag(),
+      default: new Dag(TOP_LEVEL_DAG_ID),
     },
   },
   data() {
