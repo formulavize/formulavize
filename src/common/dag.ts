@@ -29,6 +29,7 @@ export class Dag {
   private flatStyleMap: Map<StyleTag, StyleProperties>;
   private styleBinding: Map<Keyword, StyleTag[]>;
   private childDags: Map<DagId, Dag>;
+  private lineagePath: string;
 
   constructor(
     id: DagId,
@@ -51,6 +52,7 @@ export class Dag {
     if (parent !== null) {
       parent.addChildDag(this);
     }
+    this.lineagePath = this.getLineagePath();
   }
 
   addNode(node: DagNode): void {
@@ -100,12 +102,18 @@ export class Dag {
         "with new parent",
         newParent.Id,
       );
+      this.parent.childDags.delete(this.id);
     }
     this.parent = newParent;
+    this.lineagePath = this.getLineagePath();
   }
 
   get Name(): string {
     return this.name;
+  }
+
+  get LineagePath(): string {
+    return this.lineagePath;
   }
 
   getNodeList(): DagNode[] {
@@ -126,6 +134,36 @@ export class Dag {
 
   getChildDags(): Dag[] {
     return Array.from(this.childDags.values());
+  }
+
+  private getLineageIdsAscending(): DagId[] {
+    // Return a list of dag ids from the current dag to the root dag
+    // e.g. [currentDagId, parentDagId, rootDagId ]
+    const lineageIds: DagId[] = [];
+    const visitedDags: Set<DagId> = new Set();
+    let currentDag: Dag | null = this;
+    while (currentDag) {
+      if (visitedDags.has(currentDag.id)) {
+        console.warn("Cycle detected in the DAG lineage, stopping traversal");
+        break;
+      }
+      lineageIds.push(currentDag.id);
+      visitedDags.add(currentDag.id);
+      currentDag = currentDag.parent;
+    }
+    return lineageIds;
+  }
+
+  private getLineagePath(): string {
+    // Return a string representation of the lineage path
+    // from the sub-root dag to the current dag
+    // e.g. "/parentDagId/currentDagId"
+    const lineageIds = this.getLineageIdsAscending();
+    lineageIds.pop(); // omit the root dag id
+    return lineageIds
+      .reverse()
+      .map((id) => "/" + id)
+      .join("");
   }
 
   formatDag(level: number = 0): string {

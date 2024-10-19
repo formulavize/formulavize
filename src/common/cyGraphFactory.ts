@@ -45,6 +45,7 @@ export function makeCyNodes(dag: Dag): NodeDefinition[] {
       id: node.id,
       name: node.name,
       ...(dag.Id !== TOP_LEVEL_DAG_ID && { parent: dag.Id }),
+      ...(dag.LineagePath && { lineagePath: dag.LineagePath }),
     },
     ...(node.styleTags.length > 0 && {
       classes: node.styleTags.join(" "),
@@ -59,6 +60,7 @@ export function makeCyEdges(dag: Dag): EdgeDefinition[] {
       source: edge.srcNodeId,
       target: edge.destNodeId,
       name: edge.name,
+      ...(dag.LineagePath && { lineagePath: dag.LineagePath }),
     },
     ...(edge.styleTags.length > 0 && {
       classes: edge.styleTags.join(" "),
@@ -105,16 +107,25 @@ export function makeEdgeStyleSheets(dag: Dag): Stylesheet[] {
     }));
 }
 
+export function makeDagLineageSelector(dag: Dag): string {
+  if (dag.Id == TOP_LEVEL_DAG_ID) {
+    return "";
+  }
+  return `[lineagePath*='/${dag.Id}']`;
+}
+
 export function makeClassStyleSheets(dag: Dag): Stylesheet[] {
+  const lineageSelector = makeDagLineageSelector(dag);
   return Array.from(dag.getFlattenedStyles()).map(
     ([styleTag, styleProperties]) => ({
-      selector: "." + styleTag,
+      selector: `.${styleTag}${lineageSelector}`,
       style: Object.fromEntries(filterCytoscapeProperties(styleProperties)),
     }),
   );
 }
 
 export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
+  const lineageSelector = makeDagLineageSelector(dag);
   const flatStyleMap = dag.getFlattenedStyles();
   return Array.from(dag.getStyleBindings())
     .flatMap(([keyword, styleTags]) =>
@@ -122,7 +133,7 @@ export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
         const styleProperties = flatStyleMap.get(styleTag);
         if (styleProperties) {
           return {
-            selector: `[name ='${keyword}']`,
+            selector: `[name='${keyword}']${lineageSelector}`,
             style: Object.fromEntries(
               filterCytoscapeProperties(styleProperties),
             ),
@@ -136,15 +147,8 @@ export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
     .filter(Boolean) as Stylesheet[];
 }
 
-export function makeCyStylesheets(dag: Dag): Stylesheet[] {
-  const workingStylesheets: Stylesheet[] = [
-    {
-      selector: "edge",
-      style: {
-        "curve-style": "bezier",
-        "target-arrow-shape": "triangle",
-      },
-    },
+export function getBaseStylesheet(): Stylesheet[] {
+  return [
     {
       selector: "node",
       style: {
@@ -153,7 +157,20 @@ export function makeCyStylesheets(dag: Dag): Stylesheet[] {
         "text-wrap": "wrap",
       },
     },
+    {
+      selector: "edge",
+      style: {
+        "curve-style": "bezier",
+        "target-arrow-shape": "triangle",
+      },
+    },
   ];
+}
+
+export function makeCyStylesheets(dag: Dag): Stylesheet[] {
+  const workingStylesheets: Stylesheet[] =
+    dag.Id === TOP_LEVEL_DAG_ID ? getBaseStylesheet() : [];
+
   const nodeStyles = makeNodeStylesheets(dag);
   workingStylesheets.push(...nodeStyles);
 
@@ -165,6 +182,9 @@ export function makeCyStylesheets(dag: Dag): Stylesheet[] {
 
   const nameStyles = makeNameStyleSheets(dag);
   workingStylesheets.push(...nameStyles);
+
+  const childStyleSheets = dag.getChildDags().map(makeCyStylesheets);
+  workingStylesheets.push(...childStyleSheets.flat());
 
   return workingStylesheets;
 }
