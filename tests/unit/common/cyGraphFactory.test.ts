@@ -9,6 +9,8 @@ import {
   makeClassStyleSheets,
   makeNameStyleSheets,
   makeCyElements,
+  getBaseStylesheet,
+  makeCyStylesheets,
 } from "../../../src/common/cyGraphFactory";
 import {
   DESCRIPTION_PROPERTY,
@@ -180,7 +182,14 @@ describe("makes cytoscape elements", () => {
       edges: [],
       nodes: [
         { data: { id: "idX", name: "nameX" } },
-        { data: { id: "idY", name: "nameY", parent: "childDag" } },
+        {
+          data: {
+            id: "idY",
+            name: "nameY",
+            parent: "childDag",
+            lineagePath: "/childDag",
+          },
+        },
         { data: { id: "childDag", name: "" } },
       ],
     };
@@ -216,9 +225,23 @@ describe("makes cytoscape elements", () => {
       edges: [],
       nodes: [
         { data: { id: "idX", name: "nameX" } },
-        { data: { id: "idY", name: "nameY", parent: "childDag1" } },
+        {
+          data: {
+            id: "idY",
+            name: "nameY",
+            parent: "childDag1",
+            lineagePath: "/childDag1",
+          },
+        },
         { data: { id: "childDag1", name: "" } },
-        { data: { id: "idZ", name: "nameZ", parent: "childDag2" } },
+        {
+          data: {
+            id: "idZ",
+            name: "nameZ",
+            parent: "childDag2",
+            lineagePath: "/childDag2",
+          },
+        },
         { data: { id: "childDag2", name: "" } },
       ],
     };
@@ -236,11 +259,50 @@ describe("makes cytoscape elements", () => {
       styleTags: [],
       styleProperties: new Map(),
     });
+    grandChildDag.addNode({
+      id: "idY",
+      name: "nameY",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+    grandChildDag.addEdge({
+      id: "idZ",
+      name: "nameZ",
+      srcNodeId: "idX",
+      destNodeId: "idY",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
 
     const expectedCyNodes = {
-      edges: [],
+      edges: [
+        {
+          data: {
+            id: "idZ",
+            name: "nameZ",
+            source: "idX",
+            target: "idY",
+            lineagePath: "/childDag/grandChildDag",
+          },
+        },
+      ],
       nodes: [
-        { data: { id: "idX", name: "nameX", parent: "grandChildDag" } },
+        {
+          data: {
+            id: "idX",
+            name: "nameX",
+            parent: "grandChildDag",
+            lineagePath: "/childDag/grandChildDag",
+          },
+        },
+        {
+          data: {
+            id: "idY",
+            name: "nameY",
+            parent: "grandChildDag",
+            lineagePath: "/childDag/grandChildDag",
+          },
+        },
         { data: { id: "grandChildDag", name: "", parent: "childDag" } },
         { data: { id: "childDag", name: "" } },
       ],
@@ -319,6 +381,24 @@ describe("makes cytoscape stylesheets", () => {
     ];
     expect(makeClassStyleSheets(testDag)).toEqual(expectedCyClassStyles);
   });
+  test("class styles from sub dags", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag = new Dag("childDag", testDag);
+    childDag.addStyle(
+      "s",
+      new Map([
+        ["a", "1"],
+        ["b", "2"],
+      ]),
+    );
+    const expectedCyClassStyles = [
+      {
+        selector: ".s[lineagePath*='/childDag']",
+        style: { a: "1", b: "2" },
+      },
+    ];
+    expect(makeClassStyleSheets(childDag)).toEqual(expectedCyClassStyles);
+  });
   test("name style on undeclared styleTags", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyleBinding("x", ["a", "b"]);
@@ -337,14 +417,68 @@ describe("makes cytoscape stylesheets", () => {
     );
     const expectedCyNameStyles = [
       {
-        selector: "[name ='x']",
+        selector: "[name='x']",
         style: { i: "1" },
       },
       {
-        selector: "[name ='x']",
+        selector: "[name='x']",
         style: { j: "2", k: "3" },
       },
     ];
     expect(makeNameStyleSheets(testDag)).toEqual(expectedCyNameStyles);
+  });
+  test("name styles from sub dags", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag = new Dag("childDag", testDag);
+    childDag.addStyle("a", new Map([["i", "1"]]));
+    childDag.addStyle(
+      "b",
+      new Map([
+        ["j", "2"],
+        ["k", "3"],
+      ]),
+    );
+    childDag.addStyleBinding("x", ["a", "b"]);
+    const expectedCyNameStyles = [
+      {
+        selector: "[name='x'][lineagePath*='/childDag']",
+        style: { i: "1" },
+      },
+      {
+        selector: "[name='x'][lineagePath*='/childDag']",
+        style: { j: "2", k: "3" },
+      },
+    ];
+    expect(makeNameStyleSheets(childDag)).toEqual(expectedCyNameStyles);
+  });
+  test("styles from sub dags", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag = new Dag("childDag", testDag);
+    childDag.addStyle(
+      "a",
+      new Map([
+        ["background-color", "red"],
+        ["border-width", "1"],
+      ]),
+    );
+    childDag.addStyleBinding("x", ["a"]);
+
+    const grandChildDag = new Dag("grandChildDag", childDag);
+    grandChildDag.addStyle("b", new Map([["shape", "hexagon"]]));
+    const expectedCyStyles = getBaseStylesheet().concat([
+      {
+        selector: ".a[lineagePath*='/childDag']",
+        style: { "background-color": "red", "border-width": "1" },
+      },
+      {
+        selector: "[name='x'][lineagePath*='/childDag']",
+        style: { "background-color": "red", "border-width": "1" },
+      },
+      {
+        selector: ".b[lineagePath*='/grandChildDag']",
+        style: { shape: "hexagon" },
+      },
+    ]);
+    expect(makeCyStylesheets(testDag)).toEqual(expectedCyStyles);
   });
 });
