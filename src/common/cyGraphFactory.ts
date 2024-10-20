@@ -2,17 +2,6 @@ import { EdgeDefinition, ElementsDefinition, NodeDefinition } from "cytoscape";
 import { TOP_LEVEL_DAG_ID } from "./constants";
 import { Dag } from "./dag";
 
-function makeCyCompoundNode(dag: Dag): NodeDefinition {
-  const parentId = dag.Parent?.Id;
-  return {
-    data: {
-      id: dag.Id,
-      name: dag.Name,
-      ...(parentId && parentId !== TOP_LEVEL_DAG_ID && { parent: parentId }),
-    },
-  };
-}
-
 export function makeCyNodes(dag: Dag): NodeDefinition[] {
   return dag.getNodeList().map((node) => ({
     data: {
@@ -40,6 +29,21 @@ export function makeCyEdges(dag: Dag): EdgeDefinition[] {
       classes: edge.styleTags.join(" "),
     }),
   }));
+}
+
+function makeCyCompoundNode(dag: Dag): NodeDefinition {
+  const parentId = dag.Parent?.Id;
+  return {
+    data: {
+      id: dag.Id,
+      name: dag.Name,
+      ...(parentId && parentId !== TOP_LEVEL_DAG_ID && { parent: parentId }),
+      ...(dag.DagLineagePath && { lineagePath: dag.DagLineagePath }),
+    },
+    ...(dag.DagStyleTags.length > 0 && {
+      classes: dag.DagStyleTags.join(" "),
+    }),
+  };
 }
 
 export function makeCyElements(dag: Dag): ElementsDefinition {

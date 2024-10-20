@@ -122,7 +122,15 @@ export function makeSubDag(
   parentDag?: Dag,
 ): Dag {
   const namespaceContext = new NamespaceContext();
-  const curLevelDag = new Dag(dagId, parentDag, dagNamespaceStmt.Name);
+  const dagStyleTags = dagNamespaceStmt.Styling?.StyleTagList ?? [];
+  const dagStyleProperties = dagNamespaceStmt.Styling?.KeyValueMap ?? new Map();
+  const curLevelDag = new Dag(
+    dagId,
+    parentDag,
+    dagNamespaceStmt.Name,
+    dagStyleTags,
+    dagStyleProperties,
+  );
 
   function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
     mapToAdd.forEach((value, key) => {
