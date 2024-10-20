@@ -3,7 +3,6 @@ import { v4 as uuidv4 } from "uuid";
 
 import {
   RecipeTreeNode,
-  StatementTreeNode,
   CallTreeNode,
   AssignmentTreeNode,
   AliasTreeNode,
@@ -119,12 +118,11 @@ function processCall(
 
 export function makeSubDag(
   dagId: DagId,
-  dagName: string,
-  statements: StatementTreeNode[],
+  dagNamespaceStmt: NamespaceTreeNode,
   parentDag?: Dag,
 ): Dag {
   const namespaceContext = new NamespaceContext();
-  const curLevelDag = new Dag(dagId, parentDag, dagName);
+  const curLevelDag = new Dag(dagId, parentDag, dagNamespaceStmt.Name);
 
   function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
     mapToAdd.forEach((value, key) => {
@@ -132,7 +130,7 @@ export function makeSubDag(
     });
   }
 
-  statements.forEach((stmt) => {
+  dagNamespaceStmt.Statements.forEach((stmt) => {
     match(stmt.Type)
       .with(NodeType.Call, () => {
         const callStmt = stmt as CallTreeNode;
@@ -200,8 +198,7 @@ export function makeSubDag(
         const thisNamespaceId = uuidv4();
         const childDag = makeSubDag(
           thisNamespaceId,
-          namespaceStmt.Name,
-          namespaceStmt.Statements,
+          namespaceStmt,
           curLevelDag,
         );
         curLevelDag.addChildDag(childDag);
@@ -214,5 +211,8 @@ export function makeSubDag(
 }
 
 export function makeDag(recipe: RecipeTreeNode): Dag {
-  return makeSubDag(TOP_LEVEL_DAG_ID, "", recipe.Statements);
+  return makeSubDag(
+    TOP_LEVEL_DAG_ID,
+    new NamespaceTreeNode("", recipe.Statements),
+  );
 }
