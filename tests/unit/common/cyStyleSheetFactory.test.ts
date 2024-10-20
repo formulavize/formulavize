@@ -211,13 +211,7 @@ describe("makes cytoscape stylesheets", () => {
   test("styles from sub dags", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
     const childDag = new Dag("childDag", testDag);
-    childDag.addStyle(
-      "a",
-      new Map([
-        ["background-color", "red"],
-        ["border-width", "1"],
-      ]),
-    );
+    childDag.addStyle("a", new Map([["background-color", "red"]]));
     childDag.addStyleBinding("x", ["a"]);
 
     const grandChildDag = new Dag("grandChildDag", childDag);
@@ -225,11 +219,11 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyStyles = getBaseStylesheet().concat([
       {
         selector: ".a[lineagePath*='/childDag']",
-        style: { "background-color": "red", "border-width": "1" },
+        style: { "background-color": "red" },
       },
       {
         selector: "[name='x'][lineagePath*='/childDag']",
-        style: { "background-color": "red", "border-width": "1" },
+        style: { "background-color": "red" },
       },
       {
         selector: ".b[lineagePath*='/grandChildDag']",
@@ -237,5 +231,69 @@ describe("makes cytoscape stylesheets", () => {
       },
     ]);
     expect(makeCyStylesheets(testDag)).toEqual(expectedCyStyles);
+  });
+  test("sub dag with style property", () => {
+    const rootDag = new Dag(TOP_LEVEL_DAG_ID, null, "top");
+    const childDag = new Dag(
+      "x",
+      null,
+      "child",
+      [],
+      new Map([["background-color", "blue"]]),
+    );
+    rootDag.addChildDag(childDag);
+
+    const expectedCyStyles = getBaseStylesheet().concat([
+      {
+        selector: "node#x",
+        style: { "background-color": "blue" },
+      },
+    ]);
+    expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
+  });
+  test("sub dag with style tag", () => {
+    const rootDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag = new Dag("x", rootDag, "child", ["b"]); // styleTag ignored
+    childDag.addStyle("b", new Map([["background-color", "red"]]));
+    const grandChildDag = new Dag("y", childDag, "grandChild", ["b"]);
+    grandChildDag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+
+    const expectedCyStyles = getBaseStylesheet().concat([
+      {
+        selector: ".b[lineagePath*='/x']",
+        style: { "background-color": "red" },
+      },
+    ]);
+    expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
+  });
+  test("sub dags with name style", () => {
+    const rootDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag = new Dag("x", rootDag);
+    childDag.addStyle("b", new Map([["background-color", "red"]]));
+    childDag.addStyleBinding("y", ["b"]);
+    const grandChildDag = new Dag("y", childDag);
+    grandChildDag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+
+    const expectedCyStyles = getBaseStylesheet().concat([
+      {
+        selector: ".b[lineagePath*='/x']",
+        style: { "background-color": "red" },
+      },
+      {
+        selector: "[name='y'][lineagePath*='/x']",
+        style: { "background-color": "red" },
+      },
+    ]);
+    expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
   });
 });

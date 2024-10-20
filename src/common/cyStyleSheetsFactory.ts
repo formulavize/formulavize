@@ -47,6 +47,16 @@ export function makeEdgeStyleSheets(dag: Dag): Stylesheet[] {
     }));
 }
 
+export function makeCompoundNodeStylesheet(dag: Dag): Stylesheet[] {
+  const compoundNodeStylesheet = {
+    selector: `node#${dag.Id}`,
+    style: Object.fromEntries(
+      filterCytoscapeProperties(dag.DagStyleProperties),
+    ),
+  };
+  return dag.DagStyleProperties.size === 0 ? [] : [compoundNodeStylesheet];
+}
+
 export function makeDagLineageSelector(dag: Dag): string {
   return dag.Id === TOP_LEVEL_DAG_ID ? "" : `[lineagePath*='/${dag.Id}']`;
 }
@@ -105,23 +115,19 @@ export function getBaseStylesheet(): Stylesheet[] {
 }
 
 export function makeCyStylesheets(dag: Dag): Stylesheet[] {
-  const workingStylesheets: Stylesheet[] =
-    dag.Id === TOP_LEVEL_DAG_ID ? getBaseStylesheet() : [];
+  function makeChildStyleSheets(curDag: Dag): Stylesheet[] {
+    return curDag.getChildDags().flatMap(makeCyStylesheets);
+  }
 
-  const nodeStyles = makeNodeStylesheets(dag);
-  workingStylesheets.push(...nodeStyles);
+  const stylesheets: Stylesheet[] = [
+    ...(dag.Id === TOP_LEVEL_DAG_ID ? getBaseStylesheet() : []),
+    ...makeNodeStylesheets(dag),
+    ...makeEdgeStyleSheets(dag),
+    ...makeCompoundNodeStylesheet(dag),
+    ...makeClassStyleSheets(dag),
+    ...makeNameStyleSheets(dag),
+    ...makeChildStyleSheets(dag),
+  ];
 
-  const edgeStyles = makeEdgeStyleSheets(dag);
-  workingStylesheets.push(...edgeStyles);
-
-  const classStyles = makeClassStyleSheets(dag);
-  workingStylesheets.push(...classStyles);
-
-  const nameStyles = makeNameStyleSheets(dag);
-  workingStylesheets.push(...nameStyles);
-
-  const childStyleSheets = dag.getChildDags().map(makeCyStylesheets);
-  workingStylesheets.push(...childStyleSheets.flat());
-
-  return workingStylesheets;
+  return stylesheets;
 }

@@ -63,6 +63,25 @@ describe("makes cytoscape elements", () => {
     ];
     expect(makeCyEdges(testDag)).toEqual(expectedCyEdges);
   });
+  test("dag style tags", () => {
+    const dagStyleTags = ["s", "t"];
+    const dagStyleProperties = new Map([["a", "1"]]);
+    const testDag = new Dag("D", null, "", dagStyleTags, dagStyleProperties);
+    testDag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+    const expectedCyElements = {
+      edges: [],
+      nodes: [
+        { data: { id: "idX", name: "nameX", parent: "D" } },
+        { data: { id: "D", name: "" }, classes: "s t" },
+      ],
+    };
+    expect(makeCyElements(testDag)).toEqual(expectedCyElements);
+  });
   test("with top level dag only", () => {
     const topLevelDag = new Dag(TOP_LEVEL_DAG_ID);
     topLevelDag.addNode({
@@ -89,11 +108,11 @@ describe("makes cytoscape elements", () => {
     const childDag = new Dag("childDag");
     parentDag.addChildDag(childDag);
 
-    const expectedCyNodes = {
+    const expectedCyElements = {
       edges: [],
       nodes: [{ data: { id: "idX", name: "nameX" } }],
     };
-    expect(makeCyElements(parentDag)).toEqual(expectedCyNodes);
+    expect(makeCyElements(parentDag)).toEqual(expectedCyElements);
   });
   test("with child dag", () => {
     const parentDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -114,7 +133,7 @@ describe("makes cytoscape elements", () => {
 
     parentDag.addChildDag(childDag);
 
-    const expectedCyNodes = {
+    const expectedCyElements = {
       edges: [],
       nodes: [
         { data: { id: "idX", name: "nameX" } },
@@ -129,7 +148,7 @@ describe("makes cytoscape elements", () => {
         { data: { id: "childDag", name: "" } },
       ],
     };
-    expect(makeCyElements(parentDag)).toEqual(expectedCyNodes);
+    expect(makeCyElements(parentDag)).toEqual(expectedCyElements);
   });
   test("with multiple child dags", () => {
     const parentDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -157,7 +176,7 @@ describe("makes cytoscape elements", () => {
       styleProperties: new Map(),
     });
 
-    const expectedCyNodes = {
+    const expectedCyElements = {
       edges: [],
       nodes: [
         { data: { id: "idX", name: "nameX" } },
@@ -181,7 +200,7 @@ describe("makes cytoscape elements", () => {
         { data: { id: "childDag2", name: "" } },
       ],
     };
-    expect(makeCyElements(parentDag)).toEqual(expectedCyNodes);
+    expect(makeCyElements(parentDag)).toEqual(expectedCyElements);
   });
   test("with nested child dag", () => {
     const parentDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -210,7 +229,7 @@ describe("makes cytoscape elements", () => {
       styleProperties: new Map(),
     });
 
-    const expectedCyNodes = {
+    const expectedCyElements = {
       edges: [
         {
           data: {
@@ -239,10 +258,17 @@ describe("makes cytoscape elements", () => {
             lineagePath: "/childDag/grandChildDag",
           },
         },
-        { data: { id: "grandChildDag", name: "", parent: "childDag" } },
+        {
+          data: {
+            id: "grandChildDag",
+            name: "",
+            parent: "childDag",
+            lineagePath: "/childDag",
+          },
+        },
         { data: { id: "childDag", name: "" } },
       ],
     };
-    expect(makeCyElements(parentDag)).toEqual(expectedCyNodes);
+    expect(makeCyElements(parentDag)).toEqual(expectedCyElements);
   });
 });

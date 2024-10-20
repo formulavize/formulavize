@@ -30,11 +30,16 @@ export class Dag {
   private styleBinding: Map<Keyword, StyleTag[]>;
   private childDags: Map<DagId, Dag>;
   private lineagePath: string;
+  private dagLineagePath: string;
+  private dagStyleTags: StyleTag[];
+  private dagStyleProperties: StyleProperties;
 
   constructor(
     id: DagId,
     parent: Dag | null = null,
     name: string = "",
+    dagStyleTags: StyleTag[] = [],
+    dagStyleProperties: StyleProperties = new Map(),
     nodeMap: Map<NodeId, DagNode> = new Map(),
     edgeMap: Map<EdgeId, DagEdge> = new Map(),
     flatStyleMap: Map<StyleTag, StyleProperties> = new Map(),
@@ -44,6 +49,8 @@ export class Dag {
     this.id = id;
     this.parent = parent;
     this.name = name;
+    this.dagStyleTags = dagStyleTags;
+    this.dagStyleProperties = dagStyleProperties;
     this.nodeMap = nodeMap;
     this.edgeMap = edgeMap;
     this.flatStyleMap = flatStyleMap;
@@ -53,6 +60,7 @@ export class Dag {
       parent.addChildDag(this);
     }
     this.lineagePath = this.getLineagePath();
+    this.dagLineagePath = this.getDagLineagePath();
   }
 
   addNode(node: DagNode): void {
@@ -106,14 +114,27 @@ export class Dag {
     }
     this.parent = newParent;
     this.lineagePath = this.getLineagePath();
+    this.dagLineagePath = this.getDagLineagePath();
   }
 
   get Name(): string {
     return this.name;
   }
 
+  get DagStyleTags(): StyleTag[] {
+    return this.dagStyleTags;
+  }
+
+  get DagStyleProperties(): StyleProperties {
+    return this.dagStyleProperties;
+  }
+
   get LineagePath(): string {
     return this.lineagePath;
+  }
+
+  get DagLineagePath(): string {
+    return this.dagLineagePath;
   }
 
   getNodeList(): DagNode[] {
@@ -164,6 +185,11 @@ export class Dag {
       .reverse()
       .map((id) => "/" + id)
       .join("");
+  }
+
+  private getDagLineagePath(): string {
+    // Return the lineage path omitting the current dag id
+    return this.getLineagePath().split("/").slice(0, -1).join("/");
   }
 
   formatDag(level: number = 0): string {

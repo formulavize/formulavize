@@ -21,6 +21,11 @@ describe("subdag tests", () => {
     const grandchildDag = new Dag("grandchild");
     childDag.addChildDag(grandchildDag);
 
+    expect(dag.LineagePath).toEqual("");
+    expect(dag.DagLineagePath).toEqual("");
+    expect(childDag.LineagePath).toEqual("/child");
+    expect(childDag.DagLineagePath).toEqual("");
     expect(grandchildDag.LineagePath).toEqual("/child/grandchild");
+    expect(grandchildDag.DagLineagePath).toEqual("/child");
   });
 });
