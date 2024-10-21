@@ -143,8 +143,7 @@ function getArgList(c: TreeCursor, s: EditorState): ValueTreeNode[] {
 }
 
 function makeCall(c: TreeCursor, s: EditorState): CallTreeNode {
-  const callQualifiedIdent = getQualifiedIdentifer(c, s);
-  const functionName = getLastIdentifier(callQualifiedIdent);
+  const functionName = getTextFromChild("Identifier", c, s);
 
   const argList = makeNullableChild("ArgList", getArgList, c, s) ?? [];
 
