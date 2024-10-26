@@ -6,7 +6,8 @@ import {
   CallTreeNode as Call,
   AssignmentTreeNode as Assignment,
   AliasTreeNode as Alias,
-  VariableTreeNode as Variable,
+  LocalVarTreeNode as LocalVariable,
+  QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
@@ -48,17 +49,19 @@ describe("single statements", () => {
   test("call statement", () => {
     const input = "f(v)";
     expect(makeTree(input)).toEqual(
-      new Recipe([new Call("f", [new Variable("v")])]),
+      new Recipe([new Call("f", [new QualifiedVariable(["v"])])]),
     );
   });
   test("variable statement", () => {
     const input = "x";
-    expect(makeTree(input)).toEqual(new Recipe([new Variable("x")]));
+    expect(makeTree(input)).toEqual(new Recipe([new QualifiedVariable(["x"])]));
   });
   test("alias statement", () => {
     const input = "y = x";
     expect(makeTree(input)).toEqual(
-      new Recipe([new Alias(new Variable("y"), new Variable("x"))]),
+      new Recipe([
+        new Alias(new LocalVariable("y"), new QualifiedVariable(["x"])),
+      ]),
     );
   });
   test("assignment statement", () => {
@@ -66,7 +69,7 @@ describe("single statements", () => {
     expect(makeTree(input)).toEqual(
       new Recipe([
         new Assignment(
-          [new Variable("a"), new Variable("b")],
+          [new LocalVariable("a"), new LocalVariable("b")],
           new Call("c", []),
         ),
       ]),
@@ -112,8 +115,8 @@ describe("style nodes", () => {
       new Recipe([
         new Assignment(
           [
-            new Variable("a", new Style(new Map([["b", "1"]]))),
-            new Variable("c", new Style(undefined, ["d", "e"])),
+            new LocalVariable("a", new Style(new Map([["b", "1"]]))),
+            new LocalVariable("c", new Style(undefined, [["d"], ["e"]])),
           ],
           new Call("f", []),
         ),
@@ -125,8 +128,8 @@ describe("style nodes", () => {
     expect(makeTree(input)).toEqual(
       new Recipe([
         new Alias(
-          new Variable("x", new Style(undefined, ["y"])),
-          new Variable("z"),
+          new LocalVariable("x", new Style(undefined, [["y"]])),
+          new QualifiedVariable(["z"]),
         ),
       ]),
     );
@@ -134,7 +137,7 @@ describe("style nodes", () => {
   test("styled namespace", () => {
     const input = "n[]{#s}";
     expect(makeTree(input)).toEqual(
-      new Recipe([new Namespace("n", [], [], new Style(undefined, ["s"]))]),
+      new Recipe([new Namespace("n", [], [], new Style(undefined, [["s"]]))]),
     );
   });
   test("style with mixed types", () => {
@@ -149,7 +152,7 @@ describe("style nodes", () => {
               ["c--d", "2"],
               ["e_f", "3,4,5"],
             ]),
-            ["x", "y", "z"],
+            [["x"], ["y"], ["z"]],
           ),
         ),
       ]),
@@ -202,7 +205,7 @@ describe("style bindings", () => {
   test("style bind multiple styles", () => {
     const input = "%x{#a #b #c}";
     expect(makeTree(input)).toEqual(
-      new Recipe([new StyleBinding("x", ["a", "b", "c"])]),
+      new Recipe([new StyleBinding("x", [["a"], ["b"], ["c"]])]),
     );
   });
 });
@@ -212,9 +215,9 @@ describe("multiple statements", () => {
     const input = "y = f()\n x = y\n z(x)";
     expect(makeTree(input)).toEqual(
       new Recipe([
-        new Assignment([new Variable("y")], new Call("f", [])),
-        new Alias(new Variable("x"), new Variable("y")),
-        new Call("z", [new Variable("x")]),
+        new Assignment([new LocalVariable("y")], new Call("f", [])),
+        new Alias(new LocalVariable("x"), new QualifiedVariable(["y"])),
+        new Call("z", [new QualifiedVariable(["x"])]),
       ]),
     );
   });
@@ -222,9 +225,9 @@ describe("multiple statements", () => {
     const input = "y=f();x=y;z(x)";
     expect(makeTree(input)).toEqual(
       new Recipe([
-        new Assignment([new Variable("y")], new Call("f", [])),
-        new Alias(new Variable("x"), new Variable("y")),
-        new Call("z", [new Variable("x")]),
+        new Assignment([new LocalVariable("y")], new Call("f", [])),
+        new Alias(new LocalVariable("x"), new QualifiedVariable(["y"])),
+        new Call("z", [new QualifiedVariable(["x"])]),
       ]),
     );
   });
@@ -235,11 +238,11 @@ describe("multiple statements", () => {
         new Namespace(
           "n",
           [
-            new Assignment([new Variable("y")], new Call("f", [])),
-            new Alias(new Variable("z"), new Variable("x")),
+            new Assignment([new LocalVariable("y")], new Call("f", [])),
+            new Alias(new LocalVariable("z"), new QualifiedVariable(["x"])),
           ],
-          [new Variable("a"), new Call("b", [])],
-          new Style(undefined, ["s"]),
+          [new QualifiedVariable(["a"]), new Call("b", [])],
+          new Style(undefined, [["s"]]),
         ),
       ]),
     );
@@ -250,15 +253,18 @@ describe("incomplete statements", () => {
   test("incomplete assignment", () => {
     const input = "y=f(";
     expect(makeTree(input)).toEqual(
-      new Recipe([new Assignment([new Variable("y")], new Call("f", []))]),
+      new Recipe([new Assignment([new LocalVariable("y")], new Call("f", []))]),
     );
   });
   test("incomplete nested call", () => {
     const input = "x=y //test \ny=f(\n\t z()";
     expect(makeTree(input)).toEqual(
       new Recipe([
-        new Alias(new Variable("x"), new Variable("y")),
-        new Assignment([new Variable("y")], new Call("f", [new Call("z", [])])),
+        new Alias(new LocalVariable("x"), new QualifiedVariable(["y"])),
+        new Assignment(
+          [new LocalVariable("y")],
+          new Call("f", [new Call("z", [])]),
+        ),
       ]),
     );
   });

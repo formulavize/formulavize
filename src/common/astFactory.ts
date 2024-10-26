@@ -10,11 +10,13 @@ import {
   CallTreeNode,
   AssignmentTreeNode,
   AliasTreeNode,
-  VariableTreeNode,
+  QualifiedVarTreeNode,
+  LocalVarTreeNode,
   StyleTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
   NamespaceTreeNode,
+  QualifiableIdentifier,
 } from "./ast";
 
 function makeNullableChild<Result>(
@@ -41,19 +43,12 @@ function getTextFromChild(
     : "";
 }
 
-function getQualifiedIdentifer(c: TreeCursor, s: EditorState): string[] {
+function getQualifiableIdentifer(c: TreeCursor, s: EditorState): string[] {
   const candidateIdentifierList = c.node.getChild("QualifiableIdentifier");
   if (!candidateIdentifierList) return [];
   return candidateIdentifierList
     .getChildren("Identifier")
     .map((identifier) => s.doc.sliceString(identifier.from, identifier.to));
-}
-
-function getLastIdentifier(qualifiedIdentifier: string[]): string {
-  // temporarily assume the last identifier as the function name
-  return qualifiedIdentifier.length > 0
-    ? qualifiedIdentifier[qualifiedIdentifier.length - 1]
-    : "";
 }
 
 function getDescription(c: TreeCursor, s: EditorState): string | null {
@@ -69,20 +64,17 @@ function getDescription(c: TreeCursor, s: EditorState): string | null {
   return descriptionLines.length > 0 ? descriptionLines.join("\n") : null;
 }
 
-function getStyleTagName(c: TreeCursor, s: EditorState): string {
-  const styleQualifiedIdent = getQualifiedIdentifer(c, s);
-  const styleTagIdent = getLastIdentifier(styleQualifiedIdent);
-  return styleTagIdent;
-}
-
-function getStyleTagNames(c: TreeCursor, s: EditorState): string[] {
+function getStyleTagNames(
+  c: TreeCursor,
+  s: EditorState,
+): QualifiableIdentifier[] {
   return c.node
     .getChildren("StyleTag")
-    .map((styleTag) => getStyleTagName(styleTag.cursor(), s));
+    .map((styleTag) => getQualifiableIdentifer(styleTag.cursor(), s));
 }
 
 function makeStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
-  const styleTags: string[] = getStyleTagNames(c, s);
+  const styleTags: QualifiableIdentifier[] = getStyleTagNames(c, s);
   const styleDeclaredPropertyValues = new Map<string, string>(
     c.node.getChildren("StyleDeclaration").map((styleDec) => {
       const propName = getTextFromChild("PropertyName", styleDec.cursor(), s);
@@ -116,15 +108,14 @@ function makeNamedStyle(c: TreeCursor, s: EditorState): NamedStyleTreeNode {
 function makeStyleBinding(c: TreeCursor, s: EditorState): StyleBindingTreeNode {
   const keyword = getTextFromChild("Identifier", c, s);
 
-  const styleTagList: string[] =
+  const styleTagList: QualifiableIdentifier[] =
     makeNullableChild("StyleTagList", getStyleTagNames, c, s) ?? [];
   return new StyleBindingTreeNode(keyword, styleTagList);
 }
 
-function makeRhsVariable(c: TreeCursor, s: EditorState): VariableTreeNode {
-  const varQualifiedIdent = getQualifiedIdentifer(c, s);
-  const varName = getLastIdentifier(varQualifiedIdent);
-  return new VariableTreeNode(varName);
+function makeRhsVariable(c: TreeCursor, s: EditorState): QualifiedVarTreeNode {
+  const varQualifiedIdent = getQualifiableIdentifer(c, s);
+  return new QualifiedVarTreeNode(varQualifiedIdent);
 }
 
 function getArgList(c: TreeCursor, s: EditorState): ValueTreeNode[] {
@@ -152,12 +143,12 @@ function makeCall(c: TreeCursor, s: EditorState): CallTreeNode {
   return new CallTreeNode(functionName, argList, styleNode);
 }
 
-function makeLhsVariable(c: TreeCursor, s: EditorState): VariableTreeNode {
+function makeLhsVariable(c: TreeCursor, s: EditorState): LocalVarTreeNode {
   const ident = getTextFromChild("Identifier", c, s);
 
   const styleNode = makeNullableChild("StyleArgList", makeStyle, c, s);
 
-  return new VariableTreeNode(ident, styleNode);
+  return new LocalVarTreeNode(ident, styleNode);
 }
 
 function makeAssignment(c: TreeCursor, s: EditorState): AssignmentTreeNode {
