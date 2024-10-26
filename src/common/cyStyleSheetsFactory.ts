@@ -77,7 +77,9 @@ export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
   return Array.from(dag.getStyleBindings())
     .flatMap(([keyword, styleTags]) =>
       styleTags.map((styleTag) => {
-        const styleProperties = flatStyleMap.get(styleTag);
+        // temporarily get the last part to continue existing behavior
+        const tempLastPart = styleTag.at(-1) ?? "";
+        const styleProperties = flatStyleMap.get(tempLastPart);
         if (styleProperties) {
           return {
             selector: `[name='${keyword}']${lineageSelector}`,

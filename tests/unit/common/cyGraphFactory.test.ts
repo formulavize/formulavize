@@ -19,7 +19,7 @@ describe("makes cytoscape elements", () => {
     testDag.addNode({
       id: "idY",
       name: "nameY",
-      styleTags: ["s", "t"],
+      styleTags: [["s"], ["t"]],
       styleProperties: new Map([["a", "1"]]),
     });
     const expectedCyNodes = [
@@ -47,7 +47,7 @@ describe("makes cytoscape elements", () => {
       name: "nameZ",
       srcNodeId: "idX",
       destNodeId: "idY",
-      styleTags: ["s", "t"],
+      styleTags: [["s"], ["t"]],
       styleProperties: new Map([["a", "1"]]),
     });
     const expectedCyEdges = [
@@ -64,7 +64,7 @@ describe("makes cytoscape elements", () => {
     expect(makeCyEdges(testDag)).toEqual(expectedCyEdges);
   });
   test("dag style tags", () => {
-    const dagStyleTags = ["s", "t"];
+    const dagStyleTags = [["s"], ["t"]];
     const dagStyleProperties = new Map([["a", "1"]]);
     const testDag = new Dag("D", null, "", dagStyleTags, dagStyleProperties);
     testDag.addNode({

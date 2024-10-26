@@ -4,7 +4,8 @@ import {
   CallTreeNode as Call,
   AssignmentTreeNode as Assignment,
   AliasTreeNode as Alias,
-  VariableTreeNode as Variable,
+  LocalVarTreeNode as LocalVariable,
+  QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
@@ -86,18 +87,18 @@ describe("edge tests", () => {
   });
   test("one edge through variable", () => {
     const recipe = new Recipe([
-      new Assignment([new Variable("x")], new Call("y", [])),
-      new Call("z", [new Variable("x")]),
+      new Assignment([new LocalVariable("x")], new Call("y", [])),
+      new Call("z", [new QualifiedVariable(["x"])]),
     ]);
     const edgeList = makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["y", "z"]]);
   });
   test("two separate edges", () => {
     const recipe = new Recipe([
-      new Assignment([new Variable("a")], new Call("b", [])),
-      new Assignment([new Variable("c")], new Call("d", [])),
-      new Call("e", [new Variable("a")]),
-      new Call("f", [new Variable("c")]),
+      new Assignment([new LocalVariable("a")], new Call("b", [])),
+      new Assignment([new LocalVariable("c")], new Call("d", [])),
+      new Call("e", [new QualifiedVariable(["a"])]),
+      new Call("f", [new QualifiedVariable(["c"])]),
     ]);
     const edgeList = makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -107,9 +108,12 @@ describe("edge tests", () => {
   });
   test("two dependency function", () => {
     const recipe = new Recipe([
-      new Assignment([new Variable("a")], new Call("b", [])),
-      new Assignment([new Variable("c")], new Call("d", [])),
-      new Call("e", [new Variable("a"), new Variable("c")]),
+      new Assignment([new LocalVariable("a")], new Call("b", [])),
+      new Assignment([new LocalVariable("c")], new Call("d", [])),
+      new Call("e", [
+        new QualifiedVariable(["a"]),
+        new QualifiedVariable(["c"]),
+      ]),
     ]);
     const edgeList = makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -119,9 +123,9 @@ describe("edge tests", () => {
   });
   test("function with one var multiple consumers", () => {
     const recipe = new Recipe([
-      new Assignment([new Variable("a")], new Call("b", [])),
-      new Call("y", [new Variable("a")]),
-      new Call("x", [new Variable("a")]),
+      new Assignment([new LocalVariable("a")], new Call("b", [])),
+      new Call("y", [new QualifiedVariable(["a"])]),
+      new Call("x", [new QualifiedVariable(["a"])]),
     ]);
     const edgeList = makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -131,9 +135,12 @@ describe("edge tests", () => {
   });
   test("function with two vars different consumers", () => {
     const recipe = new Recipe([
-      new Assignment([new Variable("a"), new Variable("b")], new Call("c", [])),
-      new Call("y", [new Variable("a")]),
-      new Call("x", [new Variable("b")]),
+      new Assignment(
+        [new LocalVariable("a"), new LocalVariable("b")],
+        new Call("c", []),
+      ),
+      new Call("y", [new QualifiedVariable(["a"])]),
+      new Call("x", [new QualifiedVariable(["b"])]),
     ]);
     const edgeList = makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -143,8 +150,14 @@ describe("edge tests", () => {
   });
   test("function with double edge", () => {
     const recipe = new Recipe([
-      new Assignment([new Variable("a"), new Variable("b")], new Call("c", [])),
-      new Call("y", [new Variable("a"), new Variable("b")]),
+      new Assignment(
+        [new LocalVariable("a"), new LocalVariable("b")],
+        new Call("c", []),
+      ),
+      new Call("y", [
+        new QualifiedVariable(["a"]),
+        new QualifiedVariable(["b"]),
+      ]),
     ]);
     const edgeList = makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -154,8 +167,12 @@ describe("edge tests", () => {
   });
   test("function with re-used vars", () => {
     const recipe = new Recipe([
-      new Assignment([new Variable("a")], new Call("c", [])),
-      new Call("y", [new Variable("a"), new Variable("a"), new Variable("a")]),
+      new Assignment([new LocalVariable("a")], new Call("c", [])),
+      new Call("y", [
+        new QualifiedVariable(["a"]),
+        new QualifiedVariable(["a"]),
+        new QualifiedVariable(["a"]),
+      ]),
     ]);
     const edgeList = makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -166,17 +183,17 @@ describe("edge tests", () => {
   });
   test("aliased variable", () => {
     const recipe = new Recipe([
-      new Assignment([new Variable("a")], new Call("c", [])),
-      new Alias(new Variable("b"), new Variable("a")),
-      new Call("y", [new Variable("b")]),
+      new Assignment([new LocalVariable("a")], new Call("c", [])),
+      new Alias(new LocalVariable("b"), new QualifiedVariable(["a"])),
+      new Call("y", [new QualifiedVariable(["b"])]),
     ]);
     const edgeList = makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["c", "y"]]);
   });
   test("call with nested call and var", () => {
     const recipe = new Recipe([
-      new Assignment([new Variable("a")], new Call("c", [])),
-      new Call("y", [new Variable("a"), new Call("b", [])]),
+      new Assignment([new LocalVariable("a")], new Call("c", [])),
+      new Call("y", [new QualifiedVariable(["a"]), new Call("b", [])]),
     ]);
     const edgeList = makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -199,14 +216,14 @@ describe("edge tests", () => {
 describe("style tests", () => {
   function makeDagAndReturnStyleMap(
     recipe: Recipe,
-  ): Map<StyleTag, StyleProperties> {
+  ): Map<string, StyleProperties> {
     return makeDag(recipe).getFlattenedStyles();
   }
 
   test("basic named style", () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([new NamedStyle("s", new Style(sampleMap))]);
-    const expectedMap: Map<StyleTag, StyleProperties> = new Map([
+    const expectedMap: Map<string, StyleProperties> = new Map([
       ["s", sampleMap],
     ]);
     expect(makeDagAndReturnStyleMap(recipe)).toEqual(expectedMap);
@@ -215,9 +232,9 @@ describe("style tests", () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new NamedStyle("s", new Style(sampleMap)),
-      new NamedStyle("t", new Style(undefined, ["s"])),
+      new NamedStyle("t", new Style(undefined, [["s"]])),
     ]);
-    const expectedMap: Map<StyleTag, StyleProperties> = new Map([
+    const expectedMap: Map<string, StyleProperties> = new Map([
       ["s", sampleMap],
       ["t", sampleMap],
     ]);
@@ -228,9 +245,9 @@ describe("style tests", () => {
     const localMap: StyleProperties = new Map([["a", "new"]]);
     const recipe = new Recipe([
       new NamedStyle("s", new Style(sampleMap)),
-      new NamedStyle("t", new Style(localMap, ["s"])),
+      new NamedStyle("t", new Style(localMap, [["s"]])),
     ]);
-    const expectedMap: Map<StyleTag, StyleProperties> = new Map([
+    const expectedMap: Map<string, StyleProperties> = new Map([
       ["s", sampleMap],
       ["t", localMap],
     ]);
@@ -239,36 +256,38 @@ describe("style tests", () => {
 
   test("named style undeclared tag", () => {
     const recipe = new Recipe([
-      new NamedStyle("s", new Style(undefined, ["s"])),
+      new NamedStyle("s", new Style(undefined, [["s"]])),
     ]);
-    const expectedMap: Map<StyleTag, StyleProperties> = new Map([
+    const expectedMap: Map<string, StyleProperties> = new Map([
       ["s", new Map()],
     ]);
     expect(makeDagAndReturnStyleMap(recipe)).toEqual(expectedMap);
   });
   test("call styled", () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
-    const recipe = new Recipe([new Call("f", [], new Style(sampleMap, ["s"]))]);
+    const recipe = new Recipe([
+      new Call("f", [], new Style(sampleMap, [["s"]])),
+    ]);
     const dagNodeList = makeDag(recipe).getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
     expect(dagNode.styleProperties).toEqual(sampleMap);
-    expect(dagNode.styleTags).toEqual(["s"]);
+    expect(dagNode.styleTags).toEqual([["s"]]);
   });
   test("variable styled", () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new Assignment(
-        [new Variable("x", new Style(sampleMap, ["s"]))],
+        [new LocalVariable("x", new Style(sampleMap, [["s"]]))],
         new Call("f", []),
       ),
-      new Call("g", [new Variable("x")]),
+      new Call("g", [new QualifiedVariable(["x"])]),
     ]);
     const dagEdgeList = makeDag(recipe).getEdgeList();
     expect(dagEdgeList).toHaveLength(1);
     const dagEdge = dagEdgeList[0];
     expect(dagEdge.styleProperties).toEqual(sampleMap);
-    expect(dagEdge.styleTags).toEqual(["s"]);
+    expect(dagEdge.styleTags).toEqual([["s"]]);
   });
   test("multiple styled variables assigned", () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
@@ -277,12 +296,15 @@ describe("style tests", () => {
       new NamedStyle("s", new Style(sampleMap)),
       new Assignment(
         [
-          new Variable("x", new Style(undefined, ["s"])),
-          new Variable("y", new Style(sampleMap2, [])),
+          new LocalVariable("x", new Style(undefined, [["s"]])),
+          new LocalVariable("y", new Style(sampleMap2, [])),
         ],
         new Call("f", []),
       ),
-      new Call("g", [new Variable("x"), new Variable("y")]),
+      new Call("g", [
+        new QualifiedVariable(["x"]),
+        new QualifiedVariable(["y"]),
+      ]),
     ]);
     const dagEdgeList = makeDag(recipe).getEdgeList();
     expect(dagEdgeList).toHaveLength(2);
@@ -292,7 +314,7 @@ describe("style tests", () => {
       [dagEdge1, dagEdge2] = [dagEdge2, dagEdge1];
     }
     expect(dagEdge1.styleProperties).toEqual(new Map());
-    expect(dagEdge1.styleTags).toEqual(["s"]);
+    expect(dagEdge1.styleTags).toEqual([["s"]]);
     expect(dagEdge2.styleProperties).toEqual(sampleMap2);
     expect(dagEdge2.styleTags).toEqual([]);
   });
@@ -322,7 +344,7 @@ describe("style tests", () => {
     const recipe = new Recipe([
       new Assignment(
         [
-          new Variable(
+          new LocalVariable(
             "x",
             new Style(
               new Map([
@@ -334,7 +356,7 @@ describe("style tests", () => {
         ],
         new Call("f", []),
       ),
-      new Call("g", [new Variable("x")]),
+      new Call("g", [new QualifiedVariable(["x"])]),
     ]);
     const dagEdgeList = makeDag(recipe).getEdgeList();
     expect(dagEdgeList).toHaveLength(1);
@@ -360,9 +382,11 @@ describe("style binding tests", () => {
     expect(styleBindings).toEqual(expectedBinding);
   });
   test("style bind multiple styles", () => {
-    const recipe = new Recipe([new StyleBinding("x", ["a", "b"])]);
+    const recipe = new Recipe([new StyleBinding("x", [["a"], ["b"]])]);
     const styleBindings = makeDag(recipe).getStyleBindings();
-    const expectedBinding = new Map<Keyword, StyleTag[]>([["x", ["a", "b"]]]);
+    const expectedBinding = new Map<Keyword, StyleTag[]>([
+      ["x", [["a"], ["b"]]],
+    ]);
     expect(styleBindings).toEqual(expectedBinding);
   });
 });
