@@ -14,7 +14,6 @@ import {
   Dag,
   NodeId,
   EdgeId,
-  StyleTag,
   Keyword,
   StyleProperties,
 } from "../../../src/common/dag";
@@ -32,17 +31,17 @@ function makeDescriptionData(
 describe("makes style descriptions", () => {
   test("no matching styles", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
-    testDag.addStyle("empty", new Map());
-    testDag.addStyle("x", new Map([["color", "red"]]));
+    testDag.setStyle("empty", new Map());
+    testDag.setStyle("x", new Map([["color", "red"]]));
 
     const expectedMap = new Map();
     expect(getStyleDescriptionData(testDag)).toEqual(expectedMap);
   });
   test("two matching styles", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
-    testDag.addStyle("empty", new Map());
-    testDag.addStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
-    testDag.addStyle(
+    testDag.setStyle("empty", new Map());
+    testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
+    testDag.setStyle(
       "y",
       new Map([
         [DESCRIPTION_PROPERTY, "d2"],
@@ -50,7 +49,7 @@ describe("makes style descriptions", () => {
       ]),
     );
 
-    const expectedMap = new Map<StyleTag, DescriptionData>([
+    const expectedMap = new Map<string, DescriptionData>([
       ["x", makeDescriptionData("d1")],
       ["y", makeDescriptionData("d2", new Map([["color", "red"]]))],
     ]);
@@ -60,83 +59,68 @@ describe("makes style descriptions", () => {
 
 describe("makes name descriptions", () => {
   test("style with description not bound", () => {
-    const styleDescriptions = new Map<StyleTag, DescriptionData>([
-      ["x", makeDescriptionData("d1")],
-    ]);
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
-    testDag.addStyleBinding("name", ["y"]);
+    testDag.addStyleBinding("name", [["y"]]);
+    testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
 
     const expectedMap = new Map<Keyword, DescriptionData>();
-    expect(
-      getNamesWithStyleDescriptionData(testDag, styleDescriptions),
-    ).toEqual(expectedMap);
+    expect(getNamesWithStyleDescriptionData(testDag)).toEqual(expectedMap);
   });
   test("bound name with matching style", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    testDag.addStyleBinding("name", [["x"]]);
+    testDag.setStyle(
+      "x",
+      new Map([
+        [DESCRIPTION_PROPERTY, "d1"],
+        [`${DESCRIPTION_PROPERTY}-color`, "red"],
+      ]),
+    );
     const redDescriptionData = makeDescriptionData(
       "d1",
       new Map([["color", "red"]]),
     );
-    const styleDescriptions = new Map<StyleTag, DescriptionData>([
-      ["x", redDescriptionData],
-    ]);
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
-    testDag.addStyleBinding("name", ["x"]);
-
     const expectedMap = new Map<Keyword, DescriptionData>([
       ["name", redDescriptionData],
     ]);
-    expect(
-      getNamesWithStyleDescriptionData(testDag, styleDescriptions),
-    ).toEqual(expectedMap);
+    expect(getNamesWithStyleDescriptionData(testDag)).toEqual(expectedMap);
   });
   test("bound name with two matching styles", () => {
-    const styleDescriptions = new Map<StyleTag, DescriptionData>([
-      ["x", makeDescriptionData("d1")],
-      ["y", makeDescriptionData("d2")],
-    ]);
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
-    testDag.addStyleBinding("name", ["y", "x"]);
+    testDag.addStyleBinding("name", [["y"], ["x"]]);
+    testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
+    testDag.setStyle("y", new Map([[DESCRIPTION_PROPERTY, "d2"]]));
 
     // usage order takes precedence
     const expectedMap = new Map<Keyword, DescriptionData>([
       ["name", makeDescriptionData("d2")],
     ]);
-    expect(
-      getNamesWithStyleDescriptionData(testDag, styleDescriptions),
-    ).toEqual(expectedMap);
+    expect(getNamesWithStyleDescriptionData(testDag)).toEqual(expectedMap);
   });
   test("two names with bindings to the same style", () => {
-    const styleDescriptions = new Map<StyleTag, DescriptionData>([
-      ["x", makeDescriptionData("d1")],
-    ]);
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
-    testDag.addStyleBinding("name1", ["x"]);
-    testDag.addStyleBinding("name2", ["x"]);
+    testDag.addStyleBinding("name1", [["x"]]);
+    testDag.addStyleBinding("name2", [["x"]]);
+    testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
 
     const expectedMap = new Map<Keyword, DescriptionData>([
       ["name1", makeDescriptionData("d1")],
       ["name2", makeDescriptionData("d1")],
     ]);
-    expect(
-      getNamesWithStyleDescriptionData(testDag, styleDescriptions),
-    ).toEqual(expectedMap);
+    expect(getNamesWithStyleDescriptionData(testDag)).toEqual(expectedMap);
   });
   test("two names with bindings to different styles", () => {
-    const styleDescriptions = new Map<StyleTag, DescriptionData>([
-      ["x", makeDescriptionData("d1")],
-      ["y", makeDescriptionData("d2")],
-    ]);
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
-    testDag.addStyleBinding("name1", ["x"]);
-    testDag.addStyleBinding("name2", ["y"]);
+    testDag.addStyleBinding("name1", [["x"]]);
+    testDag.addStyleBinding("name2", [["y"]]);
+    testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
+    testDag.setStyle("y", new Map([[DESCRIPTION_PROPERTY, "d2"]]));
 
     const expectedMap = new Map<Keyword, DescriptionData>([
       ["name1", makeDescriptionData("d1")],
       ["name2", makeDescriptionData("d2")],
     ]);
-    expect(
-      getNamesWithStyleDescriptionData(testDag, styleDescriptions),
-    ).toEqual(expectedMap);
+    expect(getNamesWithStyleDescriptionData(testDag)).toEqual(expectedMap);
   });
 });
 
@@ -210,7 +194,7 @@ describe("makes element descriptions", () => {
       name: "name1",
       srcNodeId: "idX",
       destNodeId: "idY",
-      styleTags: ["s", "t"],
+      styleTags: [["s"], ["t"]],
       styleProperties: new Map([["a", "1"]]),
     });
 

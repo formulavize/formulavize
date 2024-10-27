@@ -123,7 +123,7 @@ describe("makes cytoscape stylesheets", () => {
   });
   test("class styles", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
-    testDag.addStyle(
+    testDag.setStyle(
       "s",
       new Map([
         ["a", "1"],
@@ -141,7 +141,7 @@ describe("makes cytoscape stylesheets", () => {
   test("class styles from sub dags", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
     const childDag = new Dag("childDag", testDag);
-    childDag.addStyle(
+    childDag.setStyle(
       "s",
       new Map([
         ["a", "1"],
@@ -164,8 +164,8 @@ describe("makes cytoscape stylesheets", () => {
   test("name styles", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyleBinding("x", [["a"], ["b"]]);
-    testDag.addStyle("a", new Map([["i", "1"]]));
-    testDag.addStyle(
+    testDag.setStyle("a", new Map([["i", "1"]]));
+    testDag.setStyle(
       "b",
       new Map([
         ["j", "2"],
@@ -187,8 +187,8 @@ describe("makes cytoscape stylesheets", () => {
   test("name styles from sub dags", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
     const childDag = new Dag("childDag", testDag);
-    childDag.addStyle("a", new Map([["i", "1"]]));
-    childDag.addStyle(
+    childDag.setStyle("a", new Map([["i", "1"]]));
+    childDag.setStyle(
       "b",
       new Map([
         ["j", "2"],
@@ -211,11 +211,11 @@ describe("makes cytoscape stylesheets", () => {
   test("styles from sub dags", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
     const childDag = new Dag("childDag", testDag);
-    childDag.addStyle("a", new Map([["background-color", "red"]]));
+    childDag.setStyle("a", new Map([["background-color", "red"]]));
     childDag.addStyleBinding("x", [["a"]]);
 
     const grandChildDag = new Dag("grandChildDag", childDag);
-    grandChildDag.addStyle("b", new Map([["shape", "hexagon"]]));
+    grandChildDag.setStyle("b", new Map([["shape", "hexagon"]]));
     const expectedCyStyles = getBaseStylesheet().concat([
       {
         selector: ".a[lineagePath*='/childDag']",
@@ -254,7 +254,7 @@ describe("makes cytoscape stylesheets", () => {
   test("sub dag with style tag", () => {
     const rootDag = new Dag(TOP_LEVEL_DAG_ID);
     const childDag = new Dag("x", rootDag, "child", [["b"]]); // styleTag ignored
-    childDag.addStyle("b", new Map([["background-color", "red"]]));
+    childDag.setStyle("b", new Map([["background-color", "red"]]));
     const grandChildDag = new Dag("y", childDag, "grandChild", [["b"]]);
     grandChildDag.addNode({
       id: "idX",
@@ -274,7 +274,7 @@ describe("makes cytoscape stylesheets", () => {
   test("sub dags with name style", () => {
     const rootDag = new Dag(TOP_LEVEL_DAG_ID);
     const childDag = new Dag("x", rootDag);
-    childDag.addStyle("b", new Map([["background-color", "red"]]));
+    childDag.setStyle("b", new Map([["background-color", "red"]]));
     childDag.addStyleBinding("y", [["b"]]);
     const grandChildDag = new Dag("y", childDag);
     grandChildDag.addNode({

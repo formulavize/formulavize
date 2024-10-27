@@ -6,8 +6,8 @@ import {
   NodeId,
   EdgeId,
   ElementId,
-  StyleTag,
   Keyword,
+  StyleTag,
   StyleProperties,
 } from "./dag";
 
@@ -43,30 +43,50 @@ export function getDescriptionData(
 
 export function getStyleDescriptionData(
   dag: Dag,
-): Map<StyleTag, DescriptionData> {
-  return new Map<StyleTag, DescriptionData>(
+): Map<string, DescriptionData> {
+  return new Map<string, DescriptionData>(
     Array.from(dag.getFlattenedStyles().entries())
       .map(([styleTag, styleProperties]) => [
         styleTag,
         getDescriptionData(styleProperties),
       ])
       .filter(([_, descriptionData]) => !!descriptionData) as Iterable<
-      [StyleTag, DescriptionData]
+      [string, DescriptionData]
     >,
   );
 }
 
+export function styleTagHasDescriptionDefined(
+  dag: Dag,
+  styleTag: StyleTag,
+): boolean {
+  return !!dag.getStyle(styleTag)?.get(DESCRIPTION_PROPERTY);
+}
+
+export function getDescriptionDataForStyleTag(
+  dag: Dag,
+  styleTag: StyleTag,
+): DescriptionData | null {
+  const styleProperties = dag.getStyle(styleTag);
+  if (!styleProperties) return null;
+  return getDescriptionData(styleProperties);
+}
+
 export function getNamesWithStyleDescriptionData(
   dag: Dag,
-  styleTagDescriptions: Map<StyleTag, DescriptionData>,
 ): Map<Keyword, DescriptionData> {
   return new Map<Keyword, DescriptionData>(
     Array.from(dag.getStyleBindings().entries())
       .map(([keyword, styleTags]) => {
-        // find the first style tag that has a description (tag usage order takes precedence)
-        const usedTag = styleTags.find((tag) => styleTagDescriptions.has(tag));
+        // find the first style tag that has a description
+        // (tag usage order takes precedence)
+        const usedTag = styleTags.find((tag) =>
+          styleTagHasDescriptionDefined(dag, tag),
+        );
         if (!usedTag) return null;
-        return [keyword, styleTagDescriptions.get(usedTag)];
+        const descriptionData = getDescriptionDataForStyleTag(dag, usedTag);
+        if (!descriptionData) return null;
+        return [keyword, descriptionData];
       })
       .filter(Boolean) as Iterable<[Keyword, DescriptionData]>,
   );
@@ -172,10 +192,7 @@ export function extendCyPopperElements(cy: cytoscape.Core, dag: Dag) {
   });
 
   const styleDescriptionData = getStyleDescriptionData(dag);
-  const nameDescriptionData = getNamesWithStyleDescriptionData(
-    dag,
-    styleDescriptionData,
-  );
+  const nameDescriptionData = getNamesWithStyleDescriptionData(dag);
 
   nameDescriptionData.forEach((descriptionData, keyword) => {
     addDescriptionPopper(

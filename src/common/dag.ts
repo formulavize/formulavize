@@ -2,7 +2,8 @@ export type NodeId = string;
 export type EdgeId = string;
 export type DagId = string;
 export type ElementId = NodeId | EdgeId;
-export type StyleTag = string[];
+export type QualifiableIdentifier = string[];
+export type StyleTag = QualifiableIdentifier;
 export type Keyword = string;
 export type StyleProperties = Map<string, string>;
 
@@ -20,15 +21,23 @@ export interface DagEdge extends DagElement {
   destNodeId: NodeId;
 }
 
+export interface DagStyle {
+  styleTags: StyleTag[];
+  styleProperties: StyleProperties;
+}
+
 export class Dag {
   private id: DagId;
   private parent: Dag | null;
   private name: string;
   private nodeMap: Map<NodeId, DagNode>;
   private edgeMap: Map<EdgeId, DagEdge>;
-  private flatStyleMap: Map<string, StyleProperties>;
+  private varNameToNodeId: Map<string, NodeId>;
+  private varNameToStyleNode: Map<string, DagStyle>;
+  private styleTagNameToFlatStyleMap: Map<string, StyleProperties>;
   private styleBinding: Map<Keyword, StyleTag[]>;
   private childDags: Map<DagId, Dag>;
+  private namespaceNameToDagId: Map<string, DagId>;
   private lineagePath: string;
   private dagLineagePath: string;
   private dagStyleTags: StyleTag[];
@@ -40,22 +49,20 @@ export class Dag {
     name: string = "",
     dagStyleTags: StyleTag[] = [],
     dagStyleProperties: StyleProperties = new Map(),
-    nodeMap: Map<NodeId, DagNode> = new Map(),
-    edgeMap: Map<EdgeId, DagEdge> = new Map(),
-    flatStyleMap: Map<string, StyleProperties> = new Map(),
-    styleBindingMap: Map<Keyword, StyleTag[]> = new Map(),
-    childDags: Map<DagId, Dag> = new Map(),
   ) {
     this.id = id;
     this.parent = parent;
     this.name = name;
     this.dagStyleTags = dagStyleTags;
     this.dagStyleProperties = dagStyleProperties;
-    this.nodeMap = nodeMap;
-    this.edgeMap = edgeMap;
-    this.flatStyleMap = flatStyleMap;
-    this.styleBinding = styleBindingMap;
-    this.childDags = childDags;
+    this.nodeMap = new Map();
+    this.edgeMap = new Map();
+    this.varNameToNodeId = new Map();
+    this.varNameToStyleNode = new Map();
+    this.styleTagNameToFlatStyleMap = new Map();
+    this.styleBinding = new Map();
+    this.childDags = new Map();
+    this.namespaceNameToDagId = new Map();
     if (parent !== null) {
       parent.addChildDag(this);
     }
@@ -79,17 +86,50 @@ export class Dag {
     this.edgeMap.set(edge.id, edge);
   }
 
-  addStyle(styleTagName: string, styleProperties: StyleProperties): void {
-    this.flatStyleMap.set(styleTagName, styleProperties);
-  }
-
   addStyleBinding(keyword: Keyword, styleTags: StyleTag[]): void {
     this.styleBinding.set(keyword, styleTags);
   }
 
   addChildDag(childDag: Dag): void {
     this.childDags.set(childDag.id, childDag);
+    if (childDag.name) {
+      this.namespaceNameToDagId.set(childDag.name, childDag.id);
+    }
     childDag.Parent = this;
+  }
+
+  setVarNode(varName: string, nodeId: NodeId): void {
+    this.varNameToNodeId.set(varName, nodeId);
+  }
+
+  setVarStyle(varName: string, styleNode: DagStyle): void {
+    this.varNameToStyleNode.set(varName, styleNode);
+  }
+
+  setStyle(styleTagName: string, styleProperties: StyleProperties): void {
+    this.styleTagNameToFlatStyleMap.set(styleTagName, styleProperties);
+  }
+
+  getVarNode(varName: QualifiableIdentifier): NodeId | undefined {
+    // temporarily get the last part to continue existing behavior
+    const tempLastPart = varName.at(-1);
+    if (tempLastPart === undefined) return undefined;
+    console.log("getVarNode", tempLastPart);
+    return this.varNameToNodeId.get(tempLastPart);
+  }
+
+  getVarStyle(varName: QualifiableIdentifier): DagStyle | undefined {
+    // temporarily get the last part to continue existing behavior
+    const tempLastPart = varName.at(-1);
+    if (tempLastPart === undefined) return undefined;
+    return this.varNameToStyleNode.get(tempLastPart);
+  }
+
+  getStyle(styleTag: StyleTag): StyleProperties | undefined {
+    // temporarily get the last part to continue existing behavior
+    const tempLastPart = styleTag.at(-1);
+    if (tempLastPart === undefined) return undefined;
+    return this.styleTagNameToFlatStyleMap.get(tempLastPart);
   }
 
   get Id(): DagId {
@@ -146,7 +186,7 @@ export class Dag {
   }
 
   getFlattenedStyles(): Map<string, StyleProperties> {
-    return this.flatStyleMap;
+    return this.styleTagNameToFlatStyleMap;
   }
 
   getStyleBindings(): Map<Keyword, StyleTag[]> {
@@ -230,7 +270,7 @@ export class Dag {
         stylePropertiesDump(edge.styleProperties) +
         "\n";
     });
-    this.flatStyleMap.forEach((style, styleTag) => {
+    this.styleTagNameToFlatStyleMap.forEach((style, styleTag) => {
       result +=
         childLeftPad + "Style: " + styleTag + stylePropertiesDump(style) + "\n";
     });
