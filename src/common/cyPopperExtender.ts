@@ -176,11 +176,11 @@ function addDescriptionPopper(
   });
 }
 
-export function extendCyPopperElements(cy: cytoscape.Core, dag: Dag) {
-  clearAllPopperDivs();
-
-  const canvasElement = document.getElementById("canvas") ?? document.body;
-
+export function addCyPopperElementsFromDag(
+  cy: cytoscape.Core,
+  canvasElement: HTMLElement,
+  dag: Dag,
+) {
   const nodeDescriptionData = getNodeDescriptionData(dag);
   nodeDescriptionData.forEach((descriptionData, nodeId) => {
     addDescriptionPopper(cy, canvasElement, `node#${nodeId}`, descriptionData);
@@ -192,8 +192,11 @@ export function extendCyPopperElements(cy: cytoscape.Core, dag: Dag) {
   });
 
   const styleDescriptionData = getStyleDescriptionData(dag);
-  const nameDescriptionData = getNamesWithStyleDescriptionData(dag);
+  styleDescriptionData.forEach((descriptionData, styleTag) => {
+    addDescriptionPopper(cy, canvasElement, `.${styleTag}`, descriptionData);
+  });
 
+  const nameDescriptionData = getNamesWithStyleDescriptionData(dag);
   nameDescriptionData.forEach((descriptionData, keyword) => {
     addDescriptionPopper(
       cy,
@@ -203,9 +206,17 @@ export function extendCyPopperElements(cy: cytoscape.Core, dag: Dag) {
     );
   });
 
-  styleDescriptionData.forEach((descriptionData, styleTag) => {
-    addDescriptionPopper(cy, canvasElement, `.${styleTag}`, descriptionData);
+  dag.getChildDags().forEach((childDag) => {
+    addCyPopperElementsFromDag(cy, canvasElement, childDag);
   });
+}
+
+export function extendCyPopperElements(cy: cytoscape.Core, dag: Dag) {
+  clearAllPopperDivs();
+
+  const canvasElement = document.getElementById("canvas") ?? document.body;
+
+  addCyPopperElementsFromDag(cy, canvasElement, dag);
 
   // scale popper divs with zoom level
   cy.on("zoom", () => {
