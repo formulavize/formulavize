@@ -1,10 +1,11 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import {
   getStyleDescriptionData,
   getNamesWithStyleDescriptionData,
   getNodeDescriptionData,
   getEdgeDescriptionData,
   DescriptionData,
+  addCyPopperElementsFromDag,
 } from "../../../src/common/cyPopperExtender";
 import {
   DESCRIPTION_PROPERTY,
@@ -17,6 +18,7 @@ import {
   Keyword,
   StyleProperties,
 } from "../../../src/common/dag";
+import { Core } from "cytoscape";
 
 function makeDescriptionData(
   description: string,
@@ -274,5 +276,26 @@ describe("makes element descriptions", () => {
       ["id2", makeDescriptionData("d2")],
     ]);
     expect(getEdgeDescriptionData(testDag)).toEqual(expectedMap);
+  });
+});
+
+describe("extends popper with descriptions", () => {
+  test("one matching node in subdag", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const subdag = new Dag("subdag", testDag);
+    subdag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [],
+      styleProperties: new Map([[DESCRIPTION_PROPERTY, "d1"]]),
+    });
+
+    const mockCyCore = {
+      elements: () => [],
+    } as unknown as Core;
+    const mockCoreSpy = vi.spyOn(mockCyCore, "elements");
+    const mockElement = {} as HTMLElement;
+    addCyPopperElementsFromDag(mockCyCore, mockElement, testDag);
+    expect(mockCoreSpy).toHaveBeenCalledWith("node#idX");
   });
 });
