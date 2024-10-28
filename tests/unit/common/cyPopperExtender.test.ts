@@ -4,6 +4,7 @@ import {
   getNamesWithStyleDescriptionData,
   getNodeDescriptionData,
   getEdgeDescriptionData,
+  getCompoundNodeDescriptionData,
   DescriptionData,
   addCyPopperElementsFromDag,
 } from "../../../src/common/cyPopperExtender";
@@ -276,6 +277,16 @@ describe("makes element descriptions", () => {
       ["id2", makeDescriptionData("d2")],
     ]);
     expect(getEdgeDescriptionData(testDag)).toEqual(expectedMap);
+  });
+  test("one matching compound node", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const stylePropMap = new Map([[DESCRIPTION_PROPERTY, "d1"]]);
+    const subdag = new Dag("subDagId", testDag, "subdag", [], stylePropMap);
+
+    const expectedMap = new Map<NodeId, DescriptionData>([
+      ["subDagId", makeDescriptionData("d1")],
+    ]);
+    expect(getCompoundNodeDescriptionData(subdag)).toEqual(expectedMap);
   });
 });
 
