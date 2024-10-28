@@ -185,6 +185,15 @@ export class Dag {
     return Array.from(this.edgeMap.values());
   }
 
+  getDagAsDagNode(): DagNode {
+    return {
+      id: this.id,
+      name: this.name,
+      styleTags: this.dagStyleTags,
+      styleProperties: this.dagStyleProperties,
+    };
+  }
+
   getFlattenedStyles(): Map<string, StyleProperties> {
     return this.styleTagNameToFlatStyleMap;
   }

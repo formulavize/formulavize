@@ -114,6 +114,12 @@ export function getEdgeDescriptionData(dag: Dag): Map<EdgeId, DescriptionData> {
   return getElementDescriptionData(dag.getEdgeList());
 }
 
+export function getCompoundNodeDescriptionData(
+  dag: Dag,
+): Map<NodeId, DescriptionData> {
+  return getElementDescriptionData([dag.getDagAsDagNode()]);
+}
+
 function clearAllPopperDivs() {
   const popperOuterDivArray = Array.from(
     document.getElementsByClassName(POPPER_OUTER_DIV_CLASS),
@@ -181,29 +187,35 @@ export function addCyPopperElementsFromDag(
   canvasElement: HTMLElement,
   dag: Dag,
 ) {
-  const nodeDescriptionData = getNodeDescriptionData(dag);
-  nodeDescriptionData.forEach((descriptionData, nodeId) => {
-    addDescriptionPopper(cy, canvasElement, `node#${nodeId}`, descriptionData);
-  });
-
-  const edgeDescriptionData = getEdgeDescriptionData(dag);
-  edgeDescriptionData.forEach((descriptionData, edgeId) => {
-    addDescriptionPopper(cy, canvasElement, `edge#${edgeId}`, descriptionData);
-  });
-
-  const styleDescriptionData = getStyleDescriptionData(dag);
-  styleDescriptionData.forEach((descriptionData, styleTag) => {
-    addDescriptionPopper(cy, canvasElement, `.${styleTag}`, descriptionData);
-  });
-
-  const nameDescriptionData = getNamesWithStyleDescriptionData(dag);
-  nameDescriptionData.forEach((descriptionData, keyword) => {
-    addDescriptionPopper(
-      cy,
-      canvasElement,
-      `[name ='${keyword}']`,
-      descriptionData,
+  function mapMapKeys<K, V, R>(
+    map: Map<K, V>,
+    mapFn: (key: K) => R,
+  ): Map<R, V> {
+    return new Map<R, V>(
+      Array.from(map.entries()).map(([key, value]) => [mapFn(key), value]),
     );
+  }
+  function addSelectorDesc(descriptionDataMap: Map<string, DescriptionData>) {
+    descriptionDataMap.forEach((descriptionData, selector) => {
+      addDescriptionPopper(cy, canvasElement, selector, descriptionData);
+    });
+  }
+
+  const descriptionDataWithSelectorKeyFunc: [
+    Map<string, DescriptionData>, // description data map
+    (key: string) => string, // makes a selector from a key
+  ][] = [
+    [getNodeDescriptionData(dag), (id: string) => `node#${id}`],
+    [getEdgeDescriptionData(dag), (id: string) => `edge#${id}`],
+    [getStyleDescriptionData(dag), (tag: string) => `.${tag}`],
+    [
+      getNamesWithStyleDescriptionData(dag),
+      (keyword: string) => `[name='${keyword}']`,
+    ],
+    [getCompoundNodeDescriptionData(dag), (id: string) => `node#${id}`],
+  ];
+  descriptionDataWithSelectorKeyFunc.forEach(([dataMap, selectorFunc]) => {
+    addSelectorDesc(mapMapKeys(dataMap, selectorFunc));
   });
 
   dag.getChildDags().forEach((childDag) => {
