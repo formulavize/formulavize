@@ -88,7 +88,7 @@ export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
             ),
           };
         } else {
-          console.log(`keyword ${keyword} could not be bound to ${styleTag}`);
+          console.warn(`keyword ${keyword} could not be bound to ${styleTag}`);
           return null;
         }
       }),

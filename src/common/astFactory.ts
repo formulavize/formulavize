@@ -211,7 +211,7 @@ function makeStatement(
     .with("LineComment", () => null)
     .with("BlockComment", () => null)
     .otherwise(() => {
-      console.warn("Unknown node type ", c.node.name);
+      console.error("Unknown node type ", c.node.name);
       return null;
     });
 }
