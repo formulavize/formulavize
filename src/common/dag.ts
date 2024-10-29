@@ -76,11 +76,11 @@ export class Dag {
 
   addEdge(edge: DagEdge): void {
     if (!this.nodeMap.has(edge.srcNodeId)) {
-      console.log("Source node id not found ", edge.srcNodeId);
+      console.warn("Source node id not found ", edge.srcNodeId);
       return;
     }
     if (!this.nodeMap.has(edge.destNodeId)) {
-      console.log("Destination node id not found ", edge.destNodeId);
+      console.warn("Destination node id not found ", edge.destNodeId);
       return;
     }
     this.edgeMap.set(edge.id, edge);
@@ -114,7 +114,6 @@ export class Dag {
     // temporarily get the last part to continue existing behavior
     const tempLastPart = varName.at(-1);
     if (tempLastPart === undefined) return undefined;
-    console.log("getVarNode", tempLastPart);
     return this.varNameToNodeId.get(tempLastPart);
   }
 

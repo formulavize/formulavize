@@ -47,12 +47,12 @@ function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
             varStyle: varStyle,
           };
         } else {
-          console.log("Unable to find variable with name ", varName);
+          console.warn("Unable to find variable with name ", varName);
           return null;
         }
       })
       .otherwise(() => {
-        console.log("Unknown node type ", arg.Type);
+        console.error("Unknown node type ", arg.Type);
         return null;
       }),
   ).filter(Boolean) as IncomingEdgeInfo[];
@@ -135,7 +135,7 @@ export function makeSubDag(
         if (RhsReferentNodeId) {
           curLevelDag.setVarNode(lhsName, RhsReferentNodeId);
         } else {
-          console.log(`var ${lhsName} not found`);
+          console.warn(`var ${lhsName} not found`);
         }
         if (aliasStmt.Lhs.Styling) {
           curLevelDag.setVarStyle(lhsName, makeDagStyle(aliasStmt.Lhs.Styling));
@@ -151,7 +151,7 @@ export function makeSubDag(
             mergeMap(workingStyleProperties, referentStyle);
           } else {
             // styles must be declared before usage
-            console.log(`styleTag ${styleTag} not found`);
+            console.warn(`styleTag ${styleTag} not found`);
           }
         });
         // any locally defined properties will overwrite referenced styles
@@ -174,7 +174,7 @@ export function makeSubDag(
         curLevelDag.addChildDag(childDag);
       })
       .otherwise(() => {
-        console.log("Unknown node type ", stmt.Type);
+        console.error("Unknown node type ", stmt.Type);
       });
   });
   return curLevelDag;
