@@ -289,8 +289,11 @@ export class Dag {
     const grandchildLeftPad = childLeftPad + "\t";
 
     function styleTagDump(styleTagList: StyleTag[]): string {
+      function styleTagListToString(styleTags: StyleTag[]): string {
+        return styleTags.map((styleTag) => `${styleTag.join(".")}`).join(", ");
+      }
       return styleTagList.length > 0
-        ? `\n${grandchildLeftPad}StyleTags: [${styleTagList.toString()}]`
+        ? `\n${grandchildLeftPad}StyleTags: [${styleTagListToString(styleTagList)}]`
         : "";
     }
 
