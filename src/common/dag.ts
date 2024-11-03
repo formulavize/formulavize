@@ -75,14 +75,6 @@ export class Dag {
   }
 
   addEdge(edge: DagEdge): void {
-    if (!this.nodeMap.has(edge.srcNodeId)) {
-      console.warn("Source node id not found ", edge.srcNodeId);
-      return;
-    }
-    if (!this.nodeMap.has(edge.destNodeId)) {
-      console.warn("Destination node id not found ", edge.destNodeId);
-      return;
-    }
     this.edgeMap.set(edge.id, edge);
   }
 
@@ -98,6 +90,75 @@ export class Dag {
     childDag.Parent = this;
   }
 
+  private resolveFromMember<K extends keyof Dag, V>(
+    memberName: K,
+    idPart: string,
+  ): V | undefined {
+    // Resolve the idPart from the member of the current dag
+    const memberValue = this[memberName];
+    if (!(memberValue instanceof Map)) return undefined;
+    return memberValue.get(idPart) as V;
+  }
+
+  private resolveQualifiedIdentifierInCurScope<K extends keyof Dag, V>(
+    qualifiedIdentifier: QualifiableIdentifier,
+    memberName: K,
+  ): V | undefined {
+    // Resolve the qualified identifier in the current scope
+    if (qualifiedIdentifier.length === 0) return undefined;
+
+    const [first, ...rest] = qualifiedIdentifier;
+    if (rest.length === 0) {
+      return this.resolveFromMember(memberName, first) as V;
+    }
+
+    const childDagId = this.namespaceNameToDagId.get(first);
+    if (!childDagId) return undefined;
+    return this.childDags
+      .get(childDagId)
+      ?.resolveQualifiedIdentifierInCurScope(rest, memberName);
+  }
+
+  private resolveQualifiedIdentifier<K extends keyof Dag, V>(
+    qualifiedIdentifier: QualifiableIdentifier,
+    memberName: K,
+    seenDags: Set<DagId> = new Set(),
+  ): V | undefined {
+    // Resolve the qualified identifier in the current scope and parent scopes
+    // with inner dags taking precedence over outer dags
+    if (this.id in seenDags) {
+      // this should never happen in practice
+      console.warn("Cycle detected in the DAG lineage, stopping traversal");
+      return undefined;
+    }
+    seenDags.add(this.id);
+    const resolvedValue = this.resolveQualifiedIdentifierInCurScope(
+      qualifiedIdentifier,
+      memberName,
+    );
+    if (resolvedValue) return resolvedValue as V;
+    return this.parent?.resolveQualifiedIdentifier(
+      qualifiedIdentifier,
+      memberName,
+      seenDags,
+    );
+  }
+
+  getVarNode(varName: QualifiableIdentifier): NodeId | undefined {
+    const varNameMember = "varNameToNodeId" as keyof Dag;
+    return this.resolveQualifiedIdentifier(varName, varNameMember);
+  }
+
+  getVarStyle(varName: QualifiableIdentifier): DagStyle | undefined {
+    const varStyleMember = "varNameToStyleNode" as keyof Dag;
+    return this.resolveQualifiedIdentifier(varName, varStyleMember);
+  }
+
+  getStyle(styleTag: StyleTag): StyleProperties | undefined {
+    const styleTagMember = "styleTagNameToFlatStyleMap" as keyof Dag;
+    return this.resolveQualifiedIdentifier(styleTag, styleTagMember);
+  }
+
   setVarNode(varName: string, nodeId: NodeId): void {
     this.varNameToNodeId.set(varName, nodeId);
   }
@@ -108,27 +169,6 @@ export class Dag {
 
   setStyle(styleTagName: string, styleProperties: StyleProperties): void {
     this.styleTagNameToFlatStyleMap.set(styleTagName, styleProperties);
-  }
-
-  getVarNode(varName: QualifiableIdentifier): NodeId | undefined {
-    // temporarily get the last part to continue existing behavior
-    const tempLastPart = varName.at(-1);
-    if (tempLastPart === undefined) return undefined;
-    return this.varNameToNodeId.get(tempLastPart);
-  }
-
-  getVarStyle(varName: QualifiableIdentifier): DagStyle | undefined {
-    // temporarily get the last part to continue existing behavior
-    const tempLastPart = varName.at(-1);
-    if (tempLastPart === undefined) return undefined;
-    return this.varNameToStyleNode.get(tempLastPart);
-  }
-
-  getStyle(styleTag: StyleTag): StyleProperties | undefined {
-    // temporarily get the last part to continue existing behavior
-    const tempLastPart = styleTag.at(-1);
-    if (tempLastPart === undefined) return undefined;
-    return this.styleTagNameToFlatStyleMap.get(tempLastPart);
   }
 
   get Id(): DagId {
