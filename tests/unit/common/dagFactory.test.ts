@@ -431,6 +431,36 @@ describe("style tests", () => {
     expect(dagEdge.styleProperties).toEqual(new Map());
     expect(dagEdge.styleTags).toEqual([]);
   });
+  test("named style in parent namespace", () => {
+    const sampleMap: StyleProperties = new Map([["a", "1"]]);
+    const recipe = new Recipe([
+      new NamedStyle("s", new Style(sampleMap)),
+      new Namespace("child", [
+        new Call("g", [], new Style(undefined, [["s"]])),
+      ]),
+    ]);
+    const dag = makeDag(recipe);
+    const childDags = dag.getChildDags();
+    expect(childDags).toHaveLength(1);
+    const childDag = childDags[0];
+    const dagNodeList = childDag.getNodeList();
+    const dagNode = dagNodeList[0];
+    expect(dagNode.styleProperties).toEqual(new Map());
+    expect(dagNode.styleTags).toEqual([["s"]]);
+  });
+  test("named style in child namespace", () => {
+    const sampleMap: StyleProperties = new Map([["a", "1"]]);
+    const recipe = new Recipe([
+      new Namespace("child", [new NamedStyle("s", new Style(sampleMap))]),
+      new Call("g", [], new Style(undefined, [["child", "s"]])),
+    ]);
+    const dag = makeDag(recipe);
+    const dagNodeList = dag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
+    const dagNode = dagNodeList[0];
+    expect(dagNode.styleProperties).toEqual(new Map());
+    expect(dagNode.styleTags).toEqual([["child", "s"]]);
+  });
   test("node description and label property", () => {
     const recipe = new Recipe([
       new Call(
