@@ -40,16 +40,15 @@ function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
         const varName = argVarName.QualifiedVarName;
         const varStyle = workingDag.getVarStyle(varName) ?? null;
         const candidateSrcNodeId = workingDag.getVarNode(varName);
-        if (candidateSrcNodeId) {
-          return {
-            nodeId: candidateSrcNodeId,
-            varName: varName,
-            varStyle: varStyle,
-          };
-        } else {
+        if (!candidateSrcNodeId) {
           console.warn("Unable to find variable with name ", varName);
           return null;
         }
+        return {
+          nodeId: candidateSrcNodeId,
+          varName: varName,
+          varStyle: varStyle,
+        };
       })
       .otherwise(() => {
         console.error("Unknown node type ", arg.Type);
@@ -117,12 +116,8 @@ export function makeSubDag(
         const thisNodeId = processCall(assignmentStmt.Rhs, curLevelDag);
         assignmentStmt.Lhs.forEach((lhsVar) => {
           curLevelDag.setVarNode(lhsVar.VarName, thisNodeId);
-          if (lhsVar.Styling) {
-            curLevelDag.setVarStyle(
-              lhsVar.VarName,
-              makeDagStyle(lhsVar.Styling),
-            );
-          }
+          const varStyle = lhsVar.Styling ? makeDagStyle(lhsVar.Styling) : null;
+          curLevelDag.setVarStyle(lhsVar.VarName, varStyle);
         });
       })
       .with(NodeType.Alias, () => {
@@ -132,14 +127,16 @@ export function makeSubDag(
         const lhsName = aliasStmt.Lhs!.VarName;
         const rhsName = aliasStmt.Rhs!.QualifiedVarName;
         const RhsReferentNodeId = curLevelDag.getVarNode(rhsName);
-        if (RhsReferentNodeId) {
-          curLevelDag.setVarNode(lhsName, RhsReferentNodeId);
-        } else {
-          console.warn(`var ${lhsName} not found`);
+        if (!RhsReferentNodeId) {
+          console.warn(`var ${rhsName} not found`);
+          return;
         }
-        if (aliasStmt.Lhs.Styling) {
-          curLevelDag.setVarStyle(lhsName, makeDagStyle(aliasStmt.Lhs.Styling));
-        }
+        curLevelDag.setVarNode(lhsName, RhsReferentNodeId);
+
+        const varStyle = aliasStmt.Lhs.Styling
+          ? makeDagStyle(aliasStmt.Lhs.Styling)
+          : null;
+        curLevelDag.setVarStyle(lhsName, varStyle);
       })
       .with(NodeType.NamedStyle, () => {
         const namedStyleStmt = stmt as NamedStyleTreeNode;
@@ -147,12 +144,12 @@ export function makeSubDag(
         const workingStyleProperties: StyleProperties = new Map();
         styleNode.StyleTagList.forEach((styleTag) => {
           const referentStyle = curLevelDag.getStyle(styleTag);
-          if (referentStyle) {
-            mergeMap(workingStyleProperties, referentStyle);
-          } else {
+          if (!referentStyle) {
             // styles must be declared before usage
             console.warn(`styleTag ${styleTag} not found`);
+            return;
           }
+          mergeMap(workingStyleProperties, referentStyle);
         });
         // any locally defined properties will overwrite referenced styles
         mergeMap(workingStyleProperties, styleNode.KeyValueMap);

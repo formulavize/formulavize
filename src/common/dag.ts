@@ -33,7 +33,7 @@ export class Dag {
   private nodeMap: Map<NodeId, DagNode>;
   private edgeMap: Map<EdgeId, DagEdge>;
   private varNameToNodeId: Map<string, NodeId>;
-  private varNameToStyleNode: Map<string, DagStyle>;
+  private varNameToStyleNode: Map<string, DagStyle | null>;
   private styleTagNameToFlatStyleMap: Map<string, StyleProperties>;
   private styleBinding: Map<Keyword, StyleTag[]>;
   private childDags: Map<DagId, Dag>;
@@ -93,7 +93,7 @@ export class Dag {
   private resolveFromMember<K extends keyof Dag, V>(
     memberName: K,
     idPart: string,
-  ): V | undefined {
+  ): V | null | undefined {
     // Resolve the idPart from the member of the current dag
     const memberValue = this[memberName];
     if (!(memberValue instanceof Map)) return undefined;
@@ -103,7 +103,7 @@ export class Dag {
   private resolveQualifiedIdentifierInCurScope<K extends keyof Dag, V>(
     qualifiedIdentifier: QualifiableIdentifier,
     memberName: K,
-  ): V | undefined {
+  ): V | null | undefined {
     // Resolve the qualified identifier in the current scope
     if (qualifiedIdentifier.length === 0) return undefined;
 
@@ -123,9 +123,11 @@ export class Dag {
     qualifiedIdentifier: QualifiableIdentifier,
     memberName: K,
     seenDags: Set<DagId> = new Set(),
-  ): V | undefined {
+  ): V | null | undefined {
     // Resolve the qualified identifier in the current scope and parent scopes
     // with inner dags taking precedence over outer dags
+    // null is returned if the identifier is found but the value is null
+    // undefined is returned if the identifier is not found
     if (this.id in seenDags) {
       // this should never happen in practice
       console.warn("Cycle detected in the DAG lineage, stopping traversal");
@@ -137,6 +139,7 @@ export class Dag {
       memberName,
     );
     if (resolvedValue) return resolvedValue as V;
+    if (resolvedValue === null) return null;
     return this.parent?.resolveQualifiedIdentifier(
       qualifiedIdentifier,
       memberName,
@@ -144,17 +147,17 @@ export class Dag {
     );
   }
 
-  getVarNode(varName: QualifiableIdentifier): NodeId | undefined {
+  getVarNode(varName: QualifiableIdentifier): NodeId | null | undefined {
     const varNameMember = "varNameToNodeId" as keyof Dag;
     return this.resolveQualifiedIdentifier(varName, varNameMember);
   }
 
-  getVarStyle(varName: QualifiableIdentifier): DagStyle | undefined {
+  getVarStyle(varName: QualifiableIdentifier): DagStyle | null | undefined {
     const varStyleMember = "varNameToStyleNode" as keyof Dag;
     return this.resolveQualifiedIdentifier(varName, varStyleMember);
   }
 
-  getStyle(styleTag: StyleTag): StyleProperties | undefined {
+  getStyle(styleTag: StyleTag): StyleProperties | null | undefined {
     const styleTagMember = "styleTagNameToFlatStyleMap" as keyof Dag;
     return this.resolveQualifiedIdentifier(styleTag, styleTagMember);
   }
@@ -163,7 +166,7 @@ export class Dag {
     this.varNameToNodeId.set(varName, nodeId);
   }
 
-  setVarStyle(varName: string, styleNode: DagStyle): void {
+  setVarStyle(varName: string, styleNode: DagStyle | null): void {
     this.varNameToStyleNode.set(varName, styleNode);
   }
 
