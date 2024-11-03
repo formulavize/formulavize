@@ -9,6 +9,7 @@ import {
   StyleTreeNode as Style,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
+  NamespaceTreeNode as Namespace,
 } from "../../../src/common/ast";
 import {
   DESCRIPTION_PROPERTY,
@@ -58,11 +59,23 @@ describe("node tests", () => {
 
 describe("edge tests", () => {
   type NodeNamePair = [string | undefined, string | undefined];
-  function makeDagAndReturnEdgeNames(recipe: Recipe): NodeNamePair[] {
-    const dag = makeDag(recipe);
-    const nodeIdToNameMap = new Map<string, string>(
-      dag.getNodeList().map((node) => [node.id, node.name]),
-    );
+  function getAllNodeNamesToNodeIds(dag: Dag): Map<string, string> {
+    function getDagNodeIdsToNames(dag: Dag): Map<string, string> {
+      return new Map<string, string>(
+        dag.getNodeList().map((node) => [node.id, node.name]),
+      );
+    }
+    const nodeIdToNameMap = new Map<string, string>(getDagNodeIdsToNames(dag));
+    return dag
+      .getChildDags()
+      .map((childDag) => getDagNodeIdsToNames(childDag))
+      .reduce((acc, val) => new Map([...acc, ...val]), nodeIdToNameMap);
+  }
+
+  function getDagEdgeNames(
+    dag: Dag,
+    nodeIdToNameMap: Map<string, string>,
+  ): NodeNamePair[] {
     return dag
       .getEdgeList()
       .map(
@@ -73,6 +86,16 @@ describe("edge tests", () => {
           ] as NodeNamePair,
       )
       .sort();
+  }
+
+  function makeDagAndReturnEdgeNames(recipe: Recipe): NodeNamePair[] {
+    const dag = makeDag(recipe);
+    const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
+    const edgeList = getDagEdgeNames(dag, nodeIdToNameMap);
+    return dag
+      .getChildDags()
+      .map((childDag) => getDagEdgeNames(childDag, nodeIdToNameMap))
+      .reduce((acc, val) => acc.concat(val), edgeList);
   }
 
   test("no edge", () => {
@@ -210,6 +233,55 @@ describe("edge tests", () => {
       ["b", "y"],
       ["b", "y"],
     ]);
+  });
+  test("cannot resolve variable usage before assignment", () => {
+    const recipe = new Recipe([
+      new Call("y", [new QualifiedVariable(["a"])]),
+      new Assignment([new LocalVariable("a")], new Call("b", [])),
+    ]);
+    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    // no edge should be created because variable a is used before assignment
+    expect(edgeList).toEqual([]);
+  });
+  test("resolve variable in parent namespace", () => {
+    const recipe = new Recipe([
+      new Assignment([new LocalVariable("a")], new Call("b", [])),
+      new Namespace("child", [new Call("y", [new QualifiedVariable(["a"])])]),
+    ]);
+    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    expect(edgeList).toEqual([["b", "y"]]);
+  });
+  test("cannot directly resolve variable in child namespace", () => {
+    const recipe = new Recipe([
+      new Namespace("child", [
+        new Assignment([new LocalVariable("a")], new Call("b", [])),
+      ]),
+      new Call("y", [new QualifiedVariable(["a"])]),
+    ]);
+    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    expect(edgeList).toEqual([]);
+  });
+  test("resolve variable in child namespace", () => {
+    const recipe = new Recipe([
+      new Namespace("child", [
+        new Assignment([new LocalVariable("a")], new Call("b", [])),
+      ]),
+      new Call("y", [new QualifiedVariable(["child", "a"])]),
+    ]);
+    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    expect(edgeList).toEqual([["b", "y"]]);
+  });
+  test("resolve variable in sibling namespace", () => {
+    const recipe = new Recipe([
+      new Namespace("child", [
+        new Assignment([new LocalVariable("a")], new Call("b", [])),
+      ]),
+      new Namespace("sibling", [
+        new Call("y", [new QualifiedVariable(["child", "a"])]),
+      ]),
+    ]);
+    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    expect(edgeList).toEqual([["b", "y"]]);
   });
 });
 
