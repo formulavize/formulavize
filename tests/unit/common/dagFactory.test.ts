@@ -390,6 +390,47 @@ describe("style tests", () => {
     expect(dagEdge2.styleProperties).toEqual(sampleMap2);
     expect(dagEdge2.styleTags).toEqual([]);
   });
+  test("variable styled in parent namespace", () => {
+    const sampleMap: StyleProperties = new Map([["a", "1"]]);
+    const recipe = new Recipe([
+      new Assignment(
+        [new LocalVariable("x", new Style(sampleMap, []))],
+        new Call("f", []),
+      ),
+      new Namespace("child", [new Call("g", [new QualifiedVariable(["x"])])]),
+    ]);
+    const dag = makeDag(recipe);
+    expect(dag.getEdgeList()).toHaveLength(0);
+    const childDags = dag.getChildDags();
+    expect(childDags).toHaveLength(1);
+    const childDag = childDags[0];
+    const dagEdgeList = childDag.getEdgeList();
+    const dagEdge = dagEdgeList[0];
+    expect(dagEdge.styleProperties).toEqual(sampleMap);
+    expect(dagEdge.styleTags).toEqual([]);
+  });
+  test("variable styled not defined in child namespace", () => {
+    const sampleMap: StyleProperties = new Map([["a", "1"]]);
+    const recipe = new Recipe([
+      new Assignment(
+        [new LocalVariable("x", new Style(sampleMap, []))],
+        new Call("f", []),
+      ),
+      new Namespace("child", [
+        new Assignment([new LocalVariable("x")], new Call("h", [])),
+        new Call("g", [new QualifiedVariable(["x"])]),
+      ]),
+    ]);
+    const dag = makeDag(recipe);
+    expect(dag.getEdgeList()).toHaveLength(0);
+    const childDags = dag.getChildDags();
+    expect(childDags).toHaveLength(1);
+    const childDag = childDags[0];
+    const dagEdgeList = childDag.getEdgeList();
+    const dagEdge = dagEdgeList[0];
+    expect(dagEdge.styleProperties).toEqual(new Map());
+    expect(dagEdge.styleTags).toEqual([]);
+  });
   test("node description and label property", () => {
     const recipe = new Recipe([
       new Call(
