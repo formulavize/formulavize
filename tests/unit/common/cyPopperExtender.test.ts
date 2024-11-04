@@ -91,12 +91,12 @@ describe("makes name descriptions", () => {
   test("bound name with two matching styles", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
     testDag.addStyleBinding("name", [["y"], ["x"]]);
-    testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
     testDag.setStyle("y", new Map([[DESCRIPTION_PROPERTY, "d2"]]));
+    testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
 
-    // usage order takes precedence
+    // last style tag takes precedence
     const expectedMap = new Map<Keyword, DescriptionData>([
-      ["name", makeDescriptionData("d2")],
+      ["name", makeDescriptionData("d1")],
     ]);
     expect(getNamesWithStyleDescriptionData(testDag)).toEqual(expectedMap);
   });

@@ -78,9 +78,9 @@ export function getNamesWithStyleDescriptionData(
   return new Map<Keyword, DescriptionData>(
     Array.from(dag.getStyleBindings().entries())
       .map(([keyword, styleTags]) => {
-        // find the first style tag that has a description
-        // (tag usage order takes precedence)
-        const usedTag = styleTags.find((tag) =>
+        // find the last style tag that has a description
+        // (usage recency takes precedence)
+        const usedTag = styleTags.findLast((tag) =>
           styleTagHasDescriptionDefined(dag, tag),
         );
         if (!usedTag) return null;
