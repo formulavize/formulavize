@@ -2,6 +2,8 @@ import { describe, test, expect } from "vitest";
 import {
   keyStartsWithNonCytoscapePrefix,
   filterCytoscapeProperties,
+  hasStyleData,
+  makeStyleObject,
   makeNodeStylesheets,
   makeEdgeStyleSheets,
   makeClassStyleSheets,
@@ -13,7 +15,7 @@ import {
   TOP_LEVEL_DAG_ID,
   DESCRIPTION_PROPERTY,
 } from "../../../src/common/constants";
-import { Dag } from "../../../src/common/dag";
+import { Dag, DagElement } from "../../../src/common/dag";
 
 describe("filters out non-cytoscape properties", () => {
   test("property with non-cytoscape prefix", () => {
@@ -65,6 +67,51 @@ describe("filters out non-cytoscape properties", () => {
     ]);
     const expectedMap = new Map([["a", "1"]]);
     expect(filterCytoscapeProperties(testMap)).toEqual(expectedMap);
+  });
+});
+
+describe("makeElementStylesheets utilities", () => {
+  function getBaseTestElement(): DagElement {
+    return {
+      id: "test",
+      name: "test",
+      styleProperties: new Map(),
+      styleTags: [],
+    };
+  }
+  test("empty style properties and tags", () => {
+    const testElement = getBaseTestElement();
+    expect(hasStyleData(testElement)).toBe(false);
+
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    expect(makeStyleObject(testDag, testElement)).toEqual({});
+  });
+  test("non-empty style properties and empty tags", () => {
+    const testElement = getBaseTestElement();
+    testElement.styleProperties = new Map([["a", "1"]]);
+    expect(hasStyleData(testElement)).toBe(true);
+
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    expect(makeStyleObject(testDag, testElement)).toEqual({ a: "1" });
+  });
+  test("empty style properties and no scoped tags", () => {
+    const testElement = getBaseTestElement();
+    testElement.styleTags = [["s"]];
+    expect(hasStyleData(testElement)).toBe(false);
+
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    testDag.setStyle("s", new Map([["a", "1"]]));
+    expect(makeStyleObject(testDag, testElement)).toEqual({});
+  });
+  test("empty style properties and scoped tags", () => {
+    const testElement = getBaseTestElement();
+    testElement.styleTags = [["n", "s"]];
+    expect(hasStyleData(testElement)).toBe(true);
+
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag = new Dag("childDag", testDag, "n");
+    childDag.setStyle("s", new Map([["a", "1"]]));
+    expect(makeStyleObject(testDag, testElement)).toEqual({ a: "1" });
   });
 });
 
@@ -294,6 +341,63 @@ describe("makes cytoscape stylesheets", () => {
         style: { "background-color": "red" },
       },
     ]);
+    expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
+  });
+  test("use scoped style tag defined in child", () => {
+    const rootDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag = new Dag("x", rootDag, "child");
+    childDag.setStyle("b", new Map([["background-color", "red"]]));
+    rootDag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [["child", "b"]],
+      styleProperties: new Map(),
+    });
+    const expectedCyStyles = getBaseStylesheet().concat([
+      {
+        selector: "node#idX",
+        style: { "background-color": "red" },
+      },
+      {
+        selector: ".b[lineagePath*='/x']",
+        style: { "background-color": "red" },
+      },
+    ]);
+    expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
+  });
+  test("use scoped style tag defined in sibiling", () => {
+    const rootDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag1 = new Dag("x", rootDag, "child1");
+    const childDag2 = new Dag("y", rootDag, "child2");
+    childDag1.setStyle("b", new Map([["background-color", "red"]]));
+    childDag2.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [["child1", "b"]],
+      styleProperties: new Map(),
+    });
+    const expectedCyStyles = getBaseStylesheet().concat([
+      {
+        selector: ".b[lineagePath*='/x']",
+        style: { "background-color": "red" },
+      },
+      {
+        selector: "node#idX",
+        style: { "background-color": "red" },
+      },
+    ]);
+    expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
+  });
+  test("use undefined scoped style tag", () => {
+    const rootDag = new Dag(TOP_LEVEL_DAG_ID);
+    new Dag("x", rootDag, "child");
+    rootDag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [["child", "b"]],
+      styleProperties: new Map(),
+    });
+    const expectedCyStyles = getBaseStylesheet();
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
   });
 });
