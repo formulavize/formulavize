@@ -1,6 +1,6 @@
 import { Stylesheet } from "cytoscape";
 import { DESCRIPTION_PROPERTY, TOP_LEVEL_DAG_ID } from "./constants";
-import { Dag, StyleProperties } from "./dag";
+import { Dag, DagElement, StyleTag, StyleProperties } from "./dag";
 
 // a list of known property prefixes that should not be passed to cytoscape
 const NON_CYTOSCAPE_PROPERTY_PREFIXES: string[] = [
@@ -23,38 +23,63 @@ export function filterCytoscapeProperties(
   );
 }
 
+export function getScopedStyleTagsProperties(
+  dag: Dag,
+  styleTags: StyleTag[],
+): StyleProperties {
+  return styleTags
+    .filter((styleTag) => styleTag.length > 1)
+    .map((styleTag) => dag.getStyle(styleTag) ?? new Map())
+    .reduce((acc, styleProperties) => {
+      styleProperties.forEach((value, key) => acc.set(key, value));
+      return acc;
+    }, new Map());
+}
+
+export function hasStyleData(dagElement: DagElement): boolean {
+  // check if there are any style properties or scoped style tags
+  // unscoped style tags are handled elsewhere by the class attribute
+  return (
+    dagElement.styleProperties.size > 0 ||
+    dagElement.styleTags.some((styleTag) => styleTag.length > 1)
+  );
+}
+
+export function makeStyleObject(dag: Dag, dagElement: DagElement): object {
+  // merge style properties from scoped style tags and style properties
+  // style properties take precedence over scoped style tags
+  const styleProperties = new Map([
+    ...getScopedStyleTagsProperties(dag, dagElement.styleTags),
+    ...dagElement.styleProperties,
+  ]);
+  return Object.fromEntries(filterCytoscapeProperties(styleProperties));
+}
+
+export function makeElementStylesheets(
+  dag: Dag,
+  elementList: DagElement[],
+  makeSelectorFunc: (id: string) => string,
+): Stylesheet[] {
+  return elementList
+    .filter((element) => hasStyleData(element))
+    .map((element) => ({
+      selector: makeSelectorFunc(element.id),
+      style: makeStyleObject(dag, element),
+    }))
+    .filter((stylesheet) => Object.keys(stylesheet.style).length > 0);
+}
+
 export function makeNodeStylesheets(dag: Dag): Stylesheet[] {
-  return dag
-    .getNodeList()
-    .filter((node) => node.styleProperties.size > 0)
-    .map((node) => ({
-      selector: `node#${node.id}`,
-      style: Object.fromEntries(
-        filterCytoscapeProperties(node.styleProperties),
-      ),
-    }));
+  return makeElementStylesheets(dag, dag.getNodeList(), (id) => `node#${id}`);
 }
 
 export function makeEdgeStyleSheets(dag: Dag): Stylesheet[] {
-  return dag
-    .getEdgeList()
-    .filter((edge) => edge.styleProperties.size > 0)
-    .map((edge) => ({
-      selector: `edge#${edge.id}`,
-      style: Object.fromEntries(
-        filterCytoscapeProperties(edge.styleProperties),
-      ),
-    }));
+  return makeElementStylesheets(dag, dag.getEdgeList(), (id) => `edge#${id}`);
 }
 
 export function makeCompoundNodeStylesheet(dag: Dag): Stylesheet[] {
-  const compoundNodeStylesheet = {
-    selector: `node#${dag.Id}`,
-    style: Object.fromEntries(
-      filterCytoscapeProperties(dag.DagStyleProperties),
-    ),
-  };
-  return dag.DagStyleProperties.size === 0 ? [] : [compoundNodeStylesheet];
+  const dagNode = dag.getDagAsDagNode();
+  return makeElementStylesheets(dag, [dagNode], (id) => `node#${id}`);
 }
 
 export function makeDagLineageSelector(dag: Dag): string {
