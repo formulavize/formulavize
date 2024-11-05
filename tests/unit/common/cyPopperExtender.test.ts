@@ -1,10 +1,10 @@
-import { describe, test, expect, vi } from "vitest";
+import { describe, test, expect, vi, MockInstance } from "vitest";
 import {
-  getStyleDescriptionData,
-  getNamesWithStyleDescriptionData,
-  getNodeDescriptionData,
-  getEdgeDescriptionData,
-  getCompoundNodeDescriptionData,
+  getStyleDescriptions,
+  getNamesWithStyleDescriptions,
+  getNodeDescriptions,
+  getEdgeDescriptions,
+  getCompoundNodeDescriptions,
   DescriptionData,
   addCyPopperElementsFromDag,
 } from "../../../src/common/cyPopperExtender";
@@ -38,7 +38,7 @@ describe("makes style descriptions", () => {
     testDag.setStyle("x", new Map([["color", "red"]]));
 
     const expectedMap = new Map();
-    expect(getStyleDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getStyleDescriptions(testDag)).toEqual(expectedMap);
   });
   test("two matching styles", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -53,10 +53,10 @@ describe("makes style descriptions", () => {
     );
 
     const expectedMap = new Map<string, DescriptionData>([
-      ["x", makeDescriptionData("d1")],
-      ["y", makeDescriptionData("d2", new Map([["color", "red"]]))],
+      [".x", makeDescriptionData("d1")],
+      [".y", makeDescriptionData("d2", new Map([["color", "red"]]))],
     ]);
-    expect(getStyleDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getStyleDescriptions(testDag)).toEqual(expectedMap);
   });
 });
 
@@ -67,7 +67,7 @@ describe("makes name descriptions", () => {
     testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
 
     const expectedMap = new Map<Keyword, DescriptionData>();
-    expect(getNamesWithStyleDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getNamesWithStyleDescriptions(testDag)).toEqual(expectedMap);
   });
   test("bound name with matching style", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -84,9 +84,9 @@ describe("makes name descriptions", () => {
       new Map([["color", "red"]]),
     );
     const expectedMap = new Map<Keyword, DescriptionData>([
-      ["name", redDescriptionData],
+      ["[name='name']", redDescriptionData],
     ]);
-    expect(getNamesWithStyleDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getNamesWithStyleDescriptions(testDag)).toEqual(expectedMap);
   });
   test("bound name with two matching styles", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -96,9 +96,9 @@ describe("makes name descriptions", () => {
 
     // last style tag takes precedence
     const expectedMap = new Map<Keyword, DescriptionData>([
-      ["name", makeDescriptionData("d1")],
+      ["[name='name']", makeDescriptionData("d1")],
     ]);
-    expect(getNamesWithStyleDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getNamesWithStyleDescriptions(testDag)).toEqual(expectedMap);
   });
   test("two names with bindings to the same style", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -107,10 +107,10 @@ describe("makes name descriptions", () => {
     testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
 
     const expectedMap = new Map<Keyword, DescriptionData>([
-      ["name1", makeDescriptionData("d1")],
-      ["name2", makeDescriptionData("d1")],
+      ["[name='name1']", makeDescriptionData("d1")],
+      ["[name='name2']", makeDescriptionData("d1")],
     ]);
-    expect(getNamesWithStyleDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getNamesWithStyleDescriptions(testDag)).toEqual(expectedMap);
   });
   test("two names with bindings to different styles", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -120,10 +120,10 @@ describe("makes name descriptions", () => {
     testDag.setStyle("y", new Map([[DESCRIPTION_PROPERTY, "d2"]]));
 
     const expectedMap = new Map<Keyword, DescriptionData>([
-      ["name1", makeDescriptionData("d1")],
-      ["name2", makeDescriptionData("d2")],
+      ["[name='name1']", makeDescriptionData("d1")],
+      ["[name='name2']", makeDescriptionData("d2")],
     ]);
-    expect(getNamesWithStyleDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getNamesWithStyleDescriptions(testDag)).toEqual(expectedMap);
   });
 });
 
@@ -138,7 +138,7 @@ describe("makes element descriptions", () => {
     });
 
     const expectedMap = new Map<NodeId, DescriptionData>();
-    expect(getNodeDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getNodeDescriptions(testDag)).toEqual(expectedMap);
   });
   test("one matching node", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -153,9 +153,9 @@ describe("makes element descriptions", () => {
     });
 
     const expectedMap = new Map<NodeId, DescriptionData>([
-      ["idX", makeDescriptionData("d1", new Map([["color", "red"]]))],
+      ["node#idX", makeDescriptionData("d1", new Map([["color", "red"]]))],
     ]);
-    expect(getNodeDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getNodeDescriptions(testDag)).toEqual(expectedMap);
   });
   test("two matching nodes", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -173,10 +173,10 @@ describe("makes element descriptions", () => {
     });
 
     const expectedMap = new Map<NodeId, DescriptionData>([
-      ["idX", makeDescriptionData("d1")],
-      ["idY", makeDescriptionData("d2")],
+      ["node#idX", makeDescriptionData("d1")],
+      ["node#idY", makeDescriptionData("d2")],
     ]);
-    expect(getNodeDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getNodeDescriptions(testDag)).toEqual(expectedMap);
   });
   test("no matching edges", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -202,7 +202,7 @@ describe("makes element descriptions", () => {
     });
 
     const expectedMap = new Map<EdgeId, DescriptionData>();
-    expect(getEdgeDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getEdgeDescriptions(testDag)).toEqual(expectedMap);
   });
   test("one matching edge", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -231,9 +231,9 @@ describe("makes element descriptions", () => {
     });
 
     const expectedMap = new Map<EdgeId, DescriptionData>([
-      ["id1", makeDescriptionData("d1", new Map([["color", "red"]]))],
+      ["edge#id1", makeDescriptionData("d1", new Map([["color", "red"]]))],
     ]);
-    expect(getEdgeDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getEdgeDescriptions(testDag)).toEqual(expectedMap);
   });
   test("two matching edges", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -273,10 +273,10 @@ describe("makes element descriptions", () => {
     });
 
     const expectedMap = new Map<EdgeId, DescriptionData>([
-      ["id1", makeDescriptionData("d1")],
-      ["id2", makeDescriptionData("d2")],
+      ["edge#id1", makeDescriptionData("d1")],
+      ["edge#id2", makeDescriptionData("d2")],
     ]);
-    expect(getEdgeDescriptionData(testDag)).toEqual(expectedMap);
+    expect(getEdgeDescriptions(testDag)).toEqual(expectedMap);
   });
   test("one matching compound node", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
@@ -284,13 +284,22 @@ describe("makes element descriptions", () => {
     const subdag = new Dag("subDagId", testDag, "subdag", [], stylePropMap);
 
     const expectedMap = new Map<NodeId, DescriptionData>([
-      ["subDagId", makeDescriptionData("d1")],
+      ["node#subDagId", makeDescriptionData("d1")],
     ]);
-    expect(getCompoundNodeDescriptionData(subdag)).toEqual(expectedMap);
+    expect(getCompoundNodeDescriptions(subdag)).toEqual(expectedMap);
   });
 });
 
-describe("extends popper with descriptions", () => {
+describe("subdag descriptions", () => {
+  function addCyPoppersAndReturnMockCyCore(testDag: Dag): MockInstance {
+    const mockCyCore = {
+      elements: () => [],
+    } as unknown as Core;
+    const mockCoreSpy = vi.spyOn(mockCyCore, "elements");
+    const mockElement = {} as HTMLElement;
+    addCyPopperElementsFromDag(mockCyCore, mockElement, testDag);
+    return mockCoreSpy;
+  }
   test("one matching node in subdag", () => {
     const testDag = new Dag(TOP_LEVEL_DAG_ID);
     const subdag = new Dag("subdag", testDag);
@@ -301,12 +310,44 @@ describe("extends popper with descriptions", () => {
       styleProperties: new Map([[DESCRIPTION_PROPERTY, "d1"]]),
     });
 
-    const mockCyCore = {
-      elements: () => [],
-    } as unknown as Core;
-    const mockCoreSpy = vi.spyOn(mockCyCore, "elements");
-    const mockElement = {} as HTMLElement;
-    addCyPopperElementsFromDag(mockCyCore, mockElement, testDag);
+    const mockCoreSpy = addCyPoppersAndReturnMockCyCore(testDag);
     expect(mockCoreSpy).toHaveBeenCalledWith("node#idX");
+  });
+  test("description on child dag", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const descStyle = new Map([[DESCRIPTION_PROPERTY, "d1"]]);
+    new Dag("childIdX", testDag, "child", [], descStyle);
+
+    const mock = addCyPoppersAndReturnMockCyCore(testDag);
+    expect(mock).toHaveBeenCalledWith("node#childIdX");
+  });
+  test("description in root dag style", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    testDag.setStyle("parentStyle", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
+
+    const mock = addCyPoppersAndReturnMockCyCore(testDag);
+    expect(mock).toHaveBeenCalledWith(".parentStyle");
+  });
+  test("description in root dag name binding", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    testDag.setStyle("parentStyle", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
+    testDag.addStyleBinding("parentName", [["parentStyle"]]);
+
+    const mock = addCyPoppersAndReturnMockCyCore(testDag);
+    expect(mock).toHaveBeenCalledWith("[name='parentName']");
+  });
+  test("description defined in root dag and used in child dag", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    testDag.setStyle("parentStyle", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
+    const childDag = new Dag("childIdX", testDag, "child", [["parentStyle"]]);
+    childDag.addNode({
+      id: "childIdX",
+      name: "childNameX",
+      styleTags: [["parentStyle"]],
+      styleProperties: new Map(),
+    });
+
+    const mock = addCyPoppersAndReturnMockCyCore(testDag);
+    expect(mock).toHaveBeenCalledWith(".parentStyle");
   });
 });

@@ -281,14 +281,8 @@ describe("makes cytoscape stylesheets", () => {
   });
   test("sub dag with style property", () => {
     const rootDag = new Dag(TOP_LEVEL_DAG_ID, null, "top");
-    const childDag = new Dag(
-      "x",
-      null,
-      "child",
-      [],
-      new Map([["background-color", "blue"]]),
-    );
-    rootDag.addChildDag(childDag);
+    const blueStyle = new Map([["background-color", "blue"]]);
+    new Dag("x", rootDag, "child", [], blueStyle);
 
     const expectedCyStyles = getBaseStylesheet().concat([
       {
