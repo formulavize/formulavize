@@ -67,6 +67,7 @@ export function makeElementStylesheets(
       style: makeStyleObject(dag, element),
     }))
     .filter((stylesheet) => Object.keys(stylesheet.style).length > 0);
+  // filter out empty stylesheets from any unresolved style tags
 }
 
 export function makeNodeStylesheets(dag: Dag): Stylesheet[] {

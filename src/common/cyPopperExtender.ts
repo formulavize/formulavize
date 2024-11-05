@@ -79,7 +79,7 @@ export function getNamesWithStyleDescriptionData(
     Array.from(dag.getStyleBindings().entries())
       .map(([keyword, styleTags]) => {
         // find the last style tag that has a description
-        // (usage recency takes precedence)
+        // so the last style tag overrides all previous ones
         const usedTag = styleTags.findLast((tag) =>
           styleTagHasDescriptionDefined(dag, tag),
         );
@@ -187,20 +187,6 @@ export function addCyPopperElementsFromDag(
   canvasElement: HTMLElement,
   dag: Dag,
 ) {
-  function mapMapKeys<K, V, R>(
-    map: Map<K, V>,
-    mapFn: (key: K) => R,
-  ): Map<R, V> {
-    return new Map<R, V>(
-      Array.from(map.entries()).map(([key, value]) => [mapFn(key), value]),
-    );
-  }
-  function addSelectorDesc(descriptionDataMap: Map<string, DescriptionData>) {
-    descriptionDataMap.forEach((descriptionData, selector) => {
-      addDescriptionPopper(cy, canvasElement, selector, descriptionData);
-    });
-  }
-
   const descriptionDataWithSelectorKeyFunc: [
     Map<string, DescriptionData>, // description data map
     (key: string) => string, // makes a selector from a key
@@ -214,6 +200,18 @@ export function addCyPopperElementsFromDag(
     ],
     [getCompoundNodeDescriptionData(dag), (id: string) => `node#${id}`],
   ];
+
+  function addSelectorDesc(descriptionDataMap: Map<string, DescriptionData>) {
+    descriptionDataMap.forEach((descriptionData, selector) => {
+      addDescriptionPopper(cy, canvasElement, selector, descriptionData);
+    });
+  }
+  function mapMapKeys<K, V, R>(
+    inMap: Map<K, V>,
+    mapFn: (key: K) => R,
+  ): Map<R, V> {
+    return new Map(Array.from(inMap, ([key, value]) => [mapFn(key), value]));
+  }
   descriptionDataWithSelectorKeyFunc.forEach(([dataMap, selectorFunc]) => {
     addSelectorDesc(mapMapKeys(dataMap, selectorFunc));
   });
