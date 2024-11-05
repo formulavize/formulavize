@@ -1,10 +1,8 @@
-import cytoscape from "cytoscape";
+import cytoscape, { Selector } from "cytoscape";
 import { DESCRIPTION_PROPERTY, DESCRIPTION_PREFIX } from "./constants";
 import {
   Dag,
   DagElement,
-  NodeId,
-  EdgeId,
   ElementId,
   Keyword,
   StyleTag,
@@ -31,7 +29,7 @@ export function getDescriptionProperties(
   );
 }
 
-export function getDescriptionData(
+export function getDescriptions(
   styleProperties: StyleProperties,
 ): DescriptionData | null {
   const description = styleProperties.get(DESCRIPTION_PROPERTY);
@@ -41,17 +39,15 @@ export function getDescriptionData(
   return { description, descriptionStyleProperties: descriptionStyleMap };
 }
 
-export function getStyleDescriptionData(
-  dag: Dag,
-): Map<string, DescriptionData> {
-  return new Map<string, DescriptionData>(
+export function getStyleDescriptions(dag: Dag): Map<string, DescriptionData> {
+  return new Map<Selector, DescriptionData>(
     Array.from(dag.getFlattenedStyles().entries())
       .map(([styleTag, styleProperties]) => [
-        styleTag,
-        getDescriptionData(styleProperties),
+        `.${styleTag}`,
+        getDescriptions(styleProperties),
       ])
       .filter(([_, descriptionData]) => !!descriptionData) as Iterable<
-      [string, DescriptionData]
+      [Selector, DescriptionData]
     >,
   );
 }
@@ -69,13 +65,13 @@ export function getDescriptionDataForStyleTag(
 ): DescriptionData | null {
   const styleProperties = dag.getStyle(styleTag);
   if (!styleProperties) return null;
-  return getDescriptionData(styleProperties);
+  return getDescriptions(styleProperties);
 }
 
-export function getNamesWithStyleDescriptionData(
+export function getNamesWithStyleDescriptions(
   dag: Dag,
 ): Map<Keyword, DescriptionData> {
-  return new Map<Keyword, DescriptionData>(
+  return new Map<Selector, DescriptionData>(
     Array.from(dag.getStyleBindings().entries())
       .map(([keyword, styleTags]) => {
         // find the last style tag that has a description
@@ -86,38 +82,47 @@ export function getNamesWithStyleDescriptionData(
         if (!usedTag) return null;
         const descriptionData = getDescriptionDataForStyleTag(dag, usedTag);
         if (!descriptionData) return null;
-        return [keyword, descriptionData];
+        const keywordSelector = `[name='${keyword}']`;
+        return [keywordSelector, descriptionData];
       })
-      .filter(Boolean) as Iterable<[Keyword, DescriptionData]>,
+      .filter(Boolean) as Iterable<[Selector, DescriptionData]>,
   );
 }
 
-function getElementDescriptionData(
+function getElementDescriptions(
   dagElements: DagElement[],
 ): Map<ElementId, DescriptionData> {
   return new Map<ElementId, DescriptionData>(
     dagElements
       .map((dagElement) => {
-        const descriptionData = getDescriptionData(dagElement.styleProperties);
+        const descriptionData = getDescriptions(dagElement.styleProperties);
         if (!descriptionData) return null;
         return [dagElement.id, descriptionData];
       })
       .filter(Boolean) as Iterable<[ElementId, DescriptionData]>,
   );
 }
-
-export function getNodeDescriptionData(dag: Dag): Map<NodeId, DescriptionData> {
-  return getElementDescriptionData(dag.getNodeList());
+export function getNodeDescriptions(dag: Dag): Map<Selector, DescriptionData> {
+  const nodeDescriptions = getElementDescriptions(dag.getNodeList());
+  return new Map(
+    Array.from(nodeDescriptions, ([key, value]) => [`node#${key}`, value]),
+  );
 }
 
-export function getEdgeDescriptionData(dag: Dag): Map<EdgeId, DescriptionData> {
-  return getElementDescriptionData(dag.getEdgeList());
+export function getEdgeDescriptions(dag: Dag): Map<Selector, DescriptionData> {
+  const edgeDescriptions = getElementDescriptions(dag.getEdgeList());
+  return new Map(
+    Array.from(edgeDescriptions, ([key, value]) => [`edge#${key}`, value]),
+  );
 }
 
-export function getCompoundNodeDescriptionData(
+export function getCompoundNodeDescriptions(
   dag: Dag,
-): Map<NodeId, DescriptionData> {
-  return getElementDescriptionData([dag.getDagAsDagNode()]);
+): Map<Selector, DescriptionData> {
+  const compoundNodeDesc = getElementDescriptions([dag.getDagAsDagNode()]);
+  return new Map(
+    Array.from(compoundNodeDesc, ([key, value]) => [`node#${key}`, value]),
+  );
 }
 
 function clearAllPopperDivs() {
@@ -165,7 +170,7 @@ function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
 function addDescriptionPopper(
   cy: cytoscape.Core,
   canvasElement: HTMLElement,
-  cySelection: string,
+  cySelection: Selector,
   descriptionData: DescriptionData,
 ) {
   cy.elements(cySelection).forEach((cyElement) => {
@@ -187,33 +192,17 @@ export function addCyPopperElementsFromDag(
   canvasElement: HTMLElement,
   dag: Dag,
 ) {
-  const descriptionDataWithSelectorKeyFunc: [
-    Map<string, DescriptionData>, // description data map
-    (key: string) => string, // makes a selector from a key
-  ][] = [
-    [getNodeDescriptionData(dag), (id: string) => `node#${id}`],
-    [getEdgeDescriptionData(dag), (id: string) => `edge#${id}`],
-    [getStyleDescriptionData(dag), (tag: string) => `.${tag}`],
-    [
-      getNamesWithStyleDescriptionData(dag),
-      (keyword: string) => `[name='${keyword}']`,
-    ],
-    [getCompoundNodeDescriptionData(dag), (id: string) => `node#${id}`],
+  const descriptionMapsToAdd: Map<Selector, DescriptionData>[] = [
+    getNodeDescriptions(dag),
+    getEdgeDescriptions(dag),
+    getStyleDescriptions(dag),
+    getNamesWithStyleDescriptions(dag),
+    getCompoundNodeDescriptions(dag),
   ];
-
-  function addSelectorDesc(descriptionDataMap: Map<string, DescriptionData>) {
+  descriptionMapsToAdd.forEach((descriptionDataMap) => {
     descriptionDataMap.forEach((descriptionData, selector) => {
       addDescriptionPopper(cy, canvasElement, selector, descriptionData);
     });
-  }
-  function mapMapKeys<K, V, R>(
-    inMap: Map<K, V>,
-    mapFn: (key: K) => R,
-  ): Map<R, V> {
-    return new Map(Array.from(inMap, ([key, value]) => [mapFn(key), value]));
-  }
-  descriptionDataWithSelectorKeyFunc.forEach(([dataMap, selectorFunc]) => {
-    addSelectorDesc(mapMapKeys(dataMap, selectorFunc));
   });
 
   dag.getChildDags().forEach((childDag) => {
