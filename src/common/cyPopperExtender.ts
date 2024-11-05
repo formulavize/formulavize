@@ -1,5 +1,9 @@
 import cytoscape, { Selector } from "cytoscape";
-import { DESCRIPTION_PROPERTY, DESCRIPTION_PREFIX } from "./constants";
+import {
+  DESCRIPTION_PROPERTY,
+  DESCRIPTION_PREFIX,
+  TOP_LEVEL_DAG_ID,
+} from "./constants";
 import {
   Dag,
   DagElement,
@@ -15,6 +19,10 @@ const POPPER_INNER_DIV_CLASS: string = "popper-inner-div";
 export interface DescriptionData {
   description: string;
   descriptionStyleProperties: StyleProperties;
+}
+
+export function makeDagLineageSelector(dag: Dag): string {
+  return dag.Id === TOP_LEVEL_DAG_ID ? "" : `[lineagePath*='/${dag.Id}']`;
 }
 
 export function getDescriptionProperties(
@@ -40,10 +48,11 @@ export function getDescriptionData(
 }
 
 export function getStyleDescriptions(dag: Dag): Map<string, DescriptionData> {
+  const lineageSelector = makeDagLineageSelector(dag);
   return new Map<Selector, DescriptionData>(
     Array.from(dag.getFlattenedStyles().entries())
       .map(([styleTag, styleProperties]) => [
-        `.${styleTag}`,
+        `.${styleTag}${lineageSelector}`,
         getDescriptionData(styleProperties),
       ])
       .filter(([_, descriptionData]) => !!descriptionData) as Iterable<
@@ -71,6 +80,7 @@ export function getDescriptionDataForStyleTag(
 export function getNamesWithStyleDescriptions(
   dag: Dag,
 ): Map<Keyword, DescriptionData> {
+  const lineageSelector = makeDagLineageSelector(dag);
   return new Map<Selector, DescriptionData>(
     Array.from(dag.getStyleBindings().entries())
       .map(([keyword, styleTags]) => {
@@ -82,7 +92,7 @@ export function getNamesWithStyleDescriptions(
         if (!usedTag) return null;
         const descriptionData = getDescriptionDataForStyleTag(dag, usedTag);
         if (!descriptionData) return null;
-        const keywordSelector = `[name='${keyword}']`;
+        const keywordSelector = `[name='${keyword}']${lineageSelector}`;
         return [keywordSelector, descriptionData];
       })
       .filter(Boolean) as Iterable<[Selector, DescriptionData]>,
