@@ -29,7 +29,7 @@ export function getDescriptionProperties(
   );
 }
 
-export function getDescriptions(
+export function getDescriptionData(
   styleProperties: StyleProperties,
 ): DescriptionData | null {
   const description = styleProperties.get(DESCRIPTION_PROPERTY);
@@ -44,7 +44,7 @@ export function getStyleDescriptions(dag: Dag): Map<string, DescriptionData> {
     Array.from(dag.getFlattenedStyles().entries())
       .map(([styleTag, styleProperties]) => [
         `.${styleTag}`,
-        getDescriptions(styleProperties),
+        getDescriptionData(styleProperties),
       ])
       .filter(([_, descriptionData]) => !!descriptionData) as Iterable<
       [Selector, DescriptionData]
@@ -65,7 +65,7 @@ export function getDescriptionDataForStyleTag(
 ): DescriptionData | null {
   const styleProperties = dag.getStyle(styleTag);
   if (!styleProperties) return null;
-  return getDescriptions(styleProperties);
+  return getDescriptionData(styleProperties);
 }
 
 export function getNamesWithStyleDescriptions(
@@ -95,7 +95,7 @@ function getElementDescriptions(
   return new Map<ElementId, DescriptionData>(
     dagElements
       .map((dagElement) => {
-        const descriptionData = getDescriptions(dagElement.styleProperties);
+        const descriptionData = getDescriptionData(dagElement.styleProperties);
         if (!descriptionData) return null;
         return [dagElement.id, descriptionData];
       })
