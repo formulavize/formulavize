@@ -350,4 +350,23 @@ describe("subdag descriptions", () => {
     const mock = addCyPoppersAndReturnMockCyCore(testDag);
     expect(mock).toHaveBeenCalledWith(".parentStyle");
   });
+  test("description style defined in child dag", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag = new Dag("childIdX", testDag, "child");
+    childDag.setStyle("childStyle", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
+
+    const mock = addCyPoppersAndReturnMockCyCore(testDag);
+    expect(mock).toHaveBeenCalledWith(".childStyle[lineagePath*='/childIdX']");
+  });
+  test("description name defined in child dag", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag = new Dag("childIdX", testDag, "child");
+    childDag.addStyleBinding("styleName", [["childStyle"]]);
+    childDag.setStyle("childStyle", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
+
+    const mock = addCyPoppersAndReturnMockCyCore(testDag);
+    expect(mock).toHaveBeenCalledWith(
+      "[name='styleName'][lineagePath*='/childIdX']",
+    );
+  });
 });
