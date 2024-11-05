@@ -1,6 +1,18 @@
 import { describe, test, expect } from "vitest";
 import { Dag } from "../../../src/common/dag";
 
+describe("accessor tests", () => {
+  // verify non-trivial accessor behavior
+  test("style insertion order preserved in getFlattenedStyles ", () => {
+    const dag = new Dag("rootId");
+    dag.setStyle("x", new Map([["color", "red"]]));
+    dag.setStyle("y", new Map([["color", "green"]]));
+    dag.setStyle("z", new Map([["color", "blue"]]));
+    const flattenedStyles = dag.getFlattenedStyles();
+    expect(Array.from(flattenedStyles.keys())).toEqual(["x", "y", "z"]);
+  });
+});
+
 describe("subdag tests", () => {
   test("switch parent", () => {
     const dag = new Dag("root1");

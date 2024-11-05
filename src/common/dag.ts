@@ -237,6 +237,7 @@ export class Dag {
   }
 
   getFlattenedStyles(): Map<string, StyleProperties> {
+    // callers may rely on style insertion order
     return this.styleTagNameToFlatStyleMap;
   }
 
