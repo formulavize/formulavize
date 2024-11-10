@@ -366,4 +366,41 @@ describe("subdag descriptions", () => {
       "[name='styleName'][lineagePath*='/childIdX']",
     );
   });
+  test("description used in name binding in sibling dag", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag1 = new Dag("childId1", testDag, "child1");
+    const childDag2 = new Dag("childId2", testDag, "child2");
+    childDag1.setStyle("childStyle1", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
+    childDag2.addStyleBinding("childName1", [["child1", "childStyle1"]]);
+
+    const mock = addCyPoppersAndReturnMockCyCore(testDag);
+    expect(mock).toHaveBeenCalledWith(".childStyle1[lineagePath*='/childId1']");
+    expect(mock).toHaveBeenCalledWith(
+      "[name='childName1'][lineagePath*='/childId2']",
+    );
+  });
+  test("description via scoped style tag in node from sibling dag", () => {
+    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const childDag1 = new Dag("childId1", testDag, "child1");
+    const childDag2 = new Dag("childId2", testDag, "child2");
+    childDag1.setStyle("childStyle1", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
+    childDag2.addNode({
+      id: "childId2",
+      name: "childName2",
+      styleTags: [["child1", "childStyle1"]],
+      styleProperties: new Map([[DESCRIPTION_PROPERTY, "d2"]]),
+    });
+
+    const mock = addCyPoppersAndReturnMockCyCore(testDag);
+    expect(mock).toHaveBeenCalledWith(".childStyle1[lineagePath*='/childId1']");
+    expect(mock).toHaveBeenCalledWith("node#childId2");
+
+    // like name bindings, conflicting descriptions are likely impractical
+    // except as a defensive measure for styles not intended to be reused
+    const expectedDescs: SelectorDescriptionPair[] = [
+      ["node#childId2", makeDescriptionData("d2")],
+      ["node#childId2", makeDescriptionData("d1")],
+    ];
+    expect(getNodeDescriptions(childDag2)).toEqual(expectedDescs);
+  });
 });
