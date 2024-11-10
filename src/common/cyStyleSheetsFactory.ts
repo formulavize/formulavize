@@ -147,15 +147,15 @@ export function makeCyStylesheets(dag: Dag): Stylesheet[] {
     return curDag.getChildDags().flatMap(makeCyStylesheets);
   }
 
-  const stylesheets: Stylesheet[] = [
-    ...(dag.Id === TOP_LEVEL_DAG_ID ? getBaseStylesheet() : []),
-    ...makeNodeStylesheets(dag),
-    ...makeEdgeStyleSheets(dag),
-    ...makeCompoundNodeStylesheet(dag),
-    ...makeClassStyleSheets(dag),
-    ...makeNameStyleSheets(dag),
-    ...makeChildStyleSheets(dag),
+  const stylesheetsList: Stylesheet[][] = [
+    dag.Id === TOP_LEVEL_DAG_ID ? getBaseStylesheet() : [],
+    makeNodeStylesheets(dag),
+    makeEdgeStyleSheets(dag),
+    makeCompoundNodeStylesheet(dag),
+    makeClassStyleSheets(dag),
+    makeNameStyleSheets(dag),
+    makeChildStyleSheets(dag),
   ];
 
-  return stylesheets;
+  return stylesheetsList.flat();
 }
