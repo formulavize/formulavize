@@ -12,6 +12,7 @@ import {
   NamedStyleTreeNode,
   StyleBindingTreeNode,
   NamespaceTreeNode,
+  ValueTreeNode,
 } from "./ast";
 import { Dag, NodeId, StyleProperties, DagId, DagStyle } from "./dag";
 import { TOP_LEVEL_DAG_ID } from "./constants";
@@ -23,38 +24,48 @@ function makeDagStyle(styleNode: StyleTreeNode): DagStyle {
   };
 }
 
-function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
-  type IncomingEdgeInfo = {
-    nodeId: NodeId;
-    varName: string;
-    varStyle: DagStyle | null;
-  };
-  const incomingEdgeInfoList: IncomingEdgeInfo[] = callStmt.ArgList.map((arg) =>
-    match(arg.Type)
-      .with(NodeType.Call, () => {
-        const argNodeId = processCall(arg as CallTreeNode, workingDag);
-        return { nodeId: argNodeId, varName: "", varStyle: null };
-      })
-      .with(NodeType.QualifiedVariable, () => {
-        const argVarName = arg as QualifiedVarTreeNode;
-        const varName = argVarName.QualifiedVarName;
-        const varStyle = workingDag.getVarStyle(varName) ?? null;
-        const candidateSrcNodeId = workingDag.getVarNode(varName);
-        if (!candidateSrcNodeId) {
-          console.warn("Unable to find variable with name ", varName);
+type IncomingEdgeInfo = {
+  nodeId: NodeId;
+  varName: string;
+  varStyle: DagStyle | null;
+};
+
+function argListToEdgeInfo(
+  argList: ValueTreeNode[],
+  workingDag: Dag,
+): IncomingEdgeInfo[] {
+  return argList
+    .map((arg) =>
+      match(arg.Type)
+        .with(NodeType.Call, () => {
+          const argNodeId = processCall(arg as CallTreeNode, workingDag);
+          return { nodeId: argNodeId, varName: "", varStyle: null };
+        })
+        .with(NodeType.QualifiedVariable, () => {
+          const argVarName = arg as QualifiedVarTreeNode;
+          const varName = argVarName.QualifiedVarName;
+          const varStyle = workingDag.getVarStyle(varName) ?? null;
+          const candidateSrcNodeId = workingDag.getVarNode(varName);
+          if (!candidateSrcNodeId) {
+            console.warn("Unable to find variable with name ", varName);
+            return null;
+          }
+          return {
+            nodeId: candidateSrcNodeId,
+            varName: varName,
+            varStyle: varStyle,
+          };
+        })
+        .otherwise(() => {
+          console.error("Unknown node type ", arg.Type);
           return null;
-        }
-        return {
-          nodeId: candidateSrcNodeId,
-          varName: varName,
-          varStyle: varStyle,
-        };
-      })
-      .otherwise(() => {
-        console.error("Unknown node type ", arg.Type);
-        return null;
-      }),
-  ).filter(Boolean) as IncomingEdgeInfo[];
+        }),
+    )
+    .filter(Boolean) as IncomingEdgeInfo[];
+}
+
+function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
+  const incomingEdgeInfoList = argListToEdgeInfo(callStmt.ArgList, workingDag);
 
   const thisNodeId = uuidv4();
   const thisNode = {
