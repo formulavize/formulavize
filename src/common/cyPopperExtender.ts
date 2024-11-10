@@ -4,14 +4,7 @@ import {
   DESCRIPTION_PREFIX,
   TOP_LEVEL_DAG_ID,
 } from "./constants";
-import {
-  Dag,
-  DagElement,
-  ElementId,
-  Keyword,
-  StyleTag,
-  StyleProperties,
-} from "./dag";
+import { Dag, DagElement, ElementId, StyleProperties } from "./dag";
 
 const POPPER_OUTER_DIV_CLASS: string = "popper-outer-div";
 const POPPER_INNER_DIV_CLASS: string = "popper-inner-div";
@@ -20,6 +13,7 @@ export interface DescriptionData {
   description: string;
   descriptionStyleProperties: StyleProperties;
 }
+export type SelectorDescriptionPair = [Selector, DescriptionData];
 
 export function makeDagLineageSelector(dag: Dag): string {
   return dag.Id === TOP_LEVEL_DAG_ID ? "" : `[lineagePath*='/${dag.Id}']`;
@@ -28,7 +22,8 @@ export function makeDagLineageSelector(dag: Dag): string {
 export function getDescriptionProperties(
   styleProperties: StyleProperties,
 ): StyleProperties {
-  // get only properties that starts with DESCRIPTION_PREFIX from styleProperties and remove the prefix
+  // get only properties that starts with DESCRIPTION_PREFIX
+  // from styleProperties and remove the prefix
   // e.g. Map(["description-color", "black"]) -> Map(["color", "black"])
   return new Map(
     Array.from(styleProperties.entries())
@@ -47,92 +42,67 @@ export function getDescriptionData(
   return { description, descriptionStyleProperties: descriptionStyleMap };
 }
 
-export function getStyleDescriptions(dag: Dag): Map<string, DescriptionData> {
+export function getStyleDescriptions(dag: Dag): SelectorDescriptionPair[] {
   const lineageSelector = makeDagLineageSelector(dag);
-  return new Map<Selector, DescriptionData>(
-    Array.from(dag.getFlattenedStyles().entries())
+  const styleEntries = Array.from(dag.getFlattenedStyles().entries());
+  return Array.from(
+    styleEntries
       .map(([styleTag, styleProperties]) => [
         `.${styleTag}${lineageSelector}`,
         getDescriptionData(styleProperties),
       ])
-      .filter(([_, descriptionData]) => !!descriptionData) as Iterable<
-      [Selector, DescriptionData]
-    >,
-  );
-}
-
-export function styleTagHasDescriptionDefined(
-  dag: Dag,
-  styleTag: StyleTag,
-): boolean {
-  return !!dag.getStyle(styleTag)?.get(DESCRIPTION_PROPERTY);
-}
-
-export function getDescriptionDataForStyleTag(
-  dag: Dag,
-  styleTag: StyleTag,
-): DescriptionData | null {
-  const styleProperties = dag.getStyle(styleTag);
-  if (!styleProperties) return null;
-  return getDescriptionData(styleProperties);
+      .filter(([_, descriptionData]) => !!descriptionData),
+  ) as SelectorDescriptionPair[];
 }
 
 export function getNamesWithStyleDescriptions(
   dag: Dag,
-): Map<Keyword, DescriptionData> {
+): SelectorDescriptionPair[] {
   const lineageSelector = makeDagLineageSelector(dag);
-  return new Map<Selector, DescriptionData>(
-    Array.from(dag.getStyleBindings().entries())
-      .map(([keyword, styleTags]) => {
-        // find the last style tag that has a description
-        // so the last style tag overrides all previous ones
-        const usedTag = styleTags.findLast((tag) =>
-          styleTagHasDescriptionDefined(dag, tag),
-        );
-        if (!usedTag) return null;
-        const descriptionData = getDescriptionDataForStyleTag(dag, usedTag);
-        if (!descriptionData) return null;
+  const bindingEntries = Array.from(dag.getStyleBindings().entries());
+  return Array.from(
+    bindingEntries
+      .flatMap(([keyword, styleTags]) => {
         const keywordSelector = `[name='${keyword}']${lineageSelector}`;
-        return [keywordSelector, descriptionData];
+        return styleTags
+          .map((tag) => dag.getStyle(tag))
+          .filter((styleProperties) =>
+            styleProperties?.get(DESCRIPTION_PROPERTY),
+          )
+          .map((styleProperties) => getDescriptionData(styleProperties!))
+          .filter(Boolean)
+          .map((descriptionData) => [keywordSelector, descriptionData]);
       })
-      .filter(Boolean) as Iterable<[Selector, DescriptionData]>,
-  );
+      .filter(Boolean),
+  ) as SelectorDescriptionPair[];
 }
 
 function getElementDescriptions(
   dagElements: DagElement[],
-): Map<ElementId, DescriptionData> {
-  return new Map<ElementId, DescriptionData>(
-    dagElements
-      .map((dagElement) => {
-        const descriptionData = getDescriptionData(dagElement.styleProperties);
-        if (!descriptionData) return null;
-        return [dagElement.id, descriptionData];
-      })
-      .filter(Boolean) as Iterable<[ElementId, DescriptionData]>,
-  );
+): [ElementId, DescriptionData][] {
+  return dagElements
+    .map((dagElement) => {
+      const descriptionData = getDescriptionData(dagElement.styleProperties);
+      if (!descriptionData) return null;
+      return [dagElement.id, descriptionData] as [ElementId, DescriptionData];
+    })
+    .filter((item): item is [ElementId, DescriptionData] => item !== null);
 }
-export function getNodeDescriptions(dag: Dag): Map<Selector, DescriptionData> {
-  const nodeDescriptions = getElementDescriptions(dag.getNodeList());
-  return new Map(
-    Array.from(nodeDescriptions, ([key, value]) => [`node#${key}`, value]),
-  );
+export function getNodeDescriptions(dag: Dag): SelectorDescriptionPair[] {
+  const nodeDescs = getElementDescriptions(dag.getNodeList());
+  return Array.from(nodeDescs, ([id, descData]) => [`node#${id}`, descData]);
 }
 
-export function getEdgeDescriptions(dag: Dag): Map<Selector, DescriptionData> {
-  const edgeDescriptions = getElementDescriptions(dag.getEdgeList());
-  return new Map(
-    Array.from(edgeDescriptions, ([key, value]) => [`edge#${key}`, value]),
-  );
+export function getEdgeDescriptions(dag: Dag): SelectorDescriptionPair[] {
+  const edgeDescs = getElementDescriptions(dag.getEdgeList());
+  return Array.from(edgeDescs, ([id, descData]) => [`edge#${id}`, descData]);
 }
 
 export function getCompoundNodeDescriptions(
   dag: Dag,
-): Map<Selector, DescriptionData> {
-  const compoundNodeDesc = getElementDescriptions([dag.getDagAsDagNode()]);
-  return new Map(
-    Array.from(compoundNodeDesc, ([key, value]) => [`node#${key}`, value]),
-  );
+): SelectorDescriptionPair[] {
+  const compNodeDesc = getElementDescriptions([dag.getDagAsDagNode()]);
+  return Array.from(compNodeDesc, ([id, descData]) => [`node#${id}`, descData]);
 }
 
 function clearAllPopperDivs() {
@@ -202,17 +172,15 @@ export function addCyPopperElementsFromDag(
   canvasElement: HTMLElement,
   dag: Dag,
 ) {
-  const descriptionMapsToAdd: Map<Selector, DescriptionData>[] = [
+  const selectorDescriptionPairs: SelectorDescriptionPair[][] = [
     getNodeDescriptions(dag),
     getEdgeDescriptions(dag),
     getStyleDescriptions(dag),
     getNamesWithStyleDescriptions(dag),
     getCompoundNodeDescriptions(dag),
   ];
-  descriptionMapsToAdd.forEach((descriptionDataMap) => {
-    descriptionDataMap.forEach((descriptionData, selector) => {
-      addDescriptionPopper(cy, canvasElement, selector, descriptionData);
-    });
+  selectorDescriptionPairs.flat().forEach(([selector, descriptionData]) => {
+    addDescriptionPopper(cy, canvasElement, selector, descriptionData);
   });
 
   dag.getChildDags().forEach((childDag) => {
