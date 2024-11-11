@@ -75,6 +75,20 @@ describe("single statements", () => {
       ]),
     );
   });
+  test("assignment with anonymous namespace", () => {
+    const input = "x = []";
+    expect(makeTree(input)).toEqual(
+      new Recipe([new Assignment([new LocalVariable("x")], new Namespace(""))]),
+    );
+  });
+  test("assignment with namespace", () => {
+    const input = "x = n[]";
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new Assignment([new LocalVariable("x")], new Namespace("n", [])),
+      ]),
+    );
+  });
   test("style declaration", () => {
     const input = "#s{}";
     expect(makeTree(input)).toEqual(new Recipe([new NamedStyle("s")]));
