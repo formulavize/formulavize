@@ -52,7 +52,7 @@ function argListToEdgeInfo(
           }
           return {
             nodeId: candidateSrcNodeId,
-            varName: varName,
+            varName: varName.at(-1) ?? "",
             varStyle: varStyle,
           };
         })
@@ -64,9 +64,27 @@ function argListToEdgeInfo(
     .filter(Boolean) as IncomingEdgeInfo[];
 }
 
-function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
-  const incomingEdgeInfoList = argListToEdgeInfo(callStmt.ArgList, workingDag);
+function addIncomingEdgesToDag(
+  incomingEdges: IncomingEdgeInfo[],
+  destNodeId: NodeId,
+  workingDag: Dag,
+): void {
+  incomingEdges.forEach((incomingEdge) => {
+    const edgeId = uuidv4();
+    const thisEdge = {
+      id: edgeId,
+      name: incomingEdge.varName,
+      srcNodeId: incomingEdge.nodeId,
+      destNodeId: destNodeId,
+      styleTags: incomingEdge.varStyle?.styleTags ?? [],
+      styleProperties:
+        incomingEdge.varStyle?.styleProperties ?? new Map<string, string>(),
+    };
+    workingDag.addEdge(thisEdge);
+  });
+}
 
+function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
   const thisNodeId = uuidv4();
   const thisNode = {
     id: thisNodeId,
@@ -76,19 +94,8 @@ function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
   };
   workingDag.addNode(thisNode);
 
-  incomingEdgeInfoList.forEach((incomingEdge) => {
-    const edgeId = uuidv4();
-    const thisEdge = {
-      id: edgeId,
-      name: incomingEdge.varName,
-      srcNodeId: incomingEdge.nodeId,
-      destNodeId: thisNodeId,
-      styleTags: incomingEdge.varStyle?.styleTags ?? [],
-      styleProperties:
-        incomingEdge.varStyle?.styleProperties ?? new Map<string, string>(),
-    };
-    workingDag.addEdge(thisEdge);
-  });
+  const incomingEdgeInfoList = argListToEdgeInfo(callStmt.ArgList, workingDag);
+  addIncomingEdgesToDag(incomingEdgeInfoList, thisNodeId, workingDag);
 
   return thisNodeId;
 }
@@ -180,6 +187,12 @@ export function makeSubDag(
         const subDagId = uuidv4();
         const childDag = makeSubDag(subDagId, namespaceStmt, curLevelDag);
         curLevelDag.addChildDag(childDag);
+
+        const dagIncomingEdges = argListToEdgeInfo(
+          namespaceStmt.ArgList,
+          curLevelDag,
+        );
+        addIncomingEdgesToDag(dagIncomingEdges, subDagId, curLevelDag);
       })
       .otherwise(() => {
         console.error("Unknown node type ", stmt.Type);
