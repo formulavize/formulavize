@@ -129,12 +129,15 @@ export class CallTreeNode extends BaseTreeNode {
 
 export class AssignmentTreeNode extends BaseTreeNode {
   private lhs: LocalVarTreeNode[];
-  private rhs: CallTreeNode | null;
+  private rhs: CallTreeNode | NamespaceTreeNode | null;
 
-  constructor(varList: LocalVarTreeNode[], call: CallTreeNode | null) {
+  constructor(
+    varList: LocalVarTreeNode[],
+    rhs: CallTreeNode | NamespaceTreeNode | null,
+  ) {
     super(NodeType.Assignment);
     this.lhs = varList;
-    this.rhs = call;
+    this.rhs = rhs;
   }
 
   getChildren(): BaseTreeNode[] {
@@ -155,7 +158,7 @@ export class AssignmentTreeNode extends BaseTreeNode {
     return this.lhs;
   }
 
-  get Rhs(): CallTreeNode | null {
+  get Rhs(): CallTreeNode | NamespaceTreeNode | null {
     return this.rhs;
   }
 }

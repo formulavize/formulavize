@@ -157,8 +157,12 @@ function makeAssignment(c: TreeCursor, s: EditorState): AssignmentTreeNode {
     .map((candidateLhsVar) => makeLhsVariable(candidateLhsVar.cursor(), s));
 
   const rhsCall = makeNullableChild("Call", makeCall, c, s);
+  if (rhsCall) return new AssignmentTreeNode(lhsVars, rhsCall);
 
-  return new AssignmentTreeNode(lhsVars, rhsCall);
+  const rhsNs = makeNullableChild("Namespace", makeNamespace, c, s);
+  if (rhsNs) return new AssignmentTreeNode(lhsVars, rhsNs);
+
+  return new AssignmentTreeNode(lhsVars, null);
 }
 
 function makeAlias(c: TreeCursor, s: EditorState): AliasTreeNode {

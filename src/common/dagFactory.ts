@@ -100,6 +100,20 @@ function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
   return thisNodeId;
 }
 
+function proccessNamespace(
+  namespaceStmt: NamespaceTreeNode,
+  workingDag: Dag,
+): NodeId {
+  const subDagId = uuidv4();
+  const childDag = makeSubDag(subDagId, namespaceStmt, workingDag);
+  workingDag.addChildDag(childDag);
+
+  const dagIncomingEdges = argListToEdgeInfo(namespaceStmt.ArgList, workingDag);
+  addIncomingEdgesToDag(dagIncomingEdges, subDagId, workingDag);
+
+  return subDagId;
+}
+
 export function makeSubDag(
   dagId: DagId,
   dagNamespaceStmt: NamespaceTreeNode,
@@ -121,6 +135,23 @@ export function makeSubDag(
     });
   }
 
+  function processAssignmentRhs(
+    rhsNode: CallTreeNode | NamespaceTreeNode,
+    workingDag: Dag,
+  ): NodeId | null {
+    return match(rhsNode.Type)
+      .with(NodeType.Call, () => {
+        return processCall(rhsNode as CallTreeNode, workingDag);
+      })
+      .with(NodeType.Namespace, () => {
+        return proccessNamespace(rhsNode as NamespaceTreeNode, workingDag);
+      })
+      .otherwise(() => {
+        console.error("Unknown node type ", rhsNode.Type);
+        return null;
+      });
+  }
+
   dagNamespaceStmt.Statements.forEach((stmt) => {
     match(stmt.Type)
       .with(NodeType.Call, () => {
@@ -130,8 +161,11 @@ export function makeSubDag(
       .with(NodeType.Assignment, () => {
         const assignmentStmt = stmt as AssignmentTreeNode;
         if (!assignmentStmt.Lhs || !assignmentStmt.Rhs) return;
-
-        const thisNodeId = processCall(assignmentStmt.Rhs, curLevelDag);
+        const thisNodeId = processAssignmentRhs(
+          assignmentStmt.Rhs,
+          curLevelDag,
+        );
+        if (!thisNodeId) return;
         assignmentStmt.Lhs.forEach((lhsVar) => {
           curLevelDag.setVarNode(lhsVar.VarName, thisNodeId);
           const varStyle = lhsVar.Styling ? makeDagStyle(lhsVar.Styling) : null;
@@ -184,15 +218,7 @@ export function makeSubDag(
       .with(NodeType.QualifiedVariable, () => null)
       .with(NodeType.Namespace, () => {
         const namespaceStmt = stmt as NamespaceTreeNode;
-        const subDagId = uuidv4();
-        const childDag = makeSubDag(subDagId, namespaceStmt, curLevelDag);
-        curLevelDag.addChildDag(childDag);
-
-        const dagIncomingEdges = argListToEdgeInfo(
-          namespaceStmt.ArgList,
-          curLevelDag,
-        );
-        addIncomingEdgesToDag(dagIncomingEdges, subDagId, curLevelDag);
+        proccessNamespace(namespaceStmt, curLevelDag);
       })
       .otherwise(() => {
         console.error("Unknown node type ", stmt.Type);

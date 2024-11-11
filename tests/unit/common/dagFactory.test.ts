@@ -307,6 +307,45 @@ describe("edge tests", () => {
     expect(nodeIdToNameMap.get(rawEdgeList[1].srcNodeId)).toEqual("f");
 
     expect(rawEdgeList[0].destNodeId).toEqual(rawEdgeList[1].destNodeId);
+
+    const childDags = dag.getChildDags();
+    expect(childDags).toHaveLength(1);
+    const childDag = childDags[0];
+    expect(rawEdgeList[0].destNodeId).toBe(childDag.Id);
+  });
+  test("edge from anonymous namespace", () => {
+    const recipe = new Recipe([
+      new Assignment([new LocalVariable("y")], new Namespace()),
+      new Call("g", [new QualifiedVariable(["y"])]),
+    ]);
+    const dag = makeDag(recipe);
+    const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
+
+    const edgeList = dag.getEdgeList();
+    expect(edgeList).toHaveLength(1);
+    expect(nodeIdToNameMap.get(edgeList[0].destNodeId)).toEqual("g");
+
+    const childDags = dag.getChildDags();
+    expect(childDags).toHaveLength(1);
+    const childDag = childDags[0];
+    expect(edgeList[0].srcNodeId).toBe(childDag.Id);
+  });
+  test("edge from named namespace", () => {
+    const recipe = new Recipe([
+      new Assignment([new LocalVariable("y")], new Namespace("child")),
+      new Call("g", [new QualifiedVariable(["y"])]),
+    ]);
+    const dag = makeDag(recipe);
+    const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
+
+    const edgeList = dag.getEdgeList();
+    expect(edgeList).toHaveLength(1);
+    expect(nodeIdToNameMap.get(edgeList[0].destNodeId)).toEqual("g");
+
+    const childDags = dag.getChildDags();
+    expect(childDags).toHaveLength(1);
+    const childDag = childDags[0];
+    expect(edgeList[0].srcNodeId).toBe(childDag.Id);
   });
 });
 
