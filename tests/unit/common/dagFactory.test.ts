@@ -306,12 +306,11 @@ describe("edge tests", () => {
     expect(rawEdgeList[1].name).toEqual("y");
     expect(nodeIdToNameMap.get(rawEdgeList[1].srcNodeId)).toEqual("f");
 
-    expect(rawEdgeList[0].destNodeId).toEqual(rawEdgeList[1].destNodeId);
-
     const childDags = dag.getChildDags();
     expect(childDags).toHaveLength(1);
     const childDag = childDags[0];
     expect(rawEdgeList[0].destNodeId).toBe(childDag.Id);
+    expect(rawEdgeList[0].destNodeId).toEqual(rawEdgeList[1].destNodeId);
   });
   test("edge from anonymous namespace", () => {
     const recipe = new Recipe([
