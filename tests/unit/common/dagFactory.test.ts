@@ -59,12 +59,13 @@ describe("node tests", () => {
 
 describe("edge tests", () => {
   type NodeNamePair = [string | undefined, string | undefined];
+  function getDagNodeIdsToNames(dag: Dag): Map<string, string> {
+    return new Map<string, string>(
+      dag.getNodeList().map((node) => [node.id, node.name]),
+    );
+  }
+
   function getAllNodeNamesToNodeIds(dag: Dag): Map<string, string> {
-    function getDagNodeIdsToNames(dag: Dag): Map<string, string> {
-      return new Map<string, string>(
-        dag.getNodeList().map((node) => [node.id, node.name]),
-      );
-    }
     const nodeIdToNameMap = new Map<string, string>(getDagNodeIdsToNames(dag));
     return dag
       .getChildDags()
@@ -282,6 +283,30 @@ describe("edge tests", () => {
     ]);
     const edgeList = makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["b", "y"]]);
+  });
+  test("namespace with args makes incoming edges", () => {
+    const recipe = new Recipe([
+      new Assignment([new LocalVariable("y")], new Call("f", [])),
+      new Namespace(
+        "child",
+        [new Call("g", [])],
+        [new QualifiedVariable(["y"]), new Call("h", [])],
+      ),
+    ]);
+    const dag = makeDag(recipe);
+    const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
+    const rawEdgeList = dag
+      .getEdgeList()
+      .sort((a, b) => a.name.localeCompare(b.name));
+    expect(rawEdgeList).toHaveLength(2);
+
+    expect(rawEdgeList[0].name).toEqual("");
+    expect(nodeIdToNameMap.get(rawEdgeList[0].srcNodeId)).toEqual("h");
+
+    expect(rawEdgeList[1].name).toEqual("y");
+    expect(nodeIdToNameMap.get(rawEdgeList[1].srcNodeId)).toEqual("f");
+
+    expect(rawEdgeList[0].destNodeId).toEqual(rawEdgeList[1].destNodeId);
   });
 });
 
