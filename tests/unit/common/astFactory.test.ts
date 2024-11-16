@@ -12,6 +12,7 @@ import {
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   NamespaceTreeNode as Namespace,
+  ImportTreeNode as Import,
   BaseTreeNode,
 } from "../../../src/common/ast";
 import { EditorState } from "@codemirror/state";
@@ -263,6 +264,28 @@ describe("multiple statements", () => {
   });
 });
 
+describe("import statements", () => {
+  test("import statement", () => {
+    const input = 'n @ "path"';
+    expect(makeTree(input)).toEqual(new Recipe([new Import("path", "n")]));
+  });
+  test("import statement with no alias", () => {
+    const input = '@ "path"';
+    expect(makeTree(input)).toEqual(new Recipe([new Import("path")]));
+  });
+  test("import statement with url path", () => {
+    const testUrl = "https://github.com/formulavize";
+    const input = `n @ "${testUrl}"`;
+    expect(makeTree(input)).toEqual(new Recipe([new Import(testUrl, "n")]));
+  });
+  test("import statement in namespace", () => {
+    const input = 'n[@"test"]';
+    expect(makeTree(input)).toEqual(
+      new Recipe([new Namespace("n", [new Import("test")])]),
+    );
+  });
+});
+
 describe("incomplete statements", () => {
   test("incomplete assignment", () => {
     const input = "y=f(";
@@ -295,5 +318,13 @@ describe("incomplete statements", () => {
   test("incomplete namespace", () => {
     const input = "n[";
     expect(makeTree(input)).toEqual(new Recipe([new Namespace("n")]));
+  });
+  test("incomplete import", () => {
+    const input = "@";
+    expect(makeTree(input)).toEqual(new Recipe([new Import("")]));
+  });
+  test("import statement with no path", () => {
+    const input = "n @";
+    expect(makeTree(input)).toEqual(new Recipe([new Import("", "n")]));
   });
 });

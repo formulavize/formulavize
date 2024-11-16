@@ -9,6 +9,7 @@ export enum NodeType {
   NamedStyle,
   StyleBinding,
   Namespace,
+  Import,
 }
 
 export abstract class BaseTreeNode {
@@ -49,7 +50,8 @@ export type StatementTreeNode =
   | AliasTreeNode
   | NamedStyleTreeNode
   | StyleBindingTreeNode
-  | NamespaceTreeNode;
+  | NamespaceTreeNode
+  | ImportTreeNode;
 
 export class RecipeTreeNode extends BaseTreeNode {
   private statements: StatementTreeNode[];
@@ -382,5 +384,33 @@ export class NamespaceTreeNode extends BaseTreeNode {
 
   get Styling(): StyleTreeNode | null {
     return this.styling;
+  }
+}
+
+export class ImportTreeNode extends BaseTreeNode {
+  private importLocation: string;
+  private importAlias: string | null;
+
+  constructor(importPath: string, importAlias: string | null = null) {
+    super(NodeType.Import);
+    this.importLocation = importPath;
+    this.importAlias = importAlias === "" ? null : importAlias;
+  }
+
+  getChildren(): BaseTreeNode[] {
+    return [];
+  }
+
+  formatValue(): string {
+    const aliasString = this.importAlias ? this.importAlias + " " : "";
+    return "Import: " + aliasString + this.importLocation;
+  }
+
+  get ImportLocation(): string {
+    return this.importLocation;
+  }
+
+  get ImportAlias(): string | null {
+    return this.importAlias;
   }
 }
