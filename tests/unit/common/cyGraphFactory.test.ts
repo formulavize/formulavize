@@ -3,9 +3,9 @@ import {
   makeCyNodes,
   makeCyEdges,
   makeCyElements,
-} from "../../../src/common/cyGraphFactory";
-import { TOP_LEVEL_DAG_ID } from "../../../src/common/constants";
-import { Dag } from "../../../src/common/dag";
+} from "../../../src/compiler/cyGraphFactory";
+import { TOP_LEVEL_DAG_ID } from "../../../src/compiler/constants";
+import { Dag } from "../../../src/compiler/dag";
 
 describe("makes cytoscape elements", () => {
   test("with two nodes", () => {

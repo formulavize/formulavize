@@ -7,11 +7,11 @@ import { defineComponent } from "vue";
 import cytoscape from "cytoscape";
 import dagre from "cytoscape-dagre";
 import popper from "cytoscape-popper";
-import { makeCyElements } from "../common/cyGraphFactory";
-import { makeCyStylesheets } from "../common/cyStyleSheetsFactory";
-import { extendCyPopperElements } from "../common/cyPopperExtender";
-import { Dag } from "../common/dag";
-import { TOP_LEVEL_DAG_ID } from "../common/constants";
+import { makeCyElements } from "../compiler/cyGraphFactory";
+import { makeCyStylesheets } from "../compiler/cyStyleSheetsFactory";
+import { extendCyPopperElements } from "../compiler/cyPopperExtender";
+import { Dag } from "../compiler/dag";
+import { TOP_LEVEL_DAG_ID } from "../compiler/constants";
 
 cytoscape.use(dagre);
 cytoscape.use(popper);

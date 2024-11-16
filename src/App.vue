@@ -41,10 +41,10 @@ import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
 import OperatorsView from "./components/OperatorsView.vue";
 import { EditorState } from "@codemirror/state";
-import { RecipeTreeNode } from "./common/ast";
-import { Dag } from "./common/dag";
-import { makeDag } from "./common/dagFactory";
-import { makeRecipeTree } from "./common/astFactory";
+import { RecipeTreeNode } from "./compiler/ast";
+import { Dag } from "./compiler/dag";
+import { makeDag } from "./compiler/dagFactory";
+import { makeRecipeTree } from "./compiler/astFactory";
 // @ts-ignore: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
