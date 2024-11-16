@@ -26,8 +26,6 @@ export abstract class BaseTreeNode {
 
   abstract formatValue(): string;
 
-  abstract isComplete(): boolean;
-
   formatTree(): string {
     const formatTreeHelper = (node: BaseTreeNode, lvl: number): string => {
       return (
@@ -73,10 +71,6 @@ export class RecipeTreeNode extends BaseTreeNode {
     return "Recipe:";
   }
 
-  isComplete(): boolean {
-    return true;
-  }
-
   get Statements(): StatementTreeNode[] {
     return this.statements;
   }
@@ -108,10 +102,6 @@ export class CallTreeNode extends BaseTreeNode {
 
   formatValue(): string {
     return "Call: " + this.name;
-  }
-
-  isComplete(): boolean {
-    return this.name !== "";
   }
 
   get Name(): string {
@@ -150,10 +140,6 @@ export class AssignmentTreeNode extends BaseTreeNode {
     return "Assignment:";
   }
 
-  isComplete(): boolean {
-    return this.lhs.length > 0 && this.rhs !== null;
-  }
-
   get Lhs(): LocalVarTreeNode[] {
     return this.lhs;
   }
@@ -182,10 +168,6 @@ export class AliasTreeNode extends BaseTreeNode {
 
   formatValue(): string {
     return "Alias:";
-  }
-
-  isComplete(): boolean {
-    return this.lhs !== null && this.rhs !== null;
   }
 
   get Lhs(): LocalVarTreeNode | null {
@@ -217,10 +199,6 @@ export class LocalVarTreeNode extends BaseTreeNode {
     return "LocalVariable: " + this.varName;
   }
 
-  isComplete(): boolean {
-    return this.varName !== "";
-  }
-
   get VarName(): string {
     return this.varName;
   }
@@ -244,10 +222,6 @@ export class QualifiedVarTreeNode extends BaseTreeNode {
 
   formatValue(): string {
     return "QualifiedVariable: " + this.qualifiedVarName.join(".");
-  }
-
-  isComplete(): boolean {
-    return this.qualifiedVarName.length > 0;
   }
 
   get QualifiedVarName(): QualifiableIdentifier {
@@ -291,10 +265,6 @@ export class StyleTreeNode extends BaseTreeNode {
     );
   }
 
-  isComplete(): boolean {
-    return true;
-  }
-
   get KeyValueMap(): Map<string, string> {
     return this.keyValueMap;
   }
@@ -323,10 +293,6 @@ export class NamedStyleTreeNode extends BaseTreeNode {
 
   formatValue(): string {
     return "StyleName: " + this.styleName;
-  }
-
-  isComplete(): boolean {
-    return true;
   }
 
   get StyleName(): string {
@@ -362,10 +328,6 @@ export class StyleBindingTreeNode extends BaseTreeNode {
     return (
       `StyleBinding: ${this.keyword} ` + `StyleTagList: [${styleTagListStr}]`
     );
-  }
-
-  isComplete(): boolean {
-    return true;
   }
 
   get Keyword(): string {
@@ -404,10 +366,6 @@ export class NamespaceTreeNode extends BaseTreeNode {
 
   formatValue(): string {
     return "Namespace: " + this.name;
-  }
-
-  isComplete(): boolean {
-    return true;
   }
 
   get Name(): string {
