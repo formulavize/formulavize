@@ -284,7 +284,7 @@ export class Dag {
     return this.getLineagePath().split("/").slice(0, -1).join("/");
   }
 
-  formatDag(level: number = 0): string {
+  debugDumpDag(level: number = 0): string {
     const leftPad = "\t".repeat(level);
     const childLeftPad = leftPad + "\t";
     const grandchildLeftPad = childLeftPad + "\t";
@@ -338,7 +338,7 @@ export class Dag {
         "\n";
     });
     this.childDags.forEach((subDag) => {
-      result += subDag.formatDag(level + 1);
+      result += subDag.debugDumpDag(level + 1);
     });
 
     return result;
