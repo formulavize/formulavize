@@ -16,6 +16,7 @@ import {
   NamedStyleTreeNode,
   StyleBindingTreeNode,
   NamespaceTreeNode,
+  ImportTreeNode,
   QualifiableIdentifier,
 } from "./ast";
 
@@ -51,7 +52,7 @@ function getQualifiableIdentifer(c: TreeCursor, s: EditorState): string[] {
     .map((identifier) => s.doc.sliceString(identifier.from, identifier.to));
 }
 
-function getDescription(c: TreeCursor, s: EditorState): string | null {
+function getJoinedStringLiterals(c: TreeCursor, s: EditorState): string | null {
   // Get all child StringLiterals with quotes trimmed
   // from the start and end then join them with newlines
   const descriptionLines: string[] = c.node
@@ -89,7 +90,7 @@ function makeStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
   );
 
   // If there are description strings, store them in a description property
-  const description = getDescription(c, s);
+  const description = getJoinedStringLiterals(c, s);
   if (description)
     styleDeclaredPropertyValues.set(DESCRIPTION_PROPERTY, description);
 
@@ -173,6 +174,12 @@ function makeAlias(c: TreeCursor, s: EditorState): AliasTreeNode {
   return new AliasTreeNode(lhsVar, rhsVar);
 }
 
+function makeImport(c: TreeCursor, s: EditorState): ImportTreeNode {
+  const importLocation = getJoinedStringLiterals(c, s) ?? "";
+  const importAs = getTextFromChild("Identifier", c, s);
+  return new ImportTreeNode(importLocation, importAs);
+}
+
 function getStatements(c: TreeCursor, s: EditorState): StatementTreeNode[] {
   return c.node
     .getChildren("Statement")
@@ -210,6 +217,7 @@ function makeStatement(
     .with("StyleTagDeclaration", () => makeNamedStyle(c, s))
     .with("StyleBinding", () => makeStyleBinding(c, s))
     .with("Namespace", () => makeNamespace(c, s))
+    .with("Import", () => makeImport(c, s))
     .with("⚠", () => null) // Error token for incomplete trees
     .with("Recipe", () => null)
     .with("LineComment", () => null)
