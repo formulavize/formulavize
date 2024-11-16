@@ -10,18 +10,18 @@ import {
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   NamespaceTreeNode as Namespace,
-} from "../../../src/common/ast";
+} from "../../../src/compiler/ast";
 import {
   DESCRIPTION_PROPERTY,
   TOP_LEVEL_DAG_ID,
-} from "../../../src/common/constants";
+} from "../../../src/compiler/constants";
 import {
   Dag,
   StyleTag,
   StyleProperties,
   Keyword,
-} from "../../../src/common/dag";
-import { makeDag } from "../../../src/common/dagFactory";
+} from "../../../src/compiler/dag";
+import { makeDag } from "../../../src/compiler/dagFactory";
 
 describe("node tests", () => {
   function makeDagAndReturnNodeNames(recipe: Recipe): string[] {

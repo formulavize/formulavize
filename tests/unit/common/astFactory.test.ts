@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest";
-import { makeRecipeTree } from "../../../src/common/astFactory";
-import { DESCRIPTION_PROPERTY } from "../../../src/common/constants";
+import { makeRecipeTree } from "../../../src/compiler/astFactory";
+import { DESCRIPTION_PROPERTY } from "../../../src/compiler/constants";
 import {
   RecipeTreeNode as Recipe,
   CallTreeNode as Call,
@@ -14,7 +14,7 @@ import {
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
   BaseTreeNode,
-} from "../../../src/common/ast";
+} from "../../../src/compiler/ast";
 import { EditorState } from "@codemirror/state";
 import { fizLanguage } from "@formulavize/lang-fiz";
 

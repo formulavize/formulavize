@@ -10,12 +10,12 @@ import {
   makeNameStyleSheets,
   getBaseStylesheet,
   makeCyStylesheets,
-} from "../../../src/common/cyStyleSheetsFactory";
+} from "../../../src/compiler/cyStyleSheetsFactory";
 import {
   TOP_LEVEL_DAG_ID,
   DESCRIPTION_PROPERTY,
-} from "../../../src/common/constants";
-import { Dag, DagElement } from "../../../src/common/dag";
+} from "../../../src/compiler/constants";
+import { Dag, DagElement } from "../../../src/compiler/dag";
 
 describe("filters out non-cytoscape properties", () => {
   test("property with non-cytoscape prefix", () => {
