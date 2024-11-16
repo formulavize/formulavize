@@ -75,7 +75,7 @@ export default defineComponent({
       return makeDag(this.curRecipeTree);
     },
     astTextDump(): string {
-      return this.curRecipeTree.formatTree();
+      return this.curRecipeTree.debugDumpTree();
     },
     dagTextDump(): string {
       return this.curDag.formatDag();

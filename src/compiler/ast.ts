@@ -25,21 +25,22 @@ export abstract class BaseTreeNode {
 
   abstract getChildren(): BaseTreeNode[];
 
-  abstract formatValue(): string;
+  abstract debugDump(): string;
 
-  formatTree(): string {
-    const formatTreeHelper = (node: BaseTreeNode, lvl: number): string => {
+  debugDumpTree(): string {
+    const debugDumpTreeHelper = (node: BaseTreeNode, lvl: number): string => {
       return (
-        `${node.formatValue()}\n` +
+        `${node.debugDump()}\n` +
         node
           .getChildren()
           .map(
-            (child) => "\t".repeat(lvl + 1) + formatTreeHelper(child, lvl + 1),
+            (child) =>
+              "\t".repeat(lvl + 1) + debugDumpTreeHelper(child, lvl + 1),
           )
           .join("")
       );
     };
-    return formatTreeHelper(this, 0);
+    return debugDumpTreeHelper(this, 0);
   }
 }
 
@@ -69,7 +70,7 @@ export class RecipeTreeNode extends BaseTreeNode {
     return this.statements;
   }
 
-  formatValue(): string {
+  debugDump(): string {
     return "Recipe:";
   }
 
@@ -102,7 +103,7 @@ export class CallTreeNode extends BaseTreeNode {
     return childList;
   }
 
-  formatValue(): string {
+  debugDump(): string {
     return "Call: " + this.name;
   }
 
@@ -138,7 +139,7 @@ export class AssignmentTreeNode extends BaseTreeNode {
     return childList;
   }
 
-  formatValue(): string {
+  debugDump(): string {
     return "Assignment:";
   }
 
@@ -168,7 +169,7 @@ export class AliasTreeNode extends BaseTreeNode {
     return childList;
   }
 
-  formatValue(): string {
+  debugDump(): string {
     return "Alias:";
   }
 
@@ -197,7 +198,7 @@ export class LocalVarTreeNode extends BaseTreeNode {
     return this.styling ? [this.styling] : [];
   }
 
-  formatValue(): string {
+  debugDump(): string {
     return "LocalVariable: " + this.varName;
   }
 
@@ -222,7 +223,7 @@ export class QualifiedVarTreeNode extends BaseTreeNode {
     return [];
   }
 
-  formatValue(): string {
+  debugDump(): string {
     return "QualifiedVariable: " + this.qualifiedVarName.join(".");
   }
 
@@ -256,7 +257,7 @@ export class StyleTreeNode extends BaseTreeNode {
     return [];
   }
 
-  formatValue(): string {
+  debugDump(): string {
     const styleTagListStr = this.styleTagList
       .map((tag) => tag.join("."))
       .join(", ");
@@ -293,7 +294,7 @@ export class NamedStyleTreeNode extends BaseTreeNode {
     return [this.styleNode];
   }
 
-  formatValue(): string {
+  debugDump(): string {
     return "StyleName: " + this.styleName;
   }
 
@@ -323,7 +324,7 @@ export class StyleBindingTreeNode extends BaseTreeNode {
     return [];
   }
 
-  formatValue(): string {
+  debugDump(): string {
     const styleTagListStr = this.styleTagList
       .map((tag) => tag.join("."))
       .join(", ");
@@ -366,7 +367,7 @@ export class NamespaceTreeNode extends BaseTreeNode {
     return childList;
   }
 
-  formatValue(): string {
+  debugDump(): string {
     return "Namespace: " + this.name;
   }
 
@@ -401,7 +402,7 @@ export class ImportTreeNode extends BaseTreeNode {
     return [];
   }
 
-  formatValue(): string {
+  debugDump(): string {
     const aliasString = this.importAlias ? this.importAlias + " " : "";
     return "Import: " + aliasString + this.importLocation;
   }
