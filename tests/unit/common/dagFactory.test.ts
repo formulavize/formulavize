@@ -21,7 +21,7 @@ import {
   StyleProperties,
   Keyword,
 } from "../../../src/compiler/dag";
-import { makeDag } from "../../../src/compiler/dagFactory";
+import { makeDag } from "../../../src/compiler/astToDag";
 
 describe("node tests", () => {
   function makeDagAndReturnNodeNames(recipe: Recipe): string[] {

@@ -8,7 +8,7 @@ import {
   DescriptionData,
   SelectorDescriptionPair,
   addCyPopperElementsFromDag,
-} from "../../../src/compiler/cyPopperExtender";
+} from "../../../src/compiler/dagToCyPopperExtension";
 import {
   DESCRIPTION_PROPERTY,
   TOP_LEVEL_DAG_ID,
