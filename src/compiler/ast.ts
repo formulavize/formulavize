@@ -28,7 +28,7 @@ export abstract class BaseTreeNode {
   abstract debugDump(): string;
 
   debugDumpTree(): string {
-    const debugDumpTreeHelper = (node: BaseTreeNode, lvl: number): string => {
+    function debugDumpTreeHelper(node: BaseTreeNode, lvl: number): string {
       return (
         `${node.debugDump()}\n` +
         node
@@ -39,7 +39,7 @@ export abstract class BaseTreeNode {
           )
           .join("")
       );
-    };
+    }
     return debugDumpTreeHelper(this, 0);
   }
 }

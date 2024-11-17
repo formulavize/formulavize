@@ -25,13 +25,13 @@
         <tab name="AST">
           <TextDumpView
             title="AST Dump"
-            :content="compilation.AST.debugDumpTree"
+            :content="compilation.AST.debugDumpTree()"
           />
         </tab>
         <tab name="DAG">
           <TextDumpView
             title="DAG Dump"
-            :content="compilation.DAG.debugDumpDag"
+            :content="compilation.DAG.debugDumpDag()"
           />
         </tab>
       </tabs>
