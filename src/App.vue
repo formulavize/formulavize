@@ -48,7 +48,7 @@ import TextDumpView from "./components/TextDumpView.vue";
 import OperatorsView from "./components/OperatorsView.vue";
 import { EditorState } from "@codemirror/state";
 import { Compilation } from "./compiler/compilation";
-import { CompilerDriver } from "./compiler/driver";
+import { Compiler } from "./compiler/driver";
 // @ts-ignore: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -69,14 +69,15 @@ export default defineComponent({
       debugMode: true,
       editorDebounceDelay: 300, // ms
       curEditorState: EditorState.create(),
+      compiler: new Compiler.Driver(),
     };
   },
   computed: {
     compilation(): Compilation {
-      return CompilerDriver.compile(
+      return this.compiler.compile(
         this.curEditorState as EditorState,
-        CompilerDriver.sourceFromEditor,
-        CompilerDriver.parseFromEditor,
+        Compiler.sourceFromEditor,
+        Compiler.parseFromEditor,
       );
     },
   },

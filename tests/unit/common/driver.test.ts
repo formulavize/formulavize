@@ -2,7 +2,7 @@ import { describe, test, expect } from "vitest";
 import { EditorState } from "@codemirror/state";
 import { fizLanguage } from "@formulavize/lang-fiz";
 import { CallTreeNode, RecipeTreeNode } from "../../../src/compiler/ast";
-import { CompilerDriver } from "../../../src/compiler/driver";
+import { Compiler } from "../../../src/compiler/driver";
 
 describe("basic compiler driver", () => {
   test("compile from editor state", () => {
@@ -11,9 +11,10 @@ describe("basic compiler driver", () => {
       extensions: [fizLanguage],
     });
 
-    const sourceGen = CompilerDriver.sourceFromEditor;
-    const parse = CompilerDriver.parseFromEditor;
-    const compilation = CompilerDriver.compile(editorState, sourceGen, parse);
+    const sourceGen = Compiler.sourceFromEditor;
+    const parse = Compiler.parseFromEditor;
+    const compiler = new Compiler.Driver();
+    const compilation = compiler.compile(editorState, sourceGen, parse);
 
     expect(compilation.Source).toBe("f()");
 
@@ -28,9 +29,10 @@ describe("basic compiler driver", () => {
   test("compile from source string", () => {
     const sourceRecipe = "f()";
 
-    const sourceGen = CompilerDriver.sourceFromSource;
-    const parse = CompilerDriver.parseFromSource;
-    const compilation = CompilerDriver.compile(sourceRecipe, sourceGen, parse);
+    const sourceGen = Compiler.sourceFromSource;
+    const parse = Compiler.parseFromSource;
+    const compiler = new Compiler.Driver();
+    const compilation = compiler.compile(sourceRecipe, sourceGen, parse);
 
     expect(compilation.Source).toBe("f()");
 

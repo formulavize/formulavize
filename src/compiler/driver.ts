@@ -16,16 +16,18 @@ interface Parse<I> {
   (input: I): RecipeTreeNode;
 }
 
-export namespace CompilerDriver {
-  export function compile<I>(
-    input: I,
-    sourceGen: SourceGen<I>,
-    parse: Parse<I>,
-  ): Compilation {
-    const source = sourceGen(input);
-    const ast = parse(input);
-    const dag = makeDag(ast);
-    return new Compilation(source, ast, dag);
+export namespace Compiler {
+  export class Driver {
+    compile<I>(
+      input: I,
+      sourceGen: SourceGen<I>,
+      parse: Parse<I>,
+    ): Compilation {
+      const source = sourceGen(input);
+      const ast = parse(input);
+      const dag = makeDag(ast);
+      return new Compilation(source, ast, dag);
+    }
   }
 
   export function sourceFromEditor(editorState: EditorState): string {
