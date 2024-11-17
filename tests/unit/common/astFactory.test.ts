@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { makeRecipeTree } from "../../../src/compiler/astFactory";
+import { makeRecipeTree } from "../../../src/compiler/editorToAst";
 import { DESCRIPTION_PROPERTY } from "../../../src/compiler/constants";
 import {
   RecipeTreeNode as Recipe,

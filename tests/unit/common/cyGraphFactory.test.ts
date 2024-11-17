@@ -3,7 +3,7 @@ import {
   makeCyNodes,
   makeCyEdges,
   makeCyElements,
-} from "../../../src/compiler/cyGraphFactory";
+} from "../../../src/compiler/dagToCyGraph";
 import { TOP_LEVEL_DAG_ID } from "../../../src/compiler/constants";
 import { Dag } from "../../../src/compiler/dag";
 

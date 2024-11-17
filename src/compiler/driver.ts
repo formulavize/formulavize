@@ -1,9 +1,9 @@
 import { EditorState } from "@codemirror/state";
 import { fizLanguage } from "@formulavize/lang-fiz";
 import { RecipeTreeNode } from "./ast";
-import { makeRecipeTree } from "./astFactory";
+import { makeRecipeTree } from "./editorToAst";
+import { makeDag } from "./astToDag";
 import { Compilation } from "./compilation";
-import { makeDag } from "./dagFactory";
 
 // Define the compiler driver interfaces for extensibility
 // May swap out with other parser libraries in the future
