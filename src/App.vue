@@ -17,16 +17,22 @@
       </tabs>
     </pane>
     <pane>
-      <GraphView v-if="!debugMode" :cur-dag="curDag" />
+      <GraphView v-if="!debugMode" :cur-dag="compilation.DAG" />
       <tabs v-else :options="{ useUrlFragment: false }">
         <tab name="Output">
-          <GraphView :cur-dag="curDag" />
+          <GraphView :cur-dag="compilation.DAG" />
         </tab>
         <tab name="AST">
-          <TextDumpView title="AST Dump" :content="astTextDump" />
+          <TextDumpView
+            title="AST Dump"
+            :content="compilation.AST.debugDumpTree"
+          />
         </tab>
         <tab name="DAG">
-          <TextDumpView title="DAG Dump" :content="dagTextDump" />
+          <TextDumpView
+            title="DAG Dump"
+            :content="compilation.DAG.debugDumpDag"
+          />
         </tab>
       </tabs>
     </pane>
@@ -41,10 +47,8 @@ import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
 import OperatorsView from "./components/OperatorsView.vue";
 import { EditorState } from "@codemirror/state";
-import { RecipeTreeNode } from "./compiler/ast";
-import { Dag } from "./compiler/dag";
-import { makeDag } from "./compiler/dagFactory";
-import { makeRecipeTree } from "./compiler/astFactory";
+import { Compilation } from "./compiler/compilation";
+import { CompilerDriver } from "./compiler/driver";
 // @ts-ignore: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -68,17 +72,12 @@ export default defineComponent({
     };
   },
   computed: {
-    curRecipeTree(): RecipeTreeNode {
-      return makeRecipeTree(this.curEditorState as EditorState);
-    },
-    curDag(): Dag {
-      return makeDag(this.curRecipeTree);
-    },
-    astTextDump(): string {
-      return this.curRecipeTree.debugDumpTree();
-    },
-    dagTextDump(): string {
-      return this.curDag.debugDumpDag();
+    compilation(): Compilation {
+      return CompilerDriver.compile(
+        this.curEditorState as EditorState,
+        CompilerDriver.sourceFromEditor,
+        CompilerDriver.parseFromEditor,
+      );
     },
   },
   methods: {
