@@ -178,6 +178,19 @@ export class Dag {
     return this.id;
   }
 
+  set Id(newId: DagId) {
+    const oldId = this.id;
+    this.id = newId;
+    this.lineagePath = this.getLineagePath();
+    this.dagLineagePath = this.getDagLineagePath();
+
+    if (!this.parent) return;
+    this.parent.childDags.delete(oldId);
+    this.parent.childDags.set(this.id, this);
+    if (!this.name) return;
+    this.parent.namespaceNameToDagId.set(this.name, this.id);
+  }
+
   get Parent(): Dag | null {
     return this.parent;
   }
@@ -201,6 +214,16 @@ export class Dag {
 
   get Name(): string {
     return this.name;
+  }
+
+  set Name(newName: string) {
+    const oldName = this.name;
+    this.name = newName;
+
+    if (!this.parent) return;
+    this.parent.namespaceNameToDagId.delete(oldName);
+    if (!this.name) return;
+    this.parent.namespaceNameToDagId.set(this.name, this.id);
   }
 
   get DagStyleTags(): StyleTag[] {
@@ -249,6 +272,14 @@ export class Dag {
     return Array.from(this.childDags.values());
   }
 
+  getVarNameToNodeIdMap(): Map<string, NodeId> {
+    return this.varNameToNodeId;
+  }
+
+  getVarNameToStyleNodeMap(): Map<string, DagStyle | null> {
+    return this.varNameToStyleNode;
+  }
+
   private getLineageIdsAscending(): DagId[] {
     // Return a list of dag ids from the current dag to the root dag
     // e.g. [currentDagId, parentDagId, rootDagId ]
@@ -282,6 +313,31 @@ export class Dag {
   private getDagLineagePath(): string {
     // Return the lineage path omitting the current dag id
     return this.getLineagePath().split("/").slice(0, -1).join("/");
+  }
+
+  mergeDag(dag: Dag): void {
+    // Merge the input dag into the current dag
+    dag.getNodeList().forEach((node) => {
+      this.addNode(node);
+    });
+    dag.getEdgeList().forEach((edge) => {
+      this.addEdge(edge);
+    });
+    dag.getFlattenedStyles().forEach((style, styleTag) => {
+      this.setStyle(styleTag, style);
+    });
+    dag.getStyleBindings().forEach((styleTags, keyword) => {
+      this.addStyleBinding(keyword, styleTags);
+    });
+    dag.getVarNameToNodeIdMap().forEach((nodeId, varName) => {
+      this.setVarNode(varName, nodeId);
+    });
+    dag.getVarNameToStyleNodeMap().forEach((styleNode, varName) => {
+      this.setVarStyle(varName, styleNode);
+    });
+    dag.getChildDags().forEach((childDag) => {
+      this.addChildDag(childDag);
+    });
   }
 
   debugDumpDag(level: number = 0): string {
