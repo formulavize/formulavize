@@ -13,9 +13,11 @@ import {
   StyleBindingTreeNode,
   NamespaceTreeNode,
   ValueTreeNode,
+  ImportTreeNode,
 } from "./ast";
 import { Dag, NodeId, StyleProperties, DagId, DagStyle } from "./dag";
 import { TOP_LEVEL_DAG_ID } from "./constants";
+import { ImportCacher } from "./importCacher";
 
 function makeDagStyle(styleNode: StyleTreeNode): DagStyle {
   return {
@@ -103,9 +105,10 @@ function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
 function proccessNamespace(
   namespaceStmt: NamespaceTreeNode,
   workingDag: Dag,
+  importer: ImportCacher,
 ): NodeId {
   const subDagId = uuidv4();
-  const childDag = makeSubDag(subDagId, namespaceStmt, workingDag);
+  const childDag = makeSubDag(subDagId, namespaceStmt, importer, workingDag);
   workingDag.addChildDag(childDag);
 
   const dagIncomingEdges = argListToEdgeInfo(namespaceStmt.ArgList, workingDag);
@@ -117,6 +120,7 @@ function proccessNamespace(
 export function makeSubDag(
   dagId: DagId,
   dagNamespaceStmt: NamespaceTreeNode,
+  importer: ImportCacher,
   parentDag?: Dag,
 ): Dag {
   const dagStyleTags = dagNamespaceStmt.Styling?.StyleTagList ?? [];
@@ -144,7 +148,11 @@ export function makeSubDag(
         return processCall(rhsNode as CallTreeNode, workingDag);
       })
       .with(NodeType.Namespace, () => {
-        return proccessNamespace(rhsNode as NamespaceTreeNode, workingDag);
+        return proccessNamespace(
+          rhsNode as NamespaceTreeNode,
+          workingDag,
+          importer,
+        );
       })
       .otherwise(() => {
         console.error("Unknown node type ", rhsNode.Type);
@@ -218,7 +226,24 @@ export function makeSubDag(
       .with(NodeType.QualifiedVariable, () => null)
       .with(NodeType.Namespace, () => {
         const namespaceStmt = stmt as NamespaceTreeNode;
-        proccessNamespace(namespaceStmt, curLevelDag);
+        proccessNamespace(namespaceStmt, curLevelDag, importer);
+      })
+      .with(NodeType.Import, async () => {
+        const importStmt = stmt as ImportTreeNode;
+        const importedDag = await importer
+          .getPackage(importStmt.ImportLocation)
+          .catch((err) => {
+            console.warn("Import failed: ", err);
+            return null;
+          });
+        if (!importedDag) return;
+        if (importStmt.ImportAlias) {
+          importedDag.Id = uuidv4();
+          importedDag.Name = importStmt.ImportAlias;
+          curLevelDag.addChildDag(importedDag);
+        } else {
+          curLevelDag.mergeDag(importedDag);
+        }
       })
       .otherwise(() => {
         console.error("Unknown node type ", stmt.Type);
@@ -227,9 +252,10 @@ export function makeSubDag(
   return curLevelDag;
 }
 
-export function makeDag(recipe: RecipeTreeNode): Dag {
+export function makeDag(recipe: RecipeTreeNode, importer: ImportCacher): Dag {
   return makeSubDag(
     TOP_LEVEL_DAG_ID,
     new NamespaceTreeNode("", recipe.Statements),
+    importer,
   );
 }

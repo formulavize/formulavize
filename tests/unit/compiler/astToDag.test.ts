@@ -22,10 +22,13 @@ import {
   Keyword,
 } from "../../../src/compiler/dag";
 import { makeDag } from "../../../src/compiler/astToDag";
+import { ImportCacher } from "../../../src/compiler/importCacher";
+
+const dummyImporter = {} as ImportCacher;
 
 describe("node tests", () => {
   function makeDagAndReturnNodeNames(recipe: Recipe): string[] {
-    return makeDag(recipe)
+    return makeDag(recipe, dummyImporter)
       .getNodeList()
       .map((node) => node.name)
       .sort();
@@ -33,7 +36,7 @@ describe("node tests", () => {
 
   test("empty recipe", () => {
     const recipe = new Recipe();
-    expect(makeDag(recipe)).toEqual(new Dag(TOP_LEVEL_DAG_ID));
+    expect(makeDag(recipe, dummyImporter)).toEqual(new Dag(TOP_LEVEL_DAG_ID));
   });
   test("one node", () => {
     const recipe = new Recipe([new Call("a", [])]);
@@ -90,7 +93,7 @@ describe("edge tests", () => {
   }
 
   function makeDagAndReturnEdgeNames(recipe: Recipe): NodeNamePair[] {
-    const dag = makeDag(recipe);
+    const dag = makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
     const edgeList = getDagEdgeNames(dag, nodeIdToNameMap);
     return dag
@@ -293,7 +296,7 @@ describe("edge tests", () => {
         [new QualifiedVariable(["y"]), new Call("h", [])],
       ),
     ]);
-    const dag = makeDag(recipe);
+    const dag = makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
     const rawEdgeList = dag
       .getEdgeList()
@@ -317,7 +320,7 @@ describe("edge tests", () => {
       new Assignment([new LocalVariable("y")], new Namespace()),
       new Call("g", [new QualifiedVariable(["y"])]),
     ]);
-    const dag = makeDag(recipe);
+    const dag = makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
 
     const edgeList = dag.getEdgeList();
@@ -334,7 +337,7 @@ describe("edge tests", () => {
       new Assignment([new LocalVariable("y")], new Namespace("child")),
       new Call("g", [new QualifiedVariable(["y"])]),
     ]);
-    const dag = makeDag(recipe);
+    const dag = makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
 
     const edgeList = dag.getEdgeList();
@@ -352,7 +355,7 @@ describe("style tests", () => {
   function makeDagAndReturnStyleMap(
     recipe: Recipe,
   ): Map<string, StyleProperties> {
-    return makeDag(recipe).getFlattenedStyles();
+    return makeDag(recipe, dummyImporter).getFlattenedStyles();
   }
 
   test("basic named style", () => {
@@ -403,7 +406,7 @@ describe("style tests", () => {
     const recipe = new Recipe([
       new Call("f", [], new Style(sampleMap, [["s"]])),
     ]);
-    const dagNodeList = makeDag(recipe).getNodeList();
+    const dagNodeList = makeDag(recipe, dummyImporter).getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
     expect(dagNode.styleProperties).toEqual(sampleMap);
@@ -418,7 +421,7 @@ describe("style tests", () => {
       ),
       new Call("g", [new QualifiedVariable(["x"])]),
     ]);
-    const dagEdgeList = makeDag(recipe).getEdgeList();
+    const dagEdgeList = makeDag(recipe, dummyImporter).getEdgeList();
     expect(dagEdgeList).toHaveLength(1);
     const dagEdge = dagEdgeList[0];
     expect(dagEdge.styleProperties).toEqual(sampleMap);
@@ -441,7 +444,7 @@ describe("style tests", () => {
         new QualifiedVariable(["y"]),
       ]),
     ]);
-    const dagEdgeList = makeDag(recipe).getEdgeList();
+    const dagEdgeList = makeDag(recipe, dummyImporter).getEdgeList();
     expect(dagEdgeList).toHaveLength(2);
     let dagEdge1 = dagEdgeList[0];
     let dagEdge2 = dagEdgeList[1];
@@ -462,7 +465,7 @@ describe("style tests", () => {
       ),
       new Namespace("child", [new Call("g", [new QualifiedVariable(["x"])])]),
     ]);
-    const dag = makeDag(recipe);
+    const dag = makeDag(recipe, dummyImporter);
     expect(dag.getEdgeList()).toHaveLength(0);
     const childDags = dag.getChildDags();
     expect(childDags).toHaveLength(1);
@@ -484,7 +487,7 @@ describe("style tests", () => {
         new Call("g", [new QualifiedVariable(["x"])]),
       ]),
     ]);
-    const dag = makeDag(recipe);
+    const dag = makeDag(recipe, dummyImporter);
     expect(dag.getEdgeList()).toHaveLength(0);
     const childDags = dag.getChildDags();
     expect(childDags).toHaveLength(1);
@@ -502,7 +505,7 @@ describe("style tests", () => {
         new Call("g", [], new Style(undefined, [["s"]])),
       ]),
     ]);
-    const dag = makeDag(recipe);
+    const dag = makeDag(recipe, dummyImporter);
     const childDags = dag.getChildDags();
     expect(childDags).toHaveLength(1);
     const childDag = childDags[0];
@@ -517,7 +520,7 @@ describe("style tests", () => {
       new Namespace("child", [new NamedStyle("s", new Style(sampleMap))]),
       new Call("g", [], new Style(undefined, [["child", "s"]])),
     ]);
-    const dag = makeDag(recipe);
+    const dag = makeDag(recipe, dummyImporter);
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
@@ -537,7 +540,7 @@ describe("style tests", () => {
         ),
       ),
     ]);
-    const dagNodeList = makeDag(recipe).getNodeList();
+    const dagNodeList = makeDag(recipe, dummyImporter).getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
     const expectedStyleMap: StyleProperties = new Map([
@@ -564,7 +567,7 @@ describe("style tests", () => {
       ),
       new Call("g", [new QualifiedVariable(["x"])]),
     ]);
-    const dagEdgeList = makeDag(recipe).getEdgeList();
+    const dagEdgeList = makeDag(recipe, dummyImporter).getEdgeList();
     expect(dagEdgeList).toHaveLength(1);
     const dagEdge = dagEdgeList[0];
     const expectedStyleMap: StyleProperties = new Map([
@@ -578,18 +581,18 @@ describe("style tests", () => {
 describe("style binding tests", () => {
   test("no style binding", () => {
     const recipe = new Recipe([]);
-    const defaultBindings = makeDag(recipe).getStyleBindings();
+    const defaultBindings = makeDag(recipe, dummyImporter).getStyleBindings();
     expect(defaultBindings).toEqual(new Map<Keyword, StyleTag[]>());
   });
   test("empty style binding", () => {
     const recipe = new Recipe([new StyleBinding("x", [])]);
-    const styleBindings = makeDag(recipe).getStyleBindings();
+    const styleBindings = makeDag(recipe, dummyImporter).getStyleBindings();
     const expectedBinding = new Map<Keyword, StyleTag[]>([["x", []]]);
     expect(styleBindings).toEqual(expectedBinding);
   });
   test("style bind multiple styles", () => {
     const recipe = new Recipe([new StyleBinding("x", [["a"], ["b"]])]);
-    const styleBindings = makeDag(recipe).getStyleBindings();
+    const styleBindings = makeDag(recipe, dummyImporter).getStyleBindings();
     const expectedBinding = new Map<Keyword, StyleTag[]>([
       ["x", [["a"], ["b"]]],
     ]);

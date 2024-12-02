@@ -4,6 +4,7 @@ import { RecipeTreeNode } from "./ast";
 import { makeRecipeTree } from "./editorToAst";
 import { makeDag } from "./astToDag";
 import { Compilation } from "./compilation";
+import { ImportCacher } from "./importCacher";
 
 // Define the compiler driver interfaces for extensibility
 // May swap out with other parser libraries in the future
@@ -18,6 +19,12 @@ interface Parse<I> {
 
 export namespace Compiler {
   export class Driver {
+    private importCacher: ImportCacher;
+
+    constructor() {
+      this.importCacher = new ImportCacher(this);
+    }
+
     compile<I>(
       input: I,
       sourceGen: SourceGen<I>,
@@ -25,7 +32,7 @@ export namespace Compiler {
     ): Compilation {
       const source = sourceGen(input);
       const ast = parse(input);
-      const dag = makeDag(ast);
+      const dag = makeDag(ast, this.importCacher);
       return new Compilation(source, ast, dag);
     }
   }
