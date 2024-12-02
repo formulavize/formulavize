@@ -10,6 +10,7 @@ import {
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   NamespaceTreeNode as Namespace,
+  ImportTreeNode as Import,
 } from "../../../src/compiler/ast";
 import {
   DESCRIPTION_PROPERTY,
@@ -597,5 +598,40 @@ describe("style binding tests", () => {
       ["x", [["a"], ["b"]]],
     ]);
     expect(styleBindings).toEqual(expectedBinding);
+  });
+});
+
+describe("import tests", () => {
+  const importedDag = new Dag(TOP_LEVEL_DAG_ID);
+  importedDag.addNode({
+    id: "idX",
+    name: "nameX",
+    styleTags: [],
+    styleProperties: new Map(),
+  });
+  const mockImporter = {
+    getPackage: async () => importedDag,
+  } as unknown as ImportCacher;
+
+  test("imported anonymous namespace", () => {
+    const recipe = new Recipe([new Import("path")]);
+    const dag = makeDag(recipe, mockImporter);
+    expect(dag.getChildDags()).toHaveLength(0);
+    const dagNodeList = dag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
+    const dagNode = dagNodeList[0];
+    expect(dagNode.name).toEqual("nameX");
+  });
+  test("imported named namespace", () => {
+    const recipe = new Recipe([new Import("path", "alias")]);
+    const dag = makeDag(recipe, mockImporter);
+    expect(dag.getNodeList()).toHaveLength(0);
+    expect(dag.getChildDags()).toHaveLength(1);
+    const childDag = dag.getChildDags()[0];
+    expect(childDag.Name).toEqual("alias");
+    const dagNodeList = childDag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
+    const dagNode = dagNodeList[0];
+    expect(dagNode.name).toEqual("nameX");
   });
 });
