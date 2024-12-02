@@ -117,6 +117,34 @@ function proccessNamespace(
   return subDagId;
 }
 
+function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
+  mapToAdd.forEach((value, key) => {
+    mutableMap.set(key, value);
+  });
+}
+
+function processAssignmentRhs(
+  rhsNode: CallTreeNode | NamespaceTreeNode,
+  workingDag: Dag,
+  importer: ImportCacher,
+): NodeId | null {
+  return match(rhsNode.Type)
+    .with(NodeType.Call, () => {
+      return processCall(rhsNode as CallTreeNode, workingDag);
+    })
+    .with(NodeType.Namespace, () => {
+      return proccessNamespace(
+        rhsNode as NamespaceTreeNode,
+        workingDag,
+        importer,
+      );
+    })
+    .otherwise(() => {
+      console.error("Unknown node type ", rhsNode.Type);
+      return null;
+    });
+}
+
 export function makeSubDag(
   dagId: DagId,
   dagNamespaceStmt: NamespaceTreeNode,
@@ -133,33 +161,6 @@ export function makeSubDag(
     dagStyleProperties,
   );
 
-  function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
-    mapToAdd.forEach((value, key) => {
-      mutableMap.set(key, value);
-    });
-  }
-
-  function processAssignmentRhs(
-    rhsNode: CallTreeNode | NamespaceTreeNode,
-    workingDag: Dag,
-  ): NodeId | null {
-    return match(rhsNode.Type)
-      .with(NodeType.Call, () => {
-        return processCall(rhsNode as CallTreeNode, workingDag);
-      })
-      .with(NodeType.Namespace, () => {
-        return proccessNamespace(
-          rhsNode as NamespaceTreeNode,
-          workingDag,
-          importer,
-        );
-      })
-      .otherwise(() => {
-        console.error("Unknown node type ", rhsNode.Type);
-        return null;
-      });
-  }
-
   dagNamespaceStmt.Statements.forEach((stmt) => {
     match(stmt.Type)
       .with(NodeType.Call, () => {
@@ -172,6 +173,7 @@ export function makeSubDag(
         const thisNodeId = processAssignmentRhs(
           assignmentStmt.Rhs,
           curLevelDag,
+          importer,
         );
         if (!thisNodeId) return;
         assignmentStmt.Lhs.forEach((lhsVar) => {
