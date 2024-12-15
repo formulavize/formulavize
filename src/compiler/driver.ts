@@ -2,8 +2,8 @@ import { EditorState } from "@codemirror/state";
 import { syntaxTree } from "@codemirror/language";
 import { fizLanguage } from "@formulavize/lang-fiz";
 import { RecipeTreeNode } from "./ast";
-import { makeRecipeTree } from "./editorToAst";
-import { makeDag } from "./astToDag";
+import { makeRecipeTree } from "./astFactory";
+import { makeDag } from "./dagFactory";
 import { Compilation } from "./compilation";
 import { ImportCacher } from "./importCacher";
 
