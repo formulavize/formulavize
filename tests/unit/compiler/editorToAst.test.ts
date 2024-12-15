@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { makeRecipeTree } from "../../../src/compiler/editorToAst";
+import { Compiler } from "../../../src/compiler/driver";
 import { DESCRIPTION_PROPERTY } from "../../../src/compiler/constants";
 import {
   RecipeTreeNode as Recipe,
@@ -15,16 +15,9 @@ import {
   ImportTreeNode as Import,
   BaseTreeNode,
 } from "../../../src/compiler/ast";
-import { EditorState } from "@codemirror/state";
-import { fizLanguage } from "@formulavize/lang-fiz";
 
 function makeTree(input: string): BaseTreeNode {
-  return makeRecipeTree(
-    EditorState.create({
-      doc: input,
-      extensions: [fizLanguage],
-    }),
-  );
+  return Compiler.parseFromSource(input);
 }
 
 describe("inactive elements", () => {

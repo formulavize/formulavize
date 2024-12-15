@@ -1,4 +1,5 @@
 import { EditorState } from "@codemirror/state";
+import { syntaxTree } from "@codemirror/language";
 import { fizLanguage } from "@formulavize/lang-fiz";
 import { RecipeTreeNode } from "./ast";
 import { makeRecipeTree } from "./editorToAst";
@@ -46,14 +47,15 @@ export namespace Compiler {
   }
 
   export function parseFromEditor(editorState: EditorState): RecipeTreeNode {
-    return makeRecipeTree(editorState);
+    const tree = syntaxTree(editorState);
+    const text = editorState.doc;
+    return makeRecipeTree(tree, text);
   }
 
   export function parseFromSource(sourceRecipe: string): RecipeTreeNode {
-    const editorState = EditorState.create({
-      doc: sourceRecipe,
-      extensions: [fizLanguage],
-    });
-    return parseFromEditor(editorState);
+    const tree = fizLanguage.parser.parse(sourceRecipe);
+    const editorState = EditorState.create({ extensions: [fizLanguage] });
+    const text = editorState.toText(sourceRecipe);
+    return makeRecipeTree(tree, text);
   }
 }
