@@ -44,7 +44,6 @@ import { EditorState } from "@codemirror/state";
 import { RecipeTreeNode } from "./compiler/ast";
 import { Dag } from "./compiler/dag";
 import { Compiler } from "./compiler/driver";
-import { TOP_LEVEL_DAG_ID } from "./compiler/constants";
 // @ts-ignore: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -67,7 +66,7 @@ export default defineComponent({
       compiler: new Compiler.Driver(),
       curEditorState: EditorState.create(),
       curAst: new RecipeTreeNode(),
-      curDag: new Dag(TOP_LEVEL_DAG_ID),
+      curDag: new Dag(""),
     };
   },
   watch: {

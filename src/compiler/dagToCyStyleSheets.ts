@@ -1,5 +1,5 @@
 import { Stylesheet } from "cytoscape";
-import { DESCRIPTION_PROPERTY, TOP_LEVEL_DAG_ID } from "./constants";
+import { DESCRIPTION_PROPERTY } from "./constants";
 import { Dag, DagElement, StyleTag, StyleProperties } from "./dag";
 
 // a list of known property prefixes that should not be passed to cytoscape
@@ -84,7 +84,7 @@ export function makeCompoundNodeStylesheet(dag: Dag): Stylesheet[] {
 }
 
 export function makeDagLineageSelector(dag: Dag): string {
-  return dag.Id === TOP_LEVEL_DAG_ID ? "" : `[lineagePath*='/${dag.Id}']`;
+  return !dag.Parent ? "" : `[lineagePath*='/${dag.Id}']`;
 }
 
 export function makeClassStyleSheets(dag: Dag): Stylesheet[] {
@@ -148,7 +148,7 @@ export function makeCyStylesheets(dag: Dag): Stylesheet[] {
   }
 
   const stylesheetsList: Stylesheet[][] = [
-    dag.Id === TOP_LEVEL_DAG_ID ? getBaseStylesheet() : [],
+    !dag.Parent ? getBaseStylesheet() : [],
     makeNodeStylesheets(dag),
     makeEdgeStyleSheets(dag),
     makeCompoundNodeStylesheet(dag),

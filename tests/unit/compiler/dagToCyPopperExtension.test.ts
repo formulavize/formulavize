@@ -9,10 +9,7 @@ import {
   SelectorDescriptionPair,
   addCyPopperElementsFromDag,
 } from "../../../src/compiler/dagToCyPopperExtension";
-import {
-  DESCRIPTION_PROPERTY,
-  TOP_LEVEL_DAG_ID,
-} from "../../../src/compiler/constants";
+import { DESCRIPTION_PROPERTY } from "../../../src/compiler/constants";
 import { Dag, StyleProperties } from "../../../src/compiler/dag";
 import { Core } from "cytoscape";
 
@@ -28,7 +25,7 @@ function makeDescriptionData(
 
 describe("makes style descriptions", () => {
   test("no matching styles", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.setStyle("empty", new Map());
     testDag.setStyle("x", new Map([["color", "red"]]));
 
@@ -36,7 +33,7 @@ describe("makes style descriptions", () => {
     expect(getStyleDescriptions(testDag)).toEqual(expectedDescs);
   });
   test("two matching styles", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.setStyle("empty", new Map());
     testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
     testDag.setStyle(
@@ -57,7 +54,7 @@ describe("makes style descriptions", () => {
 
 describe("makes name descriptions", () => {
   test("style with description not bound", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addStyleBinding("name", [["y"]]);
     testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
 
@@ -65,7 +62,7 @@ describe("makes name descriptions", () => {
     expect(getNamesWithStyleDescriptions(testDag)).toEqual(expectedDescs);
   });
   test("bound name with matching style", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addStyleBinding("name", [["x"]]);
     testDag.setStyle(
       "x",
@@ -84,7 +81,7 @@ describe("makes name descriptions", () => {
     expect(getNamesWithStyleDescriptions(testDag)).toEqual(expectedDescs);
   });
   test("bound name with two matching styles", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addStyleBinding("name", [["y"], ["x"]]);
     testDag.setStyle("y", new Map([[DESCRIPTION_PROPERTY, "d2"]]));
     testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
@@ -100,7 +97,7 @@ describe("makes name descriptions", () => {
     expect(getNamesWithStyleDescriptions(testDag)).toEqual(expectedDescs);
   });
   test("two names with bindings to the same style", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addStyleBinding("name1", [["x"]]);
     testDag.addStyleBinding("name2", [["x"]]);
     testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
@@ -112,7 +109,7 @@ describe("makes name descriptions", () => {
     expect(getNamesWithStyleDescriptions(testDag)).toEqual(expectedDescs);
   });
   test("two names with bindings to different styles", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addStyleBinding("name1", [["x"]]);
     testDag.addStyleBinding("name2", [["y"]]);
     testDag.setStyle("x", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
@@ -128,7 +125,7 @@ describe("makes name descriptions", () => {
 
 describe("makes element descriptions", () => {
   test("no matching nodes", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -140,7 +137,7 @@ describe("makes element descriptions", () => {
     expect(getNodeDescriptions(testDag)).toEqual(expectedDescs);
   });
   test("one matching node", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -157,7 +154,7 @@ describe("makes element descriptions", () => {
     expect(getNodeDescriptions(testDag)).toEqual(expectedDescs);
   });
   test("two matching nodes", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -178,7 +175,7 @@ describe("makes element descriptions", () => {
     expect(getNodeDescriptions(testDag)).toEqual(expectedDescs);
   });
   test("no matching edges", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -204,7 +201,7 @@ describe("makes element descriptions", () => {
     expect(getEdgeDescriptions(testDag)).toEqual(expectedDescs);
   });
   test("one matching edge", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -235,7 +232,7 @@ describe("makes element descriptions", () => {
     expect(getEdgeDescriptions(testDag)).toEqual(expectedDescs);
   });
   test("two matching edges", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -278,7 +275,7 @@ describe("makes element descriptions", () => {
     expect(getEdgeDescriptions(testDag)).toEqual(expectedDescs);
   });
   test("one matching compound node", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     const stylePropMap = new Map([[DESCRIPTION_PROPERTY, "d1"]]);
     const subdag = new Dag("subDagId", testDag, "subdag", [], stylePropMap);
 
@@ -298,7 +295,7 @@ describe("subdag descriptions", () => {
     return mockCoreSpy;
   }
   test("one matching node in subdag", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     const subdag = new Dag("subdag", testDag);
     subdag.addNode({
       id: "idX",
@@ -311,7 +308,7 @@ describe("subdag descriptions", () => {
     expect(mockCoreSpy).toHaveBeenCalledWith("node#idX");
   });
   test("description on child dag", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     const descStyle = new Map([[DESCRIPTION_PROPERTY, "d1"]]);
     new Dag("childIdX", testDag, "child", [], descStyle);
 
@@ -319,14 +316,14 @@ describe("subdag descriptions", () => {
     expect(mock).toHaveBeenCalledWith("node#childIdX");
   });
   test("description in root dag style", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.setStyle("parentStyle", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
 
     const mock = addCyPoppersAndReturnMockCyCore(testDag);
     expect(mock).toHaveBeenCalledWith(".parentStyle");
   });
   test("description in root dag name binding", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.setStyle("parentStyle", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
     testDag.addStyleBinding("parentName", [["parentStyle"]]);
 
@@ -334,7 +331,7 @@ describe("subdag descriptions", () => {
     expect(mock).toHaveBeenCalledWith("[name='parentName']");
   });
   test("description defined in root dag and used in child dag", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.setStyle("parentStyle", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
     const childDag = new Dag("childIdX", testDag, "child", [["parentStyle"]]);
     childDag.addNode({
@@ -348,7 +345,7 @@ describe("subdag descriptions", () => {
     expect(mock).toHaveBeenCalledWith(".parentStyle");
   });
   test("description style defined in child dag", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     const childDag = new Dag("childIdX", testDag, "child");
     childDag.setStyle("childStyle", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
 
@@ -356,7 +353,7 @@ describe("subdag descriptions", () => {
     expect(mock).toHaveBeenCalledWith(".childStyle[lineagePath*='/childIdX']");
   });
   test("description name defined in child dag", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     const childDag = new Dag("childIdX", testDag, "child");
     childDag.addStyleBinding("styleName", [["childStyle"]]);
     childDag.setStyle("childStyle", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
@@ -367,7 +364,7 @@ describe("subdag descriptions", () => {
     );
   });
   test("description used in name binding in sibling dag", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     const childDag1 = new Dag("childId1", testDag, "child1");
     const childDag2 = new Dag("childId2", testDag, "child2");
     childDag1.setStyle("childStyle1", new Map([[DESCRIPTION_PROPERTY, "d1"]]));
@@ -380,7 +377,7 @@ describe("subdag descriptions", () => {
     );
   });
   test("description via scoped style tag in node from sibling dag", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     const childDag1 = new Dag("childId1", testDag, "child1");
     const childDag2 = new Dag("childId2", testDag, "child2");
     childDag1.setStyle("childStyle1", new Map([[DESCRIPTION_PROPERTY, "d1"]]));

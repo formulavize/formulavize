@@ -16,7 +16,6 @@ import {
   ImportTreeNode,
 } from "./ast";
 import { Dag, NodeId, StyleProperties, DagId, DagStyle } from "./dag";
-import { TOP_LEVEL_DAG_ID } from "./constants";
 import { ImportCacher } from "./importCacher";
 
 function makeDagStyle(styleNode: StyleTreeNode): DagStyle {
@@ -265,7 +264,7 @@ export function makeDag(
   importer: ImportCacher,
 ): Promise<Dag> {
   return makeSubDag(
-    TOP_LEVEL_DAG_ID,
+    uuidv4(),
     new NamespaceTreeNode("", recipe.Statements),
     importer,
   );
