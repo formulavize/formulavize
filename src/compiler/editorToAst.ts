@@ -1,8 +1,7 @@
 import { match } from "ts-pattern";
-import { EditorState } from "@codemirror/state";
-import { syntaxTree } from "@codemirror/language";
+import { Text } from "@codemirror/state";
 import { DESCRIPTION_PROPERTY } from "./constants";
-import { TreeCursor } from "@lezer/common";
+import { Tree, TreeCursor } from "@lezer/common";
 import {
   RecipeTreeNode,
   StatementTreeNode,
@@ -22,66 +21,59 @@ import {
 
 function makeNullableChild<Result>(
   childName: string,
-  childFactory: (c: TreeCursor, s: EditorState) => Result,
+  childFactory: (c: TreeCursor, t: Text) => Result,
   c: TreeCursor,
-  s: EditorState,
+  t: Text,
 ): Result | null {
   const candidateChild = c.node.getChild(childName);
-  return candidateChild ? childFactory(candidateChild.cursor(), s) : null;
+  return candidateChild ? childFactory(candidateChild.cursor(), t) : null;
 }
 
-function getTextFromChild(
-  childName: string,
-  c: TreeCursor,
-  s: EditorState,
-): string {
+function getTextFromChild(childName: string, c: TreeCursor, t: Text): string {
   // Get the child node with the given name from the cursor
   // and retrieve the text from the EditorState using the syntax node's positions.
   // If the child is not found, return an empty string
   const candidateChild = c.node.getChild(childName);
   return candidateChild
-    ? s.doc.sliceString(candidateChild.from, candidateChild.to)
+    ? t.sliceString(candidateChild.from, candidateChild.to)
     : "";
 }
 
-function getQualifiableIdentifer(c: TreeCursor, s: EditorState): string[] {
+function getQualifiableIdentifer(c: TreeCursor, t: Text): string[] {
   const candidateIdentifierList = c.node.getChild("QualifiableIdentifier");
   if (!candidateIdentifierList) return [];
   return candidateIdentifierList
     .getChildren("Identifier")
-    .map((identifier) => s.doc.sliceString(identifier.from, identifier.to));
+    .map((identifier) => t.sliceString(identifier.from, identifier.to));
 }
 
-function getJoinedStringLiterals(c: TreeCursor, s: EditorState): string | null {
+function getJoinedStringLiterals(c: TreeCursor, t: Text): string | null {
   // Get all child StringLiterals with quotes trimmed
   // from the start and end then join them with newlines
   const descriptionLines: string[] = c.node
     .getChildren("StringLiteral")
     .map((stringLiteral) =>
       stringLiteral
-        ? s.doc.sliceString(stringLiteral.from + 1, stringLiteral.to - 1)
+        ? t.sliceString(stringLiteral.from + 1, stringLiteral.to - 1)
         : "",
     );
   return descriptionLines.length > 0 ? descriptionLines.join("\n") : null;
 }
 
-function getStyleTagNames(
-  c: TreeCursor,
-  s: EditorState,
-): QualifiableIdentifier[] {
+function getStyleTagNames(c: TreeCursor, t: Text): QualifiableIdentifier[] {
   return c.node
     .getChildren("StyleTag")
-    .map((styleTag) => getQualifiableIdentifer(styleTag.cursor(), s));
+    .map((styleTag) => getQualifiableIdentifer(styleTag.cursor(), t));
 }
 
-function makeStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
-  const styleTags: QualifiableIdentifier[] = getStyleTagNames(c, s);
+function makeStyle(c: TreeCursor, t: Text): StyleTreeNode {
+  const styleTags: QualifiableIdentifier[] = getStyleTagNames(c, t);
   const styleDeclaredPropertyValues = new Map<string, string>(
     c.node.getChildren("StyleDeclaration").map((styleDec) => {
-      const propName = getTextFromChild("PropertyName", styleDec.cursor(), s);
+      const propName = getTextFromChild("PropertyName", styleDec.cursor(), t);
       const styleVals = styleDec
         .getChildren("StyleValue")
-        .map((styleVal) => s.doc.sliceString(styleVal.from, styleVal.to))
+        .map((styleVal) => t.sliceString(styleVal.from, styleVal.to))
         .join(",") // comma delimit multiple values
         .replace(/(^"|^'|"$|'$)/g, "") // remove captured bounding quotes
         .replace(/\\n/g, "\n"); // for enabling cytoscape text-wrap
@@ -90,42 +82,42 @@ function makeStyle(c: TreeCursor, s: EditorState): StyleTreeNode {
   );
 
   // If there are description strings, store them in a description property
-  const description = getJoinedStringLiterals(c, s);
+  const description = getJoinedStringLiterals(c, t);
   if (description)
     styleDeclaredPropertyValues.set(DESCRIPTION_PROPERTY, description);
 
   return new StyleTreeNode(styleDeclaredPropertyValues, styleTags);
 }
 
-function makeNamedStyle(c: TreeCursor, s: EditorState): NamedStyleTreeNode {
-  const styleName = getTextFromChild("Identifier", c, s);
+function makeNamedStyle(c: TreeCursor, t: Text): NamedStyleTreeNode {
+  const styleName = getTextFromChild("Identifier", c, t);
 
   const styleNode =
-    makeNullableChild("StyleArgList", makeStyle, c, s) ?? new StyleTreeNode();
+    makeNullableChild("StyleArgList", makeStyle, c, t) ?? new StyleTreeNode();
 
   return new NamedStyleTreeNode(styleName, styleNode);
 }
 
-function makeStyleBinding(c: TreeCursor, s: EditorState): StyleBindingTreeNode {
-  const keyword = getTextFromChild("Identifier", c, s);
+function makeStyleBinding(c: TreeCursor, t: Text): StyleBindingTreeNode {
+  const keyword = getTextFromChild("Identifier", c, t);
 
   const styleTagList: QualifiableIdentifier[] =
-    makeNullableChild("StyleTagList", getStyleTagNames, c, s) ?? [];
+    makeNullableChild("StyleTagList", getStyleTagNames, c, t) ?? [];
   return new StyleBindingTreeNode(keyword, styleTagList);
 }
 
-function makeRhsVariable(c: TreeCursor, s: EditorState): QualifiedVarTreeNode {
-  const varQualifiedIdent = getQualifiableIdentifer(c, s);
+function makeRhsVariable(c: TreeCursor, t: Text): QualifiedVarTreeNode {
+  const varQualifiedIdent = getQualifiableIdentifer(c, t);
   return new QualifiedVarTreeNode(varQualifiedIdent);
 }
 
-function getArgList(c: TreeCursor, s: EditorState): ValueTreeNode[] {
+function getArgList(c: TreeCursor, t: Text): ValueTreeNode[] {
   return c.node
     .getChildren("Value")
     .map((candidateValue) =>
       match(candidateValue.name)
-        .with("Call", () => makeCall(candidateValue.cursor(), s))
-        .with("RhsVariable", () => makeRhsVariable(candidateValue.cursor(), s))
+        .with("Call", () => makeCall(candidateValue.cursor(), t))
+        .with("RhsVariable", () => makeRhsVariable(candidateValue.cursor(), t))
         .otherwise(() => {
           console.error("Unknown value type ", candidateValue.name);
           return null;
@@ -134,68 +126,68 @@ function getArgList(c: TreeCursor, s: EditorState): ValueTreeNode[] {
     .filter(Boolean) as ValueTreeNode[];
 }
 
-function makeCall(c: TreeCursor, s: EditorState): CallTreeNode {
-  const functionName = getTextFromChild("Identifier", c, s);
+function makeCall(c: TreeCursor, t: Text): CallTreeNode {
+  const functionName = getTextFromChild("Identifier", c, t);
 
-  const argList = makeNullableChild("ArgList", getArgList, c, s) ?? [];
+  const argList = makeNullableChild("ArgList", getArgList, c, t) ?? [];
 
-  const styleNode = makeNullableChild("StyleArgList", makeStyle, c, s);
+  const styleNode = makeNullableChild("StyleArgList", makeStyle, c, t);
 
   return new CallTreeNode(functionName, argList, styleNode);
 }
 
-function makeLhsVariable(c: TreeCursor, s: EditorState): LocalVarTreeNode {
-  const ident = getTextFromChild("Identifier", c, s);
+function makeLhsVariable(c: TreeCursor, t: Text): LocalVarTreeNode {
+  const ident = getTextFromChild("Identifier", c, t);
 
-  const styleNode = makeNullableChild("StyleArgList", makeStyle, c, s);
+  const styleNode = makeNullableChild("StyleArgList", makeStyle, c, t);
 
   return new LocalVarTreeNode(ident, styleNode);
 }
 
-function makeAssignment(c: TreeCursor, s: EditorState): AssignmentTreeNode {
+function makeAssignment(c: TreeCursor, t: Text): AssignmentTreeNode {
   const lhsVars = c.node
     .getChildren("LhsVariable")
-    .map((candidateLhsVar) => makeLhsVariable(candidateLhsVar.cursor(), s));
+    .map((candidateLhsVar) => makeLhsVariable(candidateLhsVar.cursor(), t));
 
-  const rhsCall = makeNullableChild("Call", makeCall, c, s);
+  const rhsCall = makeNullableChild("Call", makeCall, c, t);
   if (rhsCall) return new AssignmentTreeNode(lhsVars, rhsCall);
 
-  const rhsNs = makeNullableChild("Namespace", makeNamespace, c, s);
+  const rhsNs = makeNullableChild("Namespace", makeNamespace, c, t);
   if (rhsNs) return new AssignmentTreeNode(lhsVars, rhsNs);
 
   return new AssignmentTreeNode(lhsVars, null);
 }
 
-function makeAlias(c: TreeCursor, s: EditorState): AliasTreeNode {
-  const lhsVar = makeNullableChild("LhsVariable", makeLhsVariable, c, s);
+function makeAlias(c: TreeCursor, t: Text): AliasTreeNode {
+  const lhsVar = makeNullableChild("LhsVariable", makeLhsVariable, c, t);
 
-  const rhsVar = makeNullableChild("RhsVariable", makeRhsVariable, c, s);
+  const rhsVar = makeNullableChild("RhsVariable", makeRhsVariable, c, t);
 
   return new AliasTreeNode(lhsVar, rhsVar);
 }
 
-function makeImport(c: TreeCursor, s: EditorState): ImportTreeNode {
-  const importLocation = getJoinedStringLiterals(c, s) ?? "";
-  const importAs = getTextFromChild("Identifier", c, s);
+function makeImport(c: TreeCursor, t: Text): ImportTreeNode {
+  const importLocation = getJoinedStringLiterals(c, t) ?? "";
+  const importAs = getTextFromChild("Identifier", c, t);
   return new ImportTreeNode(importLocation, importAs);
 }
 
-function getStatements(c: TreeCursor, s: EditorState): StatementTreeNode[] {
+function getStatements(c: TreeCursor, t: Text): StatementTreeNode[] {
   return c.node
     .getChildren("Statement")
-    .map((stmtNode) => makeStatement(stmtNode.cursor(), s))
+    .map((stmtNode) => makeStatement(stmtNode.cursor(), t))
     .filter(Boolean) as StatementTreeNode[];
 }
 
-function makeNamespace(c: TreeCursor, s: EditorState): NamespaceTreeNode {
-  const namespaceName = getTextFromChild("Identifier", c, s);
+function makeNamespace(c: TreeCursor, t: Text): NamespaceTreeNode {
+  const namespaceName = getTextFromChild("Identifier", c, t);
 
   const namespaceStatements =
-    makeNullableChild("StatementList", getStatements, c, s) ?? [];
+    makeNullableChild("StatementList", getStatements, c, t) ?? [];
 
-  const argList = makeNullableChild("ArgList", getArgList, c, s) ?? [];
+  const argList = makeNullableChild("ArgList", getArgList, c, t) ?? [];
 
-  const styleNode = makeNullableChild("StyleArgList", makeStyle, c, s);
+  const styleNode = makeNullableChild("StyleArgList", makeStyle, c, t);
 
   return new NamespaceTreeNode(
     namespaceName,
@@ -205,19 +197,16 @@ function makeNamespace(c: TreeCursor, s: EditorState): NamespaceTreeNode {
   );
 }
 
-function makeStatement(
-  c: TreeCursor,
-  s: EditorState,
-): StatementTreeNode | null {
+function makeStatement(c: TreeCursor, t: Text): StatementTreeNode | null {
   return match(c.node.name)
-    .with("Call", () => makeCall(c, s))
-    .with("RhsVariable", () => makeRhsVariable(c, s))
-    .with("Alias", () => makeAlias(c, s))
-    .with("Assignment", () => makeAssignment(c, s))
-    .with("StyleTagDeclaration", () => makeNamedStyle(c, s))
-    .with("StyleBinding", () => makeStyleBinding(c, s))
-    .with("Namespace", () => makeNamespace(c, s))
-    .with("Import", () => makeImport(c, s))
+    .with("Call", () => makeCall(c, t))
+    .with("RhsVariable", () => makeRhsVariable(c, t))
+    .with("Alias", () => makeAlias(c, t))
+    .with("Assignment", () => makeAssignment(c, t))
+    .with("StyleTagDeclaration", () => makeNamedStyle(c, t))
+    .with("StyleBinding", () => makeStyleBinding(c, t))
+    .with("Namespace", () => makeNamespace(c, t))
+    .with("Import", () => makeImport(c, t))
     .with("⚠", () => null) // Error token for incomplete trees
     .with("Recipe", () => null)
     .with("LineComment", () => null)
@@ -234,14 +223,13 @@ function makeStatement(
 // text positions in the document. Though inefficient, reproducing the tree after
 // every change is the cleanest approach. Memoize / optimize later.
 // https://discuss.codemirror.net/t/efficient-reuse-of-productions-of-the-parse-tree/2944
-export function makeRecipeTree(s: EditorState): RecipeTreeNode {
-  const editorStateTree = syntaxTree(s);
-  const cursor = editorStateTree.cursor();
+export function makeRecipeTree(tree: Tree, text: Text): RecipeTreeNode {
+  const cursor = tree.cursor();
 
   if (cursor.name === "") return new RecipeTreeNode();
 
   if (cursor.name !== "Recipe") console.error("Failed to parse ", cursor.name);
 
-  const statements = getStatements(cursor, s);
+  const statements = getStatements(cursor, text);
   return new RecipeTreeNode(statements);
 }
