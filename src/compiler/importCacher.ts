@@ -15,10 +15,11 @@ export class ImportCacher {
     this.compiler = compiler;
   }
 
-  private compilePackageSourceToDag(source: string): Dag {
+  private async compilePackageSourceToDag(source: string): Promise<Dag> {
     const sourceGen = Compiler.sourceFromSource;
     const parser = Compiler.parseFromSource;
-    return this.compiler.compile(source, sourceGen, parser).DAG;
+    const compilation = await this.compiler.compile(source, sourceGen, parser);
+    return compilation.DAG;
   }
 
   private async makePackagePromise(packageLocation: string): Promise<Dag> {

@@ -25,14 +25,14 @@ export namespace Compiler {
       this.importCacher = new ImportCacher(this);
     }
 
-    compile<I>(
+    async compile<I>(
       input: I,
       sourceGen: SourceGen<I>,
       parse: Parse<I>,
-    ): Compilation {
+    ): Promise<Compilation> {
       const source = sourceGen(input);
       const ast = parse(input);
-      const dag = makeDag(ast, this.importCacher);
+      const dag = await makeDag(ast, this.importCacher);
       return new Compilation(source, ast, dag);
     }
   }

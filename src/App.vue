@@ -17,22 +17,16 @@
       </tabs>
     </pane>
     <pane>
-      <GraphView v-if="!debugMode" :cur-dag="compilation.DAG" />
+      <GraphView v-if="!debugMode" :cur-dag="curDag as Dag" />
       <tabs v-else :options="{ useUrlFragment: false }">
         <tab name="Output">
-          <GraphView :cur-dag="compilation.DAG" />
+          <GraphView :cur-dag="curDag as Dag" />
         </tab>
         <tab name="AST">
-          <TextDumpView
-            title="AST Dump"
-            :content="compilation.AST.debugDumpTree()"
-          />
+          <TextDumpView title="AST Dump" :content="curAst.debugDumpTree()" />
         </tab>
         <tab name="DAG">
-          <TextDumpView
-            title="DAG Dump"
-            :content="compilation.DAG.debugDumpDag()"
-          />
+          <TextDumpView title="DAG Dump" :content="curDag.debugDumpDag()" />
         </tab>
       </tabs>
     </pane>
@@ -47,8 +41,10 @@ import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
 import OperatorsView from "./components/OperatorsView.vue";
 import { EditorState } from "@codemirror/state";
-import { Compilation } from "./compiler/compilation";
+import { RecipeTreeNode } from "./compiler/ast";
+import { Dag } from "./compiler/dag";
 import { Compiler } from "./compiler/driver";
+import { TOP_LEVEL_DAG_ID } from "./compiler/constants";
 // @ts-ignore: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -68,17 +64,21 @@ export default defineComponent({
     return {
       debugMode: true,
       editorDebounceDelay: 300, // ms
-      curEditorState: EditorState.create(),
       compiler: new Compiler.Driver(),
+      curEditorState: EditorState.create(),
+      curAst: new RecipeTreeNode(),
+      curDag: new Dag(TOP_LEVEL_DAG_ID),
     };
   },
-  computed: {
-    compilation(): Compilation {
-      return this.compiler.compile(
-        this.curEditorState as EditorState,
+  watch: {
+    async curEditorState(newEditorState: EditorState) {
+      const curCompilation = await this.compiler.compile(
+        newEditorState,
         Compiler.sourceFromEditor,
         Compiler.parseFromEditor,
       );
+      this.curAst = curCompilation.AST;
+      this.curDag = curCompilation.DAG;
     },
   },
   methods: {

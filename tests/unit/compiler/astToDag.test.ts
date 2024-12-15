@@ -28,35 +28,37 @@ import { ImportCacher } from "../../../src/compiler/importCacher";
 const dummyImporter = {} as ImportCacher;
 
 describe("node tests", () => {
-  function makeDagAndReturnNodeNames(recipe: Recipe): string[] {
-    return makeDag(recipe, dummyImporter)
+  async function makeDagAndReturnNodeNames(recipe: Recipe): Promise<string[]> {
+    const dag = await makeDag(recipe, dummyImporter);
+    return dag
       .getNodeList()
       .map((node) => node.name)
       .sort();
   }
 
-  test("empty recipe", () => {
+  test("empty recipe", async () => {
     const recipe = new Recipe();
-    expect(makeDag(recipe, dummyImporter)).toEqual(new Dag(TOP_LEVEL_DAG_ID));
+    const dag = await makeDag(recipe, dummyImporter);
+    expect(dag).toEqual(new Dag(TOP_LEVEL_DAG_ID));
   });
-  test("one node", () => {
+  test("one node", async () => {
     const recipe = new Recipe([new Call("a", [])]);
-    const nodeList = makeDagAndReturnNodeNames(recipe);
+    const nodeList = await makeDagAndReturnNodeNames(recipe);
     expect(nodeList).toEqual(["a"]);
   });
-  test("two nodes", () => {
+  test("two nodes", async () => {
     const recipe = new Recipe([new Call("b", []), new Call("a", [])]);
-    const nodeList = makeDagAndReturnNodeNames(recipe);
+    const nodeList = await makeDagAndReturnNodeNames(recipe);
     expect(nodeList).toEqual(["a", "b"]);
   });
-  test("duplicate name nodes", () => {
+  test("duplicate name nodes", async () => {
     const recipe = new Recipe([new Call("a", []), new Call("a", [])]);
-    const nodeList = makeDagAndReturnNodeNames(recipe);
+    const nodeList = await makeDagAndReturnNodeNames(recipe);
     expect(nodeList).toEqual(["a", "a"]);
   });
-  test("nested name nodes", () => {
+  test("nested name nodes", async () => {
     const recipe = new Recipe([new Call("f", [new Call("v", [])])]);
-    const nodeList = makeDagAndReturnNodeNames(recipe);
+    const nodeList = await makeDagAndReturnNodeNames(recipe);
     expect(nodeList).toEqual(["f", "v"]);
   });
 });
@@ -93,8 +95,10 @@ describe("edge tests", () => {
       .sort();
   }
 
-  function makeDagAndReturnEdgeNames(recipe: Recipe): NodeNamePair[] {
-    const dag = makeDag(recipe, dummyImporter);
+  async function makeDagAndReturnEdgeNames(
+    recipe: Recipe,
+  ): Promise<NodeNamePair[]> {
+    const dag = await makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
     const edgeList = getDagEdgeNames(dag, nodeIdToNameMap);
     return dag
@@ -103,38 +107,38 @@ describe("edge tests", () => {
       .reduce((acc, val) => acc.concat(val), edgeList);
   }
 
-  test("no edge", () => {
+  test("no edge", async () => {
     const recipe = new Recipe([new Call("b", []), new Call("a", [])]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([]);
   });
-  test("one edge through call", () => {
+  test("one edge through call", async () => {
     const recipe = new Recipe([new Call("f", [new Call("v", [])])]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["v", "f"]]);
   });
-  test("one edge through variable", () => {
+  test("one edge through variable", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("x")], new Call("y", [])),
       new Call("z", [new QualifiedVariable(["x"])]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["y", "z"]]);
   });
-  test("two separate edges", () => {
+  test("two separate edges", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("a")], new Call("b", [])),
       new Assignment([new LocalVariable("c")], new Call("d", [])),
       new Call("e", [new QualifiedVariable(["a"])]),
       new Call("f", [new QualifiedVariable(["c"])]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
       ["b", "e"],
       ["d", "f"],
     ]);
   });
-  test("two dependency function", () => {
+  test("two dependency function", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("a")], new Call("b", [])),
       new Assignment([new LocalVariable("c")], new Call("d", [])),
@@ -143,25 +147,25 @@ describe("edge tests", () => {
         new QualifiedVariable(["c"]),
       ]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
       ["b", "e"],
       ["d", "e"],
     ]);
   });
-  test("function with one var multiple consumers", () => {
+  test("function with one var multiple consumers", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("a")], new Call("b", [])),
       new Call("y", [new QualifiedVariable(["a"])]),
       new Call("x", [new QualifiedVariable(["a"])]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
       ["b", "x"],
       ["b", "y"],
     ]);
   });
-  test("function with two vars different consumers", () => {
+  test("function with two vars different consumers", async () => {
     const recipe = new Recipe([
       new Assignment(
         [new LocalVariable("a"), new LocalVariable("b")],
@@ -170,13 +174,13 @@ describe("edge tests", () => {
       new Call("y", [new QualifiedVariable(["a"])]),
       new Call("x", [new QualifiedVariable(["b"])]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
       ["c", "x"],
       ["c", "y"],
     ]);
   });
-  test("function with double edge", () => {
+  test("function with double edge", async () => {
     const recipe = new Recipe([
       new Assignment(
         [new LocalVariable("a"), new LocalVariable("b")],
@@ -187,13 +191,13 @@ describe("edge tests", () => {
         new QualifiedVariable(["b"]),
       ]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
       ["c", "y"],
       ["c", "y"],
     ]);
   });
-  test("function with re-used vars", () => {
+  test("function with re-used vars", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("a")], new Call("c", [])),
       new Call("y", [
@@ -202,81 +206,81 @@ describe("edge tests", () => {
         new QualifiedVariable(["a"]),
       ]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
       ["c", "y"],
       ["c", "y"],
       ["c", "y"],
     ]);
   });
-  test("aliased variable", () => {
+  test("aliased variable", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("a")], new Call("c", [])),
       new Alias(new LocalVariable("b"), new QualifiedVariable(["a"])),
       new Call("y", [new QualifiedVariable(["b"])]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["c", "y"]]);
   });
-  test("call with nested call and var", () => {
+  test("call with nested call and var", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("a")], new Call("c", [])),
       new Call("y", [new QualifiedVariable(["a"]), new Call("b", [])]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
       ["b", "y"],
       ["c", "y"],
     ]);
   });
-  test("duplicate nested calls", () => {
+  test("duplicate nested calls", async () => {
     const recipe = new Recipe([
       new Call("y", [new Call("b", []), new Call("b", [])]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
       ["b", "y"],
       ["b", "y"],
     ]);
   });
-  test("cannot resolve variable usage before assignment", () => {
+  test("cannot resolve variable usage before assignment", async () => {
     const recipe = new Recipe([
       new Call("y", [new QualifiedVariable(["a"])]),
       new Assignment([new LocalVariable("a")], new Call("b", [])),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     // no edge should be created because variable a is used before assignment
     expect(edgeList).toEqual([]);
   });
-  test("resolve variable in parent namespace", () => {
+  test("resolve variable in parent namespace", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("a")], new Call("b", [])),
       new Namespace("child", [new Call("y", [new QualifiedVariable(["a"])])]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["b", "y"]]);
   });
-  test("cannot directly resolve variable in child namespace", () => {
+  test("cannot directly resolve variable in child namespace", async () => {
     const recipe = new Recipe([
       new Namespace("child", [
         new Assignment([new LocalVariable("a")], new Call("b", [])),
       ]),
       new Call("y", [new QualifiedVariable(["a"])]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([]);
   });
-  test("resolve variable in child namespace", () => {
+  test("resolve variable in child namespace", async () => {
     const recipe = new Recipe([
       new Namespace("child", [
         new Assignment([new LocalVariable("a")], new Call("b", [])),
       ]),
       new Call("y", [new QualifiedVariable(["child", "a"])]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["b", "y"]]);
   });
-  test("resolve variable in sibling namespace", () => {
+  test("resolve variable in sibling namespace", async () => {
     const recipe = new Recipe([
       new Namespace("child", [
         new Assignment([new LocalVariable("a")], new Call("b", [])),
@@ -285,10 +289,10 @@ describe("edge tests", () => {
         new Call("y", [new QualifiedVariable(["child", "a"])]),
       ]),
     ]);
-    const edgeList = makeDagAndReturnEdgeNames(recipe);
+    const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["b", "y"]]);
   });
-  test("namespace with args makes incoming edges", () => {
+  test("namespace with args makes incoming edges", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("y")], new Call("f", [])),
       new Namespace(
@@ -297,7 +301,7 @@ describe("edge tests", () => {
         [new QualifiedVariable(["y"]), new Call("h", [])],
       ),
     ]);
-    const dag = makeDag(recipe, dummyImporter);
+    const dag = await makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
     const rawEdgeList = dag
       .getEdgeList()
@@ -316,12 +320,12 @@ describe("edge tests", () => {
     expect(rawEdgeList[0].destNodeId).toBe(childDag.Id);
     expect(rawEdgeList[0].destNodeId).toEqual(rawEdgeList[1].destNodeId);
   });
-  test("edge from anonymous namespace", () => {
+  test("edge from anonymous namespace", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("y")], new Namespace()),
       new Call("g", [new QualifiedVariable(["y"])]),
     ]);
-    const dag = makeDag(recipe, dummyImporter);
+    const dag = await makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
 
     const edgeList = dag.getEdgeList();
@@ -333,12 +337,12 @@ describe("edge tests", () => {
     const childDag = childDags[0];
     expect(edgeList[0].srcNodeId).toBe(childDag.Id);
   });
-  test("edge from named namespace", () => {
+  test("edge from named namespace", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("y")], new Namespace("child")),
       new Call("g", [new QualifiedVariable(["y"])]),
     ]);
-    const dag = makeDag(recipe, dummyImporter);
+    const dag = await makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
 
     const edgeList = dag.getEdgeList();
@@ -353,21 +357,23 @@ describe("edge tests", () => {
 });
 
 describe("style tests", () => {
-  function makeDagAndReturnStyleMap(
+  async function makeDagAndReturnStyleMap(
     recipe: Recipe,
-  ): Map<string, StyleProperties> {
-    return makeDag(recipe, dummyImporter).getFlattenedStyles();
+  ): Promise<Map<string, StyleProperties>> {
+    const dag = await makeDag(recipe, dummyImporter);
+    return dag.getFlattenedStyles();
   }
 
-  test("basic named style", () => {
+  test("basic named style", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([new NamedStyle("s", new Style(sampleMap))]);
     const expectedMap: Map<string, StyleProperties> = new Map([
       ["s", sampleMap],
     ]);
-    expect(makeDagAndReturnStyleMap(recipe)).toEqual(expectedMap);
+    const styleMap = await makeDagAndReturnStyleMap(recipe);
+    expect(styleMap).toEqual(expectedMap);
   });
-  test("named style referenced", () => {
+  test("named style referenced", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new NamedStyle("s", new Style(sampleMap)),
@@ -377,9 +383,10 @@ describe("style tests", () => {
       ["s", sampleMap],
       ["t", sampleMap],
     ]);
-    expect(makeDagAndReturnStyleMap(recipe)).toEqual(expectedMap);
+    const styleMap = await makeDagAndReturnStyleMap(recipe);
+    expect(styleMap).toEqual(expectedMap);
   });
-  test("named style local overwrite", () => {
+  test("named style local overwrite", async () => {
     const sampleMap: StyleProperties = new Map([["a", "old"]]);
     const localMap: StyleProperties = new Map([["a", "new"]]);
     const recipe = new Recipe([
@@ -390,30 +397,33 @@ describe("style tests", () => {
       ["s", sampleMap],
       ["t", localMap],
     ]);
-    expect(makeDagAndReturnStyleMap(recipe)).toEqual(expectedMap);
+    const styleMap = await makeDagAndReturnStyleMap(recipe);
+    expect(styleMap).toEqual(expectedMap);
   });
 
-  test("named style undeclared tag", () => {
+  test("named style undeclared tag", async () => {
     const recipe = new Recipe([
       new NamedStyle("s", new Style(undefined, [["s"]])),
     ]);
     const expectedMap: Map<string, StyleProperties> = new Map([
       ["s", new Map()],
     ]);
-    expect(makeDagAndReturnStyleMap(recipe)).toEqual(expectedMap);
+    const styleMap = await makeDagAndReturnStyleMap(recipe);
+    expect(styleMap).toEqual(expectedMap);
   });
-  test("call styled", () => {
+  test("call styled", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new Call("f", [], new Style(sampleMap, [["s"]])),
     ]);
-    const dagNodeList = makeDag(recipe, dummyImporter).getNodeList();
+    const dag = await makeDag(recipe, dummyImporter);
+    const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
     expect(dagNode.styleProperties).toEqual(sampleMap);
     expect(dagNode.styleTags).toEqual([["s"]]);
   });
-  test("variable styled", () => {
+  test("variable styled", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new Assignment(
@@ -422,13 +432,14 @@ describe("style tests", () => {
       ),
       new Call("g", [new QualifiedVariable(["x"])]),
     ]);
-    const dagEdgeList = makeDag(recipe, dummyImporter).getEdgeList();
+    const dag = await makeDag(recipe, dummyImporter);
+    const dagEdgeList = dag.getEdgeList();
     expect(dagEdgeList).toHaveLength(1);
     const dagEdge = dagEdgeList[0];
     expect(dagEdge.styleProperties).toEqual(sampleMap);
     expect(dagEdge.styleTags).toEqual([["s"]]);
   });
-  test("multiple styled variables assigned", () => {
+  test("multiple styled variables assigned", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const sampleMap2: StyleProperties = new Map([["b", "2"]]);
     const recipe = new Recipe([
@@ -445,7 +456,8 @@ describe("style tests", () => {
         new QualifiedVariable(["y"]),
       ]),
     ]);
-    const dagEdgeList = makeDag(recipe, dummyImporter).getEdgeList();
+    const dag = await makeDag(recipe, dummyImporter);
+    const dagEdgeList = dag.getEdgeList();
     expect(dagEdgeList).toHaveLength(2);
     let dagEdge1 = dagEdgeList[0];
     let dagEdge2 = dagEdgeList[1];
@@ -457,7 +469,7 @@ describe("style tests", () => {
     expect(dagEdge2.styleProperties).toEqual(sampleMap2);
     expect(dagEdge2.styleTags).toEqual([]);
   });
-  test("variable styled in parent namespace", () => {
+  test("variable styled in parent namespace", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new Assignment(
@@ -466,17 +478,18 @@ describe("style tests", () => {
       ),
       new Namespace("child", [new Call("g", [new QualifiedVariable(["x"])])]),
     ]);
-    const dag = makeDag(recipe, dummyImporter);
+    const dag = await makeDag(recipe, dummyImporter);
     expect(dag.getEdgeList()).toHaveLength(0);
     const childDags = dag.getChildDags();
     expect(childDags).toHaveLength(1);
     const childDag = childDags[0];
     const dagEdgeList = childDag.getEdgeList();
+    expect(dagEdgeList).toHaveLength(1);
     const dagEdge = dagEdgeList[0];
     expect(dagEdge.styleProperties).toEqual(sampleMap);
     expect(dagEdge.styleTags).toEqual([]);
   });
-  test("variable styled not defined in child namespace", () => {
+  test("variable styled not defined in child namespace", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new Assignment(
@@ -488,17 +501,18 @@ describe("style tests", () => {
         new Call("g", [new QualifiedVariable(["x"])]),
       ]),
     ]);
-    const dag = makeDag(recipe, dummyImporter);
+    const dag = await makeDag(recipe, dummyImporter);
     expect(dag.getEdgeList()).toHaveLength(0);
     const childDags = dag.getChildDags();
     expect(childDags).toHaveLength(1);
     const childDag = childDags[0];
     const dagEdgeList = childDag.getEdgeList();
+    expect(dagEdgeList).toHaveLength(1);
     const dagEdge = dagEdgeList[0];
     expect(dagEdge.styleProperties).toEqual(new Map());
     expect(dagEdge.styleTags).toEqual([]);
   });
-  test("named style in parent namespace", () => {
+  test("named style in parent namespace", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new NamedStyle("s", new Style(sampleMap)),
@@ -506,29 +520,30 @@ describe("style tests", () => {
         new Call("g", [], new Style(undefined, [["s"]])),
       ]),
     ]);
-    const dag = makeDag(recipe, dummyImporter);
+    const dag = await makeDag(recipe, dummyImporter);
     const childDags = dag.getChildDags();
     expect(childDags).toHaveLength(1);
     const childDag = childDags[0];
     const dagNodeList = childDag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
     expect(dagNode.styleProperties).toEqual(new Map());
     expect(dagNode.styleTags).toEqual([["s"]]);
   });
-  test("named style in child namespace", () => {
+  test("named style in child namespace", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new Namespace("child", [new NamedStyle("s", new Style(sampleMap))]),
       new Call("g", [], new Style(undefined, [["child", "s"]])),
     ]);
-    const dag = makeDag(recipe, dummyImporter);
+    const dag = await makeDag(recipe, dummyImporter);
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
     expect(dagNode.styleProperties).toEqual(new Map());
     expect(dagNode.styleTags).toEqual([["child", "s"]]);
   });
-  test("node description and label property", () => {
+  test("node description and label property", async () => {
     const recipe = new Recipe([
       new Call(
         "name",
@@ -541,7 +556,8 @@ describe("style tests", () => {
         ),
       ),
     ]);
-    const dagNodeList = makeDag(recipe, dummyImporter).getNodeList();
+    const dag = await makeDag(recipe, dummyImporter);
+    const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
     const expectedStyleMap: StyleProperties = new Map([
@@ -550,7 +566,7 @@ describe("style tests", () => {
     ]);
     expect(dagNode.styleProperties).toEqual(expectedStyleMap);
   });
-  test("edge description and label property", () => {
+  test("edge description and label property", async () => {
     const recipe = new Recipe([
       new Assignment(
         [
@@ -568,7 +584,8 @@ describe("style tests", () => {
       ),
       new Call("g", [new QualifiedVariable(["x"])]),
     ]);
-    const dagEdgeList = makeDag(recipe, dummyImporter).getEdgeList();
+    const dag = await makeDag(recipe, dummyImporter);
+    const dagEdgeList = dag.getEdgeList();
     expect(dagEdgeList).toHaveLength(1);
     const dagEdge = dagEdgeList[0];
     const expectedStyleMap: StyleProperties = new Map([
@@ -580,20 +597,23 @@ describe("style tests", () => {
 });
 
 describe("style binding tests", () => {
-  test("no style binding", () => {
+  test("no style binding", async () => {
     const recipe = new Recipe([]);
-    const defaultBindings = makeDag(recipe, dummyImporter).getStyleBindings();
+    const dag = await makeDag(recipe, dummyImporter);
+    const defaultBindings = dag.getStyleBindings();
     expect(defaultBindings).toEqual(new Map<Keyword, StyleTag[]>());
   });
-  test("empty style binding", () => {
+  test("empty style binding", async () => {
     const recipe = new Recipe([new StyleBinding("x", [])]);
-    const styleBindings = makeDag(recipe, dummyImporter).getStyleBindings();
+    const dag = await makeDag(recipe, dummyImporter);
+    const styleBindings = dag.getStyleBindings();
     const expectedBinding = new Map<Keyword, StyleTag[]>([["x", []]]);
     expect(styleBindings).toEqual(expectedBinding);
   });
-  test("style bind multiple styles", () => {
+  test("style bind multiple styles", async () => {
     const recipe = new Recipe([new StyleBinding("x", [["a"], ["b"]])]);
-    const styleBindings = makeDag(recipe, dummyImporter).getStyleBindings();
+    const dag = await makeDag(recipe, dummyImporter);
+    const styleBindings = dag.getStyleBindings();
     const expectedBinding = new Map<Keyword, StyleTag[]>([
       ["x", [["a"], ["b"]]],
     ]);
@@ -613,18 +633,18 @@ describe("import tests", () => {
     getPackage: async () => importedDag,
   } as unknown as ImportCacher;
 
-  test("imported anonymous namespace", () => {
+  test("imported anonymous namespace", async () => {
     const recipe = new Recipe([new Import("path")]);
-    const dag = makeDag(recipe, mockImporter);
+    const dag = await makeDag(recipe, mockImporter);
     expect(dag.getChildDags()).toHaveLength(0);
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
     expect(dagNode.name).toEqual("nameX");
   });
-  test("imported named namespace", () => {
+  test("imported named namespace", async () => {
     const recipe = new Recipe([new Import("path", "alias")]);
-    const dag = makeDag(recipe, mockImporter);
+    const dag = await makeDag(recipe, mockImporter);
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getChildDags()).toHaveLength(1);
     const childDag = dag.getChildDags()[0];

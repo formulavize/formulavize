@@ -5,7 +5,7 @@ import { CallTreeNode, RecipeTreeNode } from "../../../src/compiler/ast";
 import { Compiler } from "../../../src/compiler/driver";
 
 describe("basic compiler driver", () => {
-  test("compile from editor state", () => {
+  test("compile from editor state", async () => {
     const editorState = EditorState.create({
       doc: "f()",
       extensions: [fizLanguage],
@@ -14,7 +14,7 @@ describe("basic compiler driver", () => {
     const sourceGen = Compiler.sourceFromEditor;
     const parse = Compiler.parseFromEditor;
     const compiler = new Compiler.Driver();
-    const compilation = compiler.compile(editorState, sourceGen, parse);
+    const compilation = await compiler.compile(editorState, sourceGen, parse);
 
     expect(compilation.Source).toBe("f()");
 
@@ -26,13 +26,13 @@ describe("basic compiler driver", () => {
     expect(nodeList[0].name).toEqual("f");
   });
 
-  test("compile from source string", () => {
+  test("compile from source string", async () => {
     const sourceRecipe = "f()";
 
     const sourceGen = Compiler.sourceFromSource;
     const parse = Compiler.parseFromSource;
     const compiler = new Compiler.Driver();
-    const compilation = compiler.compile(sourceRecipe, sourceGen, parse);
+    const compilation = await compiler.compile(sourceRecipe, sourceGen, parse);
 
     expect(compilation.Source).toBe("f()");
 
