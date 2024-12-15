@@ -10,7 +10,8 @@ describe("import cacher", () => {
   } as unknown as Compiler.Driver;
 
   const packageLocation = `test-package${FIZ_FILE_EXTENSION}`;
-  const invalidPackageLocation = "test-package.txt";
+  const nonFizPackageLocation = "test-package.txt";
+  const invalidPackageLocation = "invalid.fiz";
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -35,11 +36,26 @@ describe("import cacher", () => {
   });
 
   test("should return error for an invalid package location", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      text: () => Promise.resolve("failure"),
+    });
+
     const importCacher = new ImportCacher(mockCompiler);
     await expect(
       importCacher.getPackage(invalidPackageLocation),
     ).rejects.toThrow(
-      `Package '${invalidPackageLocation}' missing file extension ${FIZ_FILE_EXTENSION}`,
+      `Failed to fetch package from '${invalidPackageLocation}'`,
+    );
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("should return error for a non-fiz package location", async () => {
+    const importCacher = new ImportCacher(mockCompiler);
+    await expect(
+      importCacher.getPackage(nonFizPackageLocation),
+    ).rejects.toThrow(
+      `Package '${nonFizPackageLocation}' missing file extension ${FIZ_FILE_EXTENSION}`,
     );
     expect(global.fetch).not.toHaveBeenCalled();
   });
