@@ -1,5 +1,4 @@
 import { EdgeDefinition, ElementsDefinition, NodeDefinition } from "cytoscape";
-import { TOP_LEVEL_DAG_ID } from "./constants";
 import { Dag } from "./dag";
 
 export function makeCyNodes(dag: Dag): NodeDefinition[] {
@@ -7,7 +6,7 @@ export function makeCyNodes(dag: Dag): NodeDefinition[] {
     data: {
       id: node.id,
       name: node.name,
-      ...(dag.Id !== TOP_LEVEL_DAG_ID && { parent: dag.Id }),
+      ...(dag.Parent && { parent: dag.Id }),
       ...(dag.LineagePath && { lineagePath: dag.LineagePath }),
     },
     ...(node.styleTags.length > 0 && {
@@ -32,12 +31,12 @@ export function makeCyEdges(dag: Dag): EdgeDefinition[] {
 }
 
 function makeCyCompoundNode(dag: Dag): NodeDefinition {
-  const parentId = dag.Parent?.Id;
+  const parent = dag.Parent;
   return {
     data: {
       id: dag.Id,
       name: dag.Name,
-      ...(parentId && parentId !== TOP_LEVEL_DAG_ID && { parent: parentId }),
+      ...(parent && parent.Parent && { parent: parent.Id }),
       ...(dag.DagLineagePath && { lineagePath: dag.DagLineagePath }),
     },
     ...(dag.DagStyleTags.length > 0 && {
@@ -54,7 +53,7 @@ export function makeCyElements(dag: Dag): ElementsDefinition {
   nodeList.push(...childElements.flatMap((elementDefs) => elementDefs.nodes));
   edgeList.push(...childElements.flatMap((elementDefs) => elementDefs.edges));
 
-  if (dag.Id !== TOP_LEVEL_DAG_ID && nodeList.length > 0) {
+  if (dag.Parent && nodeList.length > 0) {
     nodeList.push(makeCyCompoundNode(dag));
   }
 

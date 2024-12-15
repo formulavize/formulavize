@@ -4,12 +4,11 @@ import {
   makeCyEdges,
   makeCyElements,
 } from "../../../src/compiler/dagToCyGraph";
-import { TOP_LEVEL_DAG_ID } from "../../../src/compiler/constants";
 import { Dag } from "../../../src/compiler/dag";
 
 describe("makes cytoscape elements", () => {
   test("with two nodes", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -29,7 +28,7 @@ describe("makes cytoscape elements", () => {
     expect(makeCyNodes(testDag)).toEqual(expectedCyNodes);
   });
   test("with one edge", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -63,7 +62,7 @@ describe("makes cytoscape elements", () => {
     ];
     expect(makeCyEdges(testDag)).toEqual(expectedCyEdges);
   });
-  test("dag style tags", () => {
+  test("dag style tags on root", () => {
     const dagStyleTags = [["s"], ["t"]];
     const dagStyleProperties = new Map([["a", "1"]]);
     const testDag = new Dag("D", null, "", dagStyleTags, dagStyleProperties);
@@ -73,17 +72,56 @@ describe("makes cytoscape elements", () => {
       styleTags: [],
       styleProperties: new Map(),
     });
+    // root level dag styles are ignored
     const expectedCyElements = {
       edges: [],
-      nodes: [
-        { data: { id: "idX", name: "nameX", parent: "D" } },
-        { data: { id: "D", name: "" }, classes: "s t" },
-      ],
+      nodes: [{ data: { id: "idX", name: "nameX" } }],
     };
     expect(makeCyElements(testDag)).toEqual(expectedCyElements);
   });
+  test("dag style tags on child", () => {
+    const parentDag = new Dag("DagId");
+    parentDag.addNode({
+      id: "idX",
+      name: "nameX",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+    const dagStyleTags = [["s"], ["t"]];
+    const dagStyleProperties = new Map([["a", "1"]]);
+    const childDag = new Dag(
+      "childDag",
+      parentDag,
+      "childDagName",
+      dagStyleTags,
+      dagStyleProperties,
+    );
+    childDag.addNode({
+      id: "idY",
+      name: "nameY",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+
+    const expectedCyElements = {
+      edges: [],
+      nodes: [
+        { data: { id: "idX", name: "nameX" } },
+        {
+          data: {
+            id: "idY",
+            name: "nameY",
+            parent: "childDag",
+            lineagePath: "/childDag",
+          },
+        },
+        { data: { id: "childDag", name: "childDagName" }, classes: "s t" },
+      ],
+    };
+    expect(makeCyElements(parentDag)).toEqual(expectedCyElements);
+  });
   test("with top level dag only", () => {
-    const topLevelDag = new Dag(TOP_LEVEL_DAG_ID);
+    const topLevelDag = new Dag("DagId");
     topLevelDag.addNode({
       id: "idX",
       name: "nameX",
@@ -97,7 +135,7 @@ describe("makes cytoscape elements", () => {
     expect(makeCyElements(topLevelDag)).toEqual(expectedCyNodes);
   });
   test("with empty child dag", () => {
-    const parentDag = new Dag(TOP_LEVEL_DAG_ID);
+    const parentDag = new Dag("DagId");
     parentDag.addNode({
       id: "idX",
       name: "nameX",
@@ -115,7 +153,7 @@ describe("makes cytoscape elements", () => {
     expect(makeCyElements(parentDag)).toEqual(expectedCyElements);
   });
   test("with child dag", () => {
-    const parentDag = new Dag(TOP_LEVEL_DAG_ID);
+    const parentDag = new Dag("DagId");
     parentDag.addNode({
       id: "idX",
       name: "nameX",
@@ -151,7 +189,7 @@ describe("makes cytoscape elements", () => {
     expect(makeCyElements(parentDag)).toEqual(expectedCyElements);
   });
   test("with multiple child dags", () => {
-    const parentDag = new Dag(TOP_LEVEL_DAG_ID);
+    const parentDag = new Dag("DagId");
     parentDag.addNode({
       id: "idX",
       name: "nameX",
@@ -203,7 +241,7 @@ describe("makes cytoscape elements", () => {
     expect(makeCyElements(parentDag)).toEqual(expectedCyElements);
   });
   test("with nested child dag", () => {
-    const parentDag = new Dag(TOP_LEVEL_DAG_ID);
+    const parentDag = new Dag("DagId");
 
     const childDag = new Dag("childDag", parentDag);
 

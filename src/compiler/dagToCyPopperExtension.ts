@@ -1,9 +1,5 @@
 import cytoscape, { Selector } from "cytoscape";
-import {
-  DESCRIPTION_PROPERTY,
-  DESCRIPTION_PREFIX,
-  TOP_LEVEL_DAG_ID,
-} from "./constants";
+import { DESCRIPTION_PROPERTY, DESCRIPTION_PREFIX } from "./constants";
 import { Dag, DagElement, ElementId, StyleTag, StyleProperties } from "./dag";
 
 const POPPER_OUTER_DIV_CLASS: string = "popper-outer-div";
@@ -16,7 +12,7 @@ export interface DescriptionData {
 export type SelectorDescriptionPair = [Selector, DescriptionData];
 
 export function makeDagLineageSelector(dag: Dag): string {
-  return dag.Id === TOP_LEVEL_DAG_ID ? "" : `[lineagePath*='/${dag.Id}']`;
+  return !dag.Parent ? "" : `[lineagePath*='/${dag.Id}']`;
 }
 
 export function getDescriptionProperties(

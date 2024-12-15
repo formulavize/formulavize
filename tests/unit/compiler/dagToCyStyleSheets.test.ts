@@ -11,10 +11,7 @@ import {
   getBaseStylesheet,
   makeCyStylesheets,
 } from "../../../src/compiler/dagToCyStyleSheets";
-import {
-  TOP_LEVEL_DAG_ID,
-  DESCRIPTION_PROPERTY,
-} from "../../../src/compiler/constants";
+import { DESCRIPTION_PROPERTY } from "../../../src/compiler/constants";
 import { Dag, DagElement } from "../../../src/compiler/dag";
 
 describe("filters out non-cytoscape properties", () => {
@@ -83,7 +80,7 @@ describe("makeElementStylesheets utilities", () => {
     const testElement = getBaseTestElement();
     expect(hasStyleData(testElement)).toBe(false);
 
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     expect(makeStyleObject(testDag, testElement)).toEqual({});
   });
   test("non-empty style properties and empty tags", () => {
@@ -91,7 +88,7 @@ describe("makeElementStylesheets utilities", () => {
     testElement.styleProperties = new Map([["a", "1"]]);
     expect(hasStyleData(testElement)).toBe(true);
 
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     expect(makeStyleObject(testDag, testElement)).toEqual({ a: "1" });
   });
   test("empty style properties and no scoped tags", () => {
@@ -99,7 +96,7 @@ describe("makeElementStylesheets utilities", () => {
     testElement.styleTags = [["s"]];
     expect(hasStyleData(testElement)).toBe(false);
 
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.setStyle("s", new Map([["a", "1"]]));
     expect(makeStyleObject(testDag, testElement)).toEqual({});
   });
@@ -108,7 +105,7 @@ describe("makeElementStylesheets utilities", () => {
     testElement.styleTags = [["n", "s"]];
     expect(hasStyleData(testElement)).toBe(true);
 
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     const childDag = new Dag("childDag", testDag, "n");
     childDag.setStyle("s", new Map([["a", "1"]]));
     expect(makeStyleObject(testDag, testElement)).toEqual({ a: "1" });
@@ -117,7 +114,7 @@ describe("makeElementStylesheets utilities", () => {
 
 describe("makes cytoscape stylesheets", () => {
   test("node styles", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -139,7 +136,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeNodeStylesheets(testDag)).toEqual(expectedCyNodeStyles);
   });
   test("edge styles", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addNode({
       id: "idX",
       name: "nameX",
@@ -169,7 +166,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeEdgeStyleSheets(testDag)).toEqual(expectedCyEdgeStyles);
   });
   test("class styles", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.setStyle(
       "s",
       new Map([
@@ -186,7 +183,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeClassStyleSheets(testDag)).toEqual(expectedCyClassStyles);
   });
   test("class styles from sub dags", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     const childDag = new Dag("childDag", testDag);
     childDag.setStyle(
       "s",
@@ -204,12 +201,12 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeClassStyleSheets(childDag)).toEqual(expectedCyClassStyles);
   });
   test("name style on undeclared styleTags", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addStyleBinding("x", [["a"], ["b"]]);
     expect(makeNameStyleSheets(testDag)).toEqual([]);
   });
   test("name styles", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     testDag.addStyleBinding("x", [["a"], ["b"]]);
     testDag.setStyle("a", new Map([["i", "1"]]));
     testDag.setStyle(
@@ -232,7 +229,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeNameStyleSheets(testDag)).toEqual(expectedCyNameStyles);
   });
   test("name styles from sub dags", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     const childDag = new Dag("childDag", testDag);
     childDag.setStyle("a", new Map([["i", "1"]]));
     childDag.setStyle(
@@ -256,7 +253,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeNameStyleSheets(childDag)).toEqual(expectedCyNameStyles);
   });
   test("styles from sub dags", () => {
-    const testDag = new Dag(TOP_LEVEL_DAG_ID);
+    const testDag = new Dag("DagId");
     const childDag = new Dag("childDag", testDag);
     childDag.setStyle("a", new Map([["background-color", "red"]]));
     childDag.addStyleBinding("x", [["a"]]);
@@ -280,7 +277,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeCyStylesheets(testDag)).toEqual(expectedCyStyles);
   });
   test("sub dag with style property", () => {
-    const rootDag = new Dag(TOP_LEVEL_DAG_ID, null, "top");
+    const rootDag = new Dag("DagId", null, "top");
     const blueStyle = new Map([["background-color", "blue"]]);
     new Dag("x", rootDag, "child", [], blueStyle);
 
@@ -293,7 +290,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
   });
   test("sub dag with style tag", () => {
-    const rootDag = new Dag(TOP_LEVEL_DAG_ID);
+    const rootDag = new Dag("DagId");
     const childDag = new Dag("x", rootDag, "child", [["b"]]); // styleTag ignored
     childDag.setStyle("b", new Map([["background-color", "red"]]));
     const grandChildDag = new Dag("y", childDag, "grandChild", [["b"]]);
@@ -313,7 +310,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
   });
   test("sub dags with name style", () => {
-    const rootDag = new Dag(TOP_LEVEL_DAG_ID);
+    const rootDag = new Dag("DagId");
     const childDag = new Dag("x", rootDag);
     childDag.setStyle("b", new Map([["background-color", "red"]]));
     childDag.addStyleBinding("y", [["b"]]);
@@ -338,7 +335,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
   });
   test("use scoped style tag defined in child", () => {
-    const rootDag = new Dag(TOP_LEVEL_DAG_ID);
+    const rootDag = new Dag("DagId");
     const childDag = new Dag("x", rootDag, "child");
     childDag.setStyle("b", new Map([["background-color", "red"]]));
     rootDag.addNode({
@@ -360,7 +357,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
   });
   test("use scoped style tag defined in sibiling", () => {
-    const rootDag = new Dag(TOP_LEVEL_DAG_ID);
+    const rootDag = new Dag("DagId");
     const childDag1 = new Dag("x", rootDag, "child1");
     const childDag2 = new Dag("y", rootDag, "child2");
     childDag1.setStyle("b", new Map([["background-color", "red"]]));
@@ -383,7 +380,7 @@ describe("makes cytoscape stylesheets", () => {
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
   });
   test("use undefined scoped style tag", () => {
-    const rootDag = new Dag(TOP_LEVEL_DAG_ID);
+    const rootDag = new Dag("DagId");
     new Dag("x", rootDag, "child");
     rootDag.addNode({
       id: "idX",

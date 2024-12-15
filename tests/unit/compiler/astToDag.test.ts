@@ -12,10 +12,7 @@ import {
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
 } from "../../../src/compiler/ast";
-import {
-  DESCRIPTION_PROPERTY,
-  TOP_LEVEL_DAG_ID,
-} from "../../../src/compiler/constants";
+import { DESCRIPTION_PROPERTY } from "../../../src/compiler/constants";
 import {
   Dag,
   StyleTag,
@@ -39,7 +36,7 @@ describe("node tests", () => {
   test("empty recipe", async () => {
     const recipe = new Recipe();
     const dag = await makeDag(recipe, dummyImporter);
-    expect(dag).toEqual(new Dag(TOP_LEVEL_DAG_ID));
+    expect(dag).toEqual(new Dag(dag.Id));
   });
   test("one node", async () => {
     const recipe = new Recipe([new Call("a", [])]);
@@ -622,7 +619,7 @@ describe("style binding tests", () => {
 });
 
 describe("import tests", () => {
-  const importedDag = new Dag(TOP_LEVEL_DAG_ID);
+  const importedDag = new Dag("ImportTest");
   importedDag.addNode({
     id: "idX",
     name: "nameX",
