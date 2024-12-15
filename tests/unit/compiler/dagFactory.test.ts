@@ -19,7 +19,7 @@ import {
   StyleProperties,
   Keyword,
 } from "../../../src/compiler/dag";
-import { makeDag } from "../../../src/compiler/astToDag";
+import { makeDag } from "../../../src/compiler/dagFactory";
 import { ImportCacher } from "../../../src/compiler/importCacher";
 
 const dummyImporter = {} as ImportCacher;
