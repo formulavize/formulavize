@@ -102,14 +102,14 @@ function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
   return thisNodeId;
 }
 
-function proccessNamespace(
+async function proccessNamespace(
   namespaceStmt: NamespaceTreeNode,
   workingDag: Dag,
   importer: ImportCacher,
-): NodeId {
+): Promise<NodeId> {
   const subDagId = uuidv4();
   const childDag = makeSubDag(subDagId, namespaceStmt, importer, workingDag);
-  workingDag.addChildDag(childDag);
+  workingDag.addChildDag(await childDag);
 
   const dagIncomingEdges = argListToEdgeInfo(namespaceStmt.ArgList, workingDag);
   addIncomingEdgesToDag(dagIncomingEdges, subDagId, workingDag);
@@ -123,11 +123,11 @@ function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
   });
 }
 
-function processAssignmentRhs(
+async function processAssignmentRhs(
   rhsNode: CallTreeNode | NamespaceTreeNode,
   workingDag: Dag,
   importer: ImportCacher,
-): NodeId | null {
+): Promise<NodeId> {
   return match(rhsNode.Type)
     .with(NodeType.Call, () => {
       return processCall(rhsNode as CallTreeNode, workingDag);
@@ -141,16 +141,16 @@ function processAssignmentRhs(
     })
     .otherwise(() => {
       console.error("Unknown node type ", rhsNode.Type);
-      return null;
+      return Promise.reject(`Unknown node type ${rhsNode.Type}`);
     });
 }
 
-export function makeSubDag(
+export async function makeSubDag(
   dagId: DagId,
   dagNamespaceStmt: NamespaceTreeNode,
   importer: ImportCacher,
   parentDag?: Dag,
-): Dag {
+): Promise<Dag> {
   const dagStyleTags = dagNamespaceStmt.Styling?.StyleTagList ?? [];
   const dagStyleProperties = dagNamespaceStmt.Styling?.KeyValueMap ?? new Map();
   const curLevelDag = new Dag(
@@ -161,26 +161,29 @@ export function makeSubDag(
     dagStyleProperties,
   );
 
-  dagNamespaceStmt.Statements.forEach((stmt) => {
-    match(stmt.Type)
+  for (const stmt of dagNamespaceStmt.Statements) {
+    await match(stmt.Type)
       .with(NodeType.Call, () => {
         const callStmt = stmt as CallTreeNode;
         processCall(callStmt, curLevelDag);
       })
-      .with(NodeType.Assignment, () => {
+      .with(NodeType.Assignment, async () => {
         const assignmentStmt = stmt as AssignmentTreeNode;
         if (!assignmentStmt.Lhs || !assignmentStmt.Rhs) return;
-        const thisNodeId = processAssignmentRhs(
+        const thisNodeId = await processAssignmentRhs(
           assignmentStmt.Rhs,
           curLevelDag,
           importer,
-        );
+        ).catch((err) => {
+          console.warn("Assignment failed: ", err);
+          return null;
+        });
         if (!thisNodeId) return;
-        assignmentStmt.Lhs.forEach((lhsVar) => {
+        for (const lhsVar of assignmentStmt.Lhs) {
           curLevelDag.setVarNode(lhsVar.VarName, thisNodeId);
           const varStyle = lhsVar.Styling ? makeDagStyle(lhsVar.Styling) : null;
           curLevelDag.setVarStyle(lhsVar.VarName, varStyle);
-        });
+        }
       })
       .with(NodeType.Alias, () => {
         const aliasStmt = stmt as AliasTreeNode;
@@ -226,12 +229,15 @@ export function makeSubDag(
         );
       })
       .with(NodeType.QualifiedVariable, () => null)
-      .with(NodeType.Namespace, () => {
+      .with(NodeType.Namespace, async () => {
         const namespaceStmt = stmt as NamespaceTreeNode;
-        proccessNamespace(namespaceStmt, curLevelDag, importer);
+        await proccessNamespace(namespaceStmt, curLevelDag, importer);
       })
       .with(NodeType.Import, async () => {
         const importStmt = stmt as ImportTreeNode;
+        // Imports are processed sequentially to ensure order is respected.
+        // Hoisting and parallelizing would be faster, but could result in
+        // incorrect behavior if the order of imports matters.
         const importedDag = await importer
           .getPackage(importStmt.ImportLocation)
           .catch((err) => {
@@ -250,11 +256,14 @@ export function makeSubDag(
       .otherwise(() => {
         console.error("Unknown node type ", stmt.Type);
       });
-  });
+  }
   return curLevelDag;
 }
 
-export function makeDag(recipe: RecipeTreeNode, importer: ImportCacher): Dag {
+export function makeDag(
+  recipe: RecipeTreeNode,
+  importer: ImportCacher,
+): Promise<Dag> {
   return makeSubDag(
     TOP_LEVEL_DAG_ID,
     new NamespaceTreeNode("", recipe.Statements),
