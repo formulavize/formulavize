@@ -651,4 +651,20 @@ describe("import tests", () => {
     const dagNode = dagNodeList[0];
     expect(dagNode.name).toEqual("nameX");
   });
+
+  const mockImporterError = {
+    getPackage: async () => {
+      throw new Error("import error");
+    },
+  } as unknown as ImportCacher;
+
+  test("continue after problematic import", async () => {
+    const recipe = new Recipe([new Import("path"), new Call("f", [])]);
+    const dag = await makeDag(recipe, mockImporterError);
+    expect(dag.getChildDags()).toHaveLength(0);
+    const dagNodeList = dag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
+    const dagNode = dagNodeList[0];
+    expect(dagNode.name).toEqual("f");
+  });
 });
