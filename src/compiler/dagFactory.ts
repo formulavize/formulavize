@@ -101,7 +101,7 @@ function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
   return thisNodeId;
 }
 
-async function proccessNamespace(
+async function processNamespace(
   namespaceStmt: NamespaceTreeNode,
   workingDag: Dag,
   importer: ImportCacher,
@@ -156,7 +156,7 @@ async function processAssignmentRhs(
       return processCall(rhsNode as CallTreeNode, workingDag);
     })
     .with(NodeType.Namespace, () => {
-      return proccessNamespace(
+      return processNamespace(
         rhsNode as NamespaceTreeNode,
         workingDag,
         importer,
@@ -254,7 +254,7 @@ export async function makeSubDag(
       .with(NodeType.QualifiedVariable, () => null)
       .with(NodeType.Namespace, async () => {
         const namespaceStmt = stmt as NamespaceTreeNode;
-        await proccessNamespace(namespaceStmt, curLevelDag, importer);
+        await processNamespace(namespaceStmt, curLevelDag, importer);
       })
       .with(NodeType.Import, async () => {
         const importStmt = stmt as ImportTreeNode;
