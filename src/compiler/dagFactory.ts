@@ -116,6 +116,30 @@ async function proccessNamespace(
   return subDagId;
 }
 
+async function processImport(
+  importStmt: ImportTreeNode,
+  workingDag: Dag,
+  importer: ImportCacher,
+): Promise<NodeId | null> {
+  // Imports are processed sequentially to ensure order is respected.
+  // Hoisting and parallelizing would be faster, but could result in
+  // incorrect behavior if the order of imports matters.
+  const importedDag = await importer
+    .getPackage(importStmt.ImportLocation)
+    .catch((err) => {
+      console.warn("Import failed: ", err);
+      return Promise.reject(`Import Failure: ${err}`);
+    });
+  if (importStmt.ImportAlias) {
+    importedDag.Id = uuidv4();
+    importedDag.Name = importStmt.ImportAlias;
+    workingDag.addChildDag(importedDag);
+    return importedDag.Id;
+  }
+  workingDag.mergeDag(importedDag);
+  return null;
+}
+
 function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
   mapToAdd.forEach((value, key) => {
     mutableMap.set(key, value);
@@ -234,23 +258,9 @@ export async function makeSubDag(
       })
       .with(NodeType.Import, async () => {
         const importStmt = stmt as ImportTreeNode;
-        // Imports are processed sequentially to ensure order is respected.
-        // Hoisting and parallelizing would be faster, but could result in
-        // incorrect behavior if the order of imports matters.
-        const importedDag = await importer
-          .getPackage(importStmt.ImportLocation)
-          .catch((err) => {
-            console.warn("Import failed: ", err);
-            return null;
-          });
-        if (!importedDag) return;
-        if (importStmt.ImportAlias) {
-          importedDag.Id = uuidv4();
-          importedDag.Name = importStmt.ImportAlias;
-          curLevelDag.addChildDag(importedDag);
-        } else {
-          curLevelDag.mergeDag(importedDag);
-        }
+        await processImport(importStmt, curLevelDag, importer).catch((err) => {
+          console.warn(err);
+        });
       })
       .otherwise(() => {
         console.error("Unknown node type ", stmt.Type);
