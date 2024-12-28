@@ -20,7 +20,7 @@
     "@codemirror/search": "^6.5.7",
     "@codemirror/state": "^6.4.1",
     "@codemirror/view": "^6.34.2",
-    "@formulavize/lang-fiz": "^0.3.0",
+    "@formulavize/lang-fiz": "^0.3.1",
     "@lezer/common": "^1.2.3",
     "cytoscape": "^3.30.3",
     "cytoscape-dagre": "^2.5.0",

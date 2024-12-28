@@ -651,6 +651,40 @@ describe("import tests", () => {
     const dagNode = dagNodeList[0];
     expect(dagNode.name).toEqual("nameX");
   });
+  test("imported anonymous namespace in assignment", async () => {
+    const recipe = new Recipe([
+      new Assignment([new LocalVariable("x")], new Import("path")),
+      new Call("y", [new QualifiedVariable(["x"])]),
+    ]);
+    const dag = await makeDag(recipe, mockImporter);
+    expect(dag.getChildDags()).toHaveLength(1);
+    const childDag = dag.getChildDags()[0];
+    expect(childDag.Name).toEqual("");
+    const childDagNodeList = childDag.getNodeList();
+    expect(childDagNodeList).toHaveLength(1);
+    const childDagNode = childDagNodeList[0];
+    expect(childDagNode.name).toEqual("nameX");
+
+    const dagEdgeList = dag.getEdgeList();
+    expect(dagEdgeList).toHaveLength(1);
+  });
+  test("imported named namespace in assignment", async () => {
+    const recipe = new Recipe([
+      new Assignment([new LocalVariable("x")], new Import("path", "alias")),
+      new Call("y", [new QualifiedVariable(["x"])]),
+    ]);
+    const dag = await makeDag(recipe, mockImporter);
+    expect(dag.getChildDags()).toHaveLength(1);
+    const childDag = dag.getChildDags()[0];
+    expect(childDag.Name).toEqual("alias");
+    const childDagNodeList = childDag.getNodeList();
+    expect(childDagNodeList).toHaveLength(1);
+    const childDagNode = childDagNodeList[0];
+    expect(childDagNode.name).toEqual("nameX");
+
+    const dagEdgeList = dag.getEdgeList();
+    expect(dagEdgeList).toHaveLength(1);
+  });
 
   const mockImporterError = {
     getPackage: async () => {
