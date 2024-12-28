@@ -116,32 +116,46 @@ async function processNamespace(
   return subDagId;
 }
 
+async function getImportedDag(
+  importStmt: ImportTreeNode,
+  importer: ImportCacher,
+): Promise<Dag> {
+  // Imports are processed sequentially to ensure order is respected.
+  // Hoisting and parallelizing would be faster, but could result in
+  // incorrect behavior if the order of imports matters.
+  return importer.getPackage(importStmt.ImportLocation).catch((err) => {
+    console.warn("Import failed: ", err);
+    return Promise.reject(`Import Failure: ${err}`);
+  });
+}
+
 async function processImport(
   importStmt: ImportTreeNode,
   workingDag: Dag,
   importer: ImportCacher,
-  allowBlankName: boolean = false,
-): Promise<NodeId | null> {
-  // Process the import statement and add the imported DAG to the working DAG
-  // If a name is provided, the imported DAG is added as a child with the given name
-  // If no name is provided, the imported DAG is merged into the working DAG
-  // Imports are processed sequentially to ensure order is respected.
-  // Hoisting and parallelizing would be faster, but could result in
-  // incorrect behavior if the order of imports matters.
-  const importedDag = await importer
-    .getPackage(importStmt.ImportLocation)
-    .catch((err) => {
-      console.warn("Import failed: ", err);
-      return Promise.reject(`Import Failure: ${err}`);
-    });
-  if (importStmt.ImportName || allowBlankName) {
+): Promise<NodeId> {
+  // Process imports referenced by a variable, always returning a node id
+  const importedDag = await getImportedDag(importStmt, importer);
+  importedDag.Id = uuidv4();
+  importedDag.Name = importStmt.ImportName ?? "";
+  workingDag.addChildDag(importedDag);
+  return importedDag.Id;
+}
+
+async function processUnassignedImport(
+  importStmt: ImportTreeNode,
+  workingDag: Dag,
+  importer: ImportCacher,
+) {
+  // Process imports not referenced by a variable
+  const importedDag = await getImportedDag(importStmt, importer);
+  if (importStmt.ImportName) {
     importedDag.Id = uuidv4();
-    importedDag.Name = importStmt.ImportName ?? "";
+    importedDag.Name = importStmt.ImportName;
     workingDag.addChildDag(importedDag);
-    return importedDag.Id;
+  } else {
+    workingDag.mergeDag(importedDag);
   }
-  workingDag.mergeDag(importedDag);
-  return null;
 }
 
 function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
@@ -167,17 +181,7 @@ async function processAssignmentRhs(
       );
     })
     .with(NodeType.Import, async () => {
-      return processImport(
-        rhsNode as ImportTreeNode,
-        workingDag,
-        importer,
-        true,
-      ).then((importedNodeId) => {
-        if (!importedNodeId) {
-          return Promise.reject("Import did not create a referenceable node");
-        }
-        return importedNodeId;
-      });
+      return processImport(rhsNode as ImportTreeNode, workingDag, importer);
     })
     .otherwise(() => {
       console.error("Unknown node type ", rhsNode.Type);
@@ -275,9 +279,11 @@ export async function makeSubDag(
       })
       .with(NodeType.Import, async () => {
         const importStmt = stmt as ImportTreeNode;
-        await processImport(importStmt, curLevelDag, importer).catch((err) => {
-          console.warn(err);
-        });
+        await processUnassignedImport(importStmt, curLevelDag, importer).catch(
+          (err) => {
+            console.warn(err);
+          },
+        );
       })
       .otherwise(() => {
         console.error("Unknown node type ", stmt.Type);
