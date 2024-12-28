@@ -120,7 +120,11 @@ async function processImport(
   importStmt: ImportTreeNode,
   workingDag: Dag,
   importer: ImportCacher,
+  allowBlankAlias: boolean = false,
 ): Promise<NodeId | null> {
+  // Process the import statement and add the imported DAG to the working DAG
+  // If an alias is provided, the imported DAG is added as a child with the alias as the name
+  // If no alias is provided, the imported DAG is merged into the working DAG
   // Imports are processed sequentially to ensure order is respected.
   // Hoisting and parallelizing would be faster, but could result in
   // incorrect behavior if the order of imports matters.
@@ -130,9 +134,9 @@ async function processImport(
       console.warn("Import failed: ", err);
       return Promise.reject(`Import Failure: ${err}`);
     });
-  if (importStmt.ImportAlias) {
+  if (importStmt.ImportAlias || allowBlankAlias) {
     importedDag.Id = uuidv4();
-    importedDag.Name = importStmt.ImportAlias;
+    importedDag.Name = importStmt.ImportAlias ?? "";
     workingDag.addChildDag(importedDag);
     return importedDag.Id;
   }
@@ -147,7 +151,7 @@ function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
 }
 
 async function processAssignmentRhs(
-  rhsNode: CallTreeNode | NamespaceTreeNode,
+  rhsNode: CallTreeNode | NamespaceTreeNode | ImportTreeNode,
   workingDag: Dag,
   importer: ImportCacher,
 ): Promise<NodeId> {
@@ -161,6 +165,19 @@ async function processAssignmentRhs(
         workingDag,
         importer,
       );
+    })
+    .with(NodeType.Import, async () => {
+      return processImport(
+        rhsNode as ImportTreeNode,
+        workingDag,
+        importer,
+        true,
+      ).then((importedNodeId) => {
+        if (!importedNodeId) {
+          return Promise.reject("Import did not create a referenceable node");
+        }
+        return importedNodeId;
+      });
     })
     .otherwise(() => {
       console.error("Unknown node type ", rhsNode.Type);

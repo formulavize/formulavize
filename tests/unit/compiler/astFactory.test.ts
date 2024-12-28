@@ -83,6 +83,22 @@ describe("single statements", () => {
       ]),
     );
   });
+  test("assignment with anonymous import", () => {
+    const input = 'x = @"path"';
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new Assignment([new LocalVariable("x")], new Import("path")),
+      ]),
+    );
+  });
+  test("assignment with named import", () => {
+    const input = 'x = n @ "path"';
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new Assignment([new LocalVariable("x")], new Import("path", "n")),
+      ]),
+    );
+  });
   test("style declaration", () => {
     const input = "#s{}";
     expect(makeTree(input)).toEqual(new Recipe([new NamedStyle("s")]));

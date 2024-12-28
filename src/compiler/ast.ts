@@ -122,11 +122,11 @@ export class CallTreeNode extends BaseTreeNode {
 
 export class AssignmentTreeNode extends BaseTreeNode {
   private lhs: LocalVarTreeNode[];
-  private rhs: CallTreeNode | NamespaceTreeNode | null;
+  private rhs: CallTreeNode | NamespaceTreeNode | ImportTreeNode | null;
 
   constructor(
     varList: LocalVarTreeNode[],
-    rhs: CallTreeNode | NamespaceTreeNode | null,
+    rhs: CallTreeNode | NamespaceTreeNode | ImportTreeNode | null,
   ) {
     super(NodeType.Assignment);
     this.lhs = varList;
@@ -147,7 +147,7 @@ export class AssignmentTreeNode extends BaseTreeNode {
     return this.lhs;
   }
 
-  get Rhs(): CallTreeNode | NamespaceTreeNode | null {
+  get Rhs(): CallTreeNode | NamespaceTreeNode | ImportTreeNode | null {
     return this.rhs;
   }
 }

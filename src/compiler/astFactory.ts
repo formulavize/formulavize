@@ -155,6 +155,9 @@ function makeAssignment(c: TreeCursor, t: Text): AssignmentTreeNode {
   const rhsNs = makeNullableChild("Namespace", makeNamespace, c, t);
   if (rhsNs) return new AssignmentTreeNode(lhsVars, rhsNs);
 
+  const rhsImport = makeNullableChild("Import", makeImport, c, t);
+  if (rhsImport) return new AssignmentTreeNode(lhsVars, rhsImport);
+
   return new AssignmentTreeNode(lhsVars, null);
 }
 
