@@ -120,11 +120,11 @@ async function processImport(
   importStmt: ImportTreeNode,
   workingDag: Dag,
   importer: ImportCacher,
-  allowBlankAlias: boolean = false,
+  allowBlankName: boolean = false,
 ): Promise<NodeId | null> {
   // Process the import statement and add the imported DAG to the working DAG
-  // If an alias is provided, the imported DAG is added as a child with the alias as the name
-  // If no alias is provided, the imported DAG is merged into the working DAG
+  // If a name is provided, the imported DAG is added as a child with the given name
+  // If no name is provided, the imported DAG is merged into the working DAG
   // Imports are processed sequentially to ensure order is respected.
   // Hoisting and parallelizing would be faster, but could result in
   // incorrect behavior if the order of imports matters.
@@ -134,9 +134,9 @@ async function processImport(
       console.warn("Import failed: ", err);
       return Promise.reject(`Import Failure: ${err}`);
     });
-  if (importStmt.ImportAlias || allowBlankAlias) {
+  if (importStmt.ImportName || allowBlankName) {
     importedDag.Id = uuidv4();
-    importedDag.Name = importStmt.ImportAlias ?? "";
+    importedDag.Name = importStmt.ImportName ?? "";
     workingDag.addChildDag(importedDag);
     return importedDag.Id;
   }

@@ -390,12 +390,12 @@ export class NamespaceTreeNode extends BaseTreeNode {
 
 export class ImportTreeNode extends BaseTreeNode {
   private importLocation: string;
-  private importAlias: string | null;
+  private importName: string | null;
 
-  constructor(importPath: string, importAlias: string | null = null) {
+  constructor(importPath: string, importName: string | null = null) {
     super(NodeType.Import);
     this.importLocation = importPath;
-    this.importAlias = importAlias === "" ? null : importAlias;
+    this.importName = importName === "" ? null : importName;
   }
 
   getChildren(): BaseTreeNode[] {
@@ -403,7 +403,7 @@ export class ImportTreeNode extends BaseTreeNode {
   }
 
   debugDump(): string {
-    const aliasString = this.importAlias ? this.importAlias + " " : "";
+    const aliasString = this.importName ? this.importName + " " : "";
     return "Import: " + aliasString + this.importLocation;
   }
 
@@ -411,7 +411,7 @@ export class ImportTreeNode extends BaseTreeNode {
     return this.importLocation;
   }
 
-  get ImportAlias(): string | null {
-    return this.importAlias;
+  get ImportName(): string | null {
+    return this.importName;
   }
 }
