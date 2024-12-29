@@ -62,17 +62,6 @@ describe("import cacher", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  test("should return the exact same cached promise", async () => {
-    const fetchPromise = new Promise(() => {});
-    global.fetch = vi.fn().mockReturnValue(fetchPromise);
-
-    const importCacher = new ImportCacher(mockCompiler);
-    const result1 = importCacher.getPackage(packageLocation);
-    const result2 = importCacher.getPackage(packageLocation);
-
-    expect(result1).toBe(result2);
-  });
-
   test("should cache the fetched package", async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,

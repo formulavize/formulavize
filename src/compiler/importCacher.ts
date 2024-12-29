@@ -1,9 +1,10 @@
 import { FIZ_FILE_EXTENSION } from "./constants";
 import { Dag } from "./dag";
 import { Compiler } from "./driver";
+import { Compilation } from "./compilation";
 
 interface PackageCache {
-  [key: string]: Promise<Dag>;
+  [key: string]: Promise<Compilation>;
 }
 
 export class ImportCacher {
@@ -15,10 +16,10 @@ export class ImportCacher {
     this.compiler = compiler;
   }
 
-  private async compilePackageSourceToDag(
+  private async compilePackageSource(
     source: string,
     seenImports: Set<string>,
-  ): Promise<Dag> {
+  ): Promise<Compilation> {
     const sourceGen = Compiler.sourceFromSource;
     const parser = Compiler.parseFromSource;
     const compilation = await this.compiler.compile(
@@ -27,13 +28,13 @@ export class ImportCacher {
       parser,
       seenImports,
     );
-    return compilation.DAG;
+    return compilation;
   }
 
   private async makePackagePromise(
     packageLocation: string,
     seenImports: Set<string>,
-  ): Promise<Dag> {
+  ): Promise<Compilation> {
     return fetch(packageLocation)
       .then((response) => {
         if (!response.ok) {
@@ -46,7 +47,7 @@ export class ImportCacher {
         return response.text();
       })
       .then((source) => {
-        return this.compilePackageSourceToDag(source, seenImports);
+        return this.compilePackageSource(source, seenImports);
       });
   }
 
@@ -62,7 +63,11 @@ export class ImportCacher {
     // Assumes packageLocation uniquely identifies a package
     // versioning is currently the responsibility of the package implementer
     // to put in the packageLocation (e.g. packageLocation = "pkg-1.0.0.fiz")
-    if (packageLocation in this.cache) return this.cache[packageLocation];
+    if (packageLocation in this.cache) {
+      return this.cache[packageLocation].then((compilation) => {
+        return compilation.DAG;
+      });
+    }
 
     // The suffix is usually the last thing users input
     // so this check only allows a fetch attempt with the complete location.
@@ -82,7 +87,9 @@ export class ImportCacher {
       newSeenImports,
     );
     this.cache[packageLocation] = packagePromise;
-    return packagePromise;
+    return packagePromise.then((compilation) => {
+      return compilation.DAG;
+    });
   }
 
   clearCache(): void {
