@@ -30,10 +30,11 @@ export namespace Compiler {
       input: I,
       sourceGen: SourceGen<I>,
       parse: Parse<I>,
+      seenImports: Set<string> = new Set(),
     ): Promise<Compilation> {
       const source = sourceGen(input);
       const ast = parse(input);
-      const dag = await makeDag(ast, this.importCacher);
+      const dag = await makeDag(ast, this.importCacher, seenImports);
       return new Compilation(source, ast, dag);
     }
   }

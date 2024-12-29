@@ -105,9 +105,16 @@ async function processNamespace(
   namespaceStmt: NamespaceTreeNode,
   workingDag: Dag,
   importer: ImportCacher,
+  seenImports: Set<string>,
 ): Promise<NodeId> {
   const subDagId = uuidv4();
-  const childDag = makeSubDag(subDagId, namespaceStmt, importer, workingDag);
+  const childDag = makeSubDag(
+    subDagId,
+    namespaceStmt,
+    importer,
+    seenImports,
+    workingDag,
+  );
   workingDag.addChildDag(await childDag);
 
   const dagIncomingEdges = argListToEdgeInfo(namespaceStmt.ArgList, workingDag);
@@ -119,23 +126,27 @@ async function processNamespace(
 async function getImportedDag(
   importStmt: ImportTreeNode,
   importer: ImportCacher,
+  seenImports: Set<string>,
 ): Promise<Dag> {
   // Imports are processed sequentially to ensure order is respected.
   // Hoisting and parallelizing would be faster, but could result in
   // incorrect behavior if the order of imports matters.
-  return importer.getPackage(importStmt.ImportLocation).catch((err) => {
-    console.warn("Import failed: ", err);
-    return Promise.reject(`Import Failure: ${err}`);
-  });
+  return importer
+    .getPackage(importStmt.ImportLocation, seenImports)
+    .catch((err) => {
+      console.warn("Import failed: ", err);
+      return Promise.reject(`Import Failure: ${err}`);
+    });
 }
 
 async function processImport(
   importStmt: ImportTreeNode,
   workingDag: Dag,
   importer: ImportCacher,
+  seenImports: Set<string>,
 ): Promise<NodeId> {
   // Process imports referenced by a variable, always returning a node id
-  const importedDag = await getImportedDag(importStmt, importer);
+  const importedDag = await getImportedDag(importStmt, importer, seenImports);
   importedDag.Id = uuidv4();
   importedDag.Name = importStmt.ImportName ?? "";
   workingDag.addChildDag(importedDag);
@@ -146,9 +157,10 @@ async function processUnassignedImport(
   importStmt: ImportTreeNode,
   workingDag: Dag,
   importer: ImportCacher,
+  seenImports: Set<string>,
 ) {
   // Process imports not referenced by a variable
-  const importedDag = await getImportedDag(importStmt, importer);
+  const importedDag = await getImportedDag(importStmt, importer, seenImports);
   if (importStmt.ImportName) {
     importedDag.Id = uuidv4();
     importedDag.Name = importStmt.ImportName;
@@ -168,6 +180,7 @@ async function processAssignmentRhs(
   rhsNode: CallTreeNode | NamespaceTreeNode | ImportTreeNode,
   workingDag: Dag,
   importer: ImportCacher,
+  seenImports: Set<string>,
 ): Promise<NodeId> {
   return match(rhsNode.Type)
     .with(NodeType.Call, () => {
@@ -178,10 +191,16 @@ async function processAssignmentRhs(
         rhsNode as NamespaceTreeNode,
         workingDag,
         importer,
+        seenImports,
       );
     })
     .with(NodeType.Import, async () => {
-      return processImport(rhsNode as ImportTreeNode, workingDag, importer);
+      return processImport(
+        rhsNode as ImportTreeNode,
+        workingDag,
+        importer,
+        seenImports,
+      );
     })
     .otherwise(() => {
       console.error("Unknown node type ", rhsNode.Type);
@@ -193,6 +212,7 @@ export async function makeSubDag(
   dagId: DagId,
   dagNamespaceStmt: NamespaceTreeNode,
   importer: ImportCacher,
+  seenImports: Set<string> = new Set(),
   parentDag?: Dag,
 ): Promise<Dag> {
   const dagStyleTags = dagNamespaceStmt.Styling?.StyleTagList ?? [];
@@ -218,6 +238,7 @@ export async function makeSubDag(
           assignmentStmt.Rhs,
           curLevelDag,
           importer,
+          seenImports,
         ).catch((err) => {
           console.warn("Assignment failed: ", err);
           return null;
@@ -275,15 +296,23 @@ export async function makeSubDag(
       .with(NodeType.QualifiedVariable, () => null)
       .with(NodeType.Namespace, async () => {
         const namespaceStmt = stmt as NamespaceTreeNode;
-        await processNamespace(namespaceStmt, curLevelDag, importer);
+        await processNamespace(
+          namespaceStmt,
+          curLevelDag,
+          importer,
+          seenImports,
+        );
       })
       .with(NodeType.Import, async () => {
         const importStmt = stmt as ImportTreeNode;
-        await processUnassignedImport(importStmt, curLevelDag, importer).catch(
-          (err) => {
-            console.warn(err);
-          },
-        );
+        await processUnassignedImport(
+          importStmt,
+          curLevelDag,
+          importer,
+          seenImports,
+        ).catch((err) => {
+          console.warn(err);
+        });
       })
       .otherwise(() => {
         console.error("Unknown node type ", stmt.Type);
@@ -295,10 +324,12 @@ export async function makeSubDag(
 export function makeDag(
   recipe: RecipeTreeNode,
   importer: ImportCacher,
+  seenImports: Set<string> = new Set(),
 ): Promise<Dag> {
   return makeSubDag(
     uuidv4(),
     new NamespaceTreeNode("", recipe.Statements),
     importer,
+    seenImports,
   );
 }

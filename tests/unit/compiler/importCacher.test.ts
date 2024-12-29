@@ -1,4 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
+import { Dag } from "../../../src/compiler/dag";
 import { ImportCacher } from "../../../src/compiler/importCacher";
 import { Compiler } from "../../../src/compiler/driver";
 import { FIZ_FILE_EXTENSION } from "../../../src/compiler/constants";
@@ -31,6 +32,7 @@ describe("import cacher", () => {
       "package source",
       expect.any(Function),
       expect.any(Function),
+      new Set([packageLocation]),
     );
     expect(result).toEqual(mockDag);
   });
@@ -129,5 +131,103 @@ describe("import cacher", () => {
     await expect(importCacher.getPackage(packageLocation)).rejects.toThrow(
       "Failed to fetch",
     );
+  });
+
+  function makeMockResponse(recipe: string, valid: boolean = true) {
+    return Promise.resolve({
+      ok: valid,
+      text: () => Promise.resolve(recipe),
+    });
+  }
+  async function compileDag(source: string): Promise<Dag> {
+    const compiler = new Compiler.Driver();
+    const sourceGen = Compiler.sourceFromSource;
+    const parser = Compiler.parseFromSource;
+    const compilation = await compiler.compile(source, sourceGen, parser);
+    return compilation.DAG;
+  }
+  test("transitive imports should be cached", async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "a.fiz") {
+        return makeMockResponse(`@ "b.fiz"`);
+      }
+      if (url === "b.fiz") {
+        return makeMockResponse("f()");
+      }
+      return Promise.reject(new Error("Invalid URL"));
+    });
+    const testSource = `@ "a.fiz"`;
+    const dag = await compileDag(testSource);
+    expect(dag.getChildDags()).toHaveLength(0);
+    const nodeList = dag.getNodeList();
+    expect(nodeList).toHaveLength(1);
+    const dagNode = nodeList[0];
+    expect(dagNode.name).toEqual("f");
+
+    expect(global.fetch).toHaveBeenCalledWith("a.fiz");
+    expect(global.fetch).toHaveBeenCalledWith("b.fiz");
+  });
+
+  test("self imports should not cause infinite loop", async () => {
+    global.fetch = vi.fn().mockImplementationOnce((url: string) => {
+      if (url === "a.fiz") {
+        return makeMockResponse(`@ "a.fiz"`);
+      }
+      return Promise.reject(new Error("Invalid URL"));
+    });
+
+    const testSource = `@ "a.fiz"`;
+    const dag = await compileDag(testSource);
+    expect(dag.getChildDags()).toHaveLength(0);
+    expect(dag.getNodeList()).toHaveLength(0);
+
+    expect(global.fetch).toHaveBeenCalledWith("a.fiz");
+  });
+
+  test("circular imports should not cause infinite loop", async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "a.fiz") {
+        return makeMockResponse(`@ "b.fiz"`);
+      }
+      if (url === "b.fiz") {
+        return makeMockResponse(`@ "a.fiz"`);
+      }
+      return Promise.reject(new Error("Invalid URL"));
+    });
+
+    const testSource = `@ "a.fiz"`;
+    const dag = await compileDag(testSource);
+    expect(dag.getChildDags()).toHaveLength(0);
+    expect(dag.getNodeList()).toHaveLength(0);
+
+    expect(global.fetch).toHaveBeenCalledWith("a.fiz");
+    expect(global.fetch).toHaveBeenCalledWith("b.fiz");
+  });
+
+  test("diamond dependency is not considered a circular import", async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "a.fiz") {
+        return makeMockResponse(`x @ "b.fiz"; y @ "c.fiz";`);
+      }
+      if (url === "b.fiz") {
+        return makeMockResponse(`@ "d.fiz"`);
+      }
+      if (url === "c.fiz") {
+        return makeMockResponse(`@ "d.fiz"`);
+      }
+      if (url === "d.fiz") {
+        return makeMockResponse("f()");
+      }
+      return Promise.reject(new Error("Invalid URL"));
+    });
+
+    const testSource = `@ "a.fiz"`;
+    const dag = await compileDag(testSource);
+    expect(dag.getChildDags()).toHaveLength(2);
+
+    expect(global.fetch).toHaveBeenCalledWith("a.fiz");
+    expect(global.fetch).toHaveBeenCalledWith("b.fiz");
+    expect(global.fetch).toHaveBeenCalledWith("c.fiz");
+    expect(global.fetch).toHaveBeenCalledWith("d.fiz");
   });
 });
