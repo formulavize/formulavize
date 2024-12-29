@@ -25,7 +25,7 @@ describe("import cacher", () => {
     });
 
     const importCacher = new ImportCacher(mockCompiler);
-    const result = await importCacher.getPackage(packageLocation);
+    const result = await importCacher.getPackageDag(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledWith(packageLocation);
     expect(mockCompiler.compile).toHaveBeenCalledWith(
@@ -45,7 +45,7 @@ describe("import cacher", () => {
 
     const importCacher = new ImportCacher(mockCompiler);
     await expect(
-      importCacher.getPackage(invalidPackageLocation),
+      importCacher.getPackageDag(invalidPackageLocation),
     ).rejects.toThrow(
       `Failed to fetch package from '${invalidPackageLocation}'`,
     );
@@ -55,7 +55,7 @@ describe("import cacher", () => {
   test("should return error for a non-fiz package location", async () => {
     const importCacher = new ImportCacher(mockCompiler);
     await expect(
-      importCacher.getPackage(nonFizPackageLocation),
+      importCacher.getPackageDag(nonFizPackageLocation),
     ).rejects.toThrow(
       `Package '${nonFizPackageLocation}' missing file extension ${FIZ_FILE_EXTENSION}`,
     );
@@ -69,13 +69,13 @@ describe("import cacher", () => {
     });
 
     const importCacher = new ImportCacher(mockCompiler);
-    await importCacher.getPackage(packageLocation);
-    const result = await importCacher.getPackage(packageLocation);
+    await importCacher.getPackageDag(packageLocation);
+    const result = await importCacher.getPackageDag(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(result).toEqual(mockDag);
 
-    const cachedResult = await importCacher.getPackage(packageLocation);
+    const cachedResult = await importCacher.getPackageDag(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
     expect(cachedResult).toEqual(mockDag);
@@ -94,9 +94,9 @@ describe("import cacher", () => {
       });
 
     const importCacher = new ImportCacher(mockCompiler);
-    await importCacher.getPackage(packageLocation);
+    await importCacher.getPackageDag(packageLocation);
     importCacher.clearCache();
-    await importCacher.getPackage(packageLocation);
+    await importCacher.getPackageDag(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
@@ -108,7 +108,7 @@ describe("import cacher", () => {
     });
     const importCacher = new ImportCacher(mockCompiler);
 
-    await expect(importCacher.getPackage(packageLocation)).rejects.toThrow(
+    await expect(importCacher.getPackageDag(packageLocation)).rejects.toThrow(
       "Failed to fetch package from 'test-package.fiz': Not Found",
     );
   });
@@ -117,7 +117,7 @@ describe("import cacher", () => {
     global.fetch = vi.fn().mockRejectedValueOnce(new Error("Failed to fetch"));
     const importCacher = new ImportCacher(mockCompiler);
 
-    await expect(importCacher.getPackage(packageLocation)).rejects.toThrow(
+    await expect(importCacher.getPackageDag(packageLocation)).rejects.toThrow(
       "Failed to fetch",
     );
   });

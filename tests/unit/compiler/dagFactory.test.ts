@@ -627,7 +627,7 @@ describe("import tests", () => {
     styleProperties: new Map(),
   });
   const mockImporter = {
-    getPackage: async () => importedDag,
+    getPackageDag: async () => importedDag,
   } as unknown as ImportCacher;
 
   test("imported anonymous namespace", async () => {
@@ -687,7 +687,7 @@ describe("import tests", () => {
   });
 
   const mockImporterError = {
-    getPackage: async () => {
+    getPackageDag: async () => {
       throw new Error("import error");
     },
   } as unknown as ImportCacher;

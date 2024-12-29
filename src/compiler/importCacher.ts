@@ -51,10 +51,10 @@ export class ImportCacher {
       });
   }
 
-  getPackage(
+  private getPackage(
     packageLocation: string,
     seenImports: Set<string> = new Set(),
-  ): Promise<Dag> {
+  ): Promise<Compilation> {
     // Prevent circular imports
     if (seenImports.has(packageLocation)) {
       return Promise.reject(`Circular import detected: ${packageLocation}`);
@@ -63,11 +63,7 @@ export class ImportCacher {
     // Assumes packageLocation uniquely identifies a package
     // versioning is currently the responsibility of the package implementer
     // to put in the packageLocation (e.g. packageLocation = "pkg-1.0.0.fiz")
-    if (packageLocation in this.cache) {
-      return this.cache[packageLocation].then((compilation) => {
-        return compilation.DAG;
-      });
-    }
+    if (packageLocation in this.cache) return this.cache[packageLocation];
 
     // The suffix is usually the last thing users input
     // so this check only allows a fetch attempt with the complete location.
@@ -87,9 +83,15 @@ export class ImportCacher {
       newSeenImports,
     );
     this.cache[packageLocation] = packagePromise;
-    return packagePromise.then((compilation) => {
-      return compilation.DAG;
-    });
+    return packagePromise;
+  }
+
+  async getPackageDag(
+    packageLocation: string,
+    seenImports: Set<string> = new Set(),
+  ): Promise<Dag> {
+    const compilation = await this.getPackage(packageLocation, seenImports);
+    return compilation.DAG;
   }
 
   clearCache(): void {

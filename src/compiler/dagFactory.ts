@@ -132,7 +132,7 @@ async function getImportedDag(
   // Hoisting and parallelizing would be faster, but could result in
   // incorrect behavior if the order of imports matters.
   return importer
-    .getPackage(importStmt.ImportLocation, seenImports)
+    .getPackageDag(importStmt.ImportLocation, seenImports)
     .catch((err) => {
       console.warn("Import failed: ", err);
       return Promise.reject(`Import Failure: ${err}`);
