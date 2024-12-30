@@ -121,20 +121,31 @@ describe("import cacher", () => {
       "Failed to fetch",
     );
   });
+});
 
-  function makeMockResponse(recipe: string, valid: boolean = true) {
-    return Promise.resolve({
-      ok: valid,
-      text: () => Promise.resolve(recipe),
-    });
-  }
-  async function compileDag(source: string): Promise<Dag> {
-    const compiler = new Compiler.Driver();
-    const sourceGen = Compiler.sourceFromSource;
-    const parser = Compiler.parseFromSource;
-    const compilation = await compiler.compile(source, sourceGen, parser);
-    return compilation.DAG;
-  }
+function makeMockResponse(recipe: string, valid: boolean = true) {
+  return Promise.resolve({
+    ok: valid,
+    text: () => Promise.resolve(recipe),
+  });
+}
+
+async function compileDag(
+  source: string,
+  compiler: Compiler.Driver,
+): Promise<Dag> {
+  const sourceGen = Compiler.sourceFromSource;
+  const parser = Compiler.parseFromSource;
+  const compilation = await compiler.compile(source, sourceGen, parser);
+  return compilation.DAG;
+}
+
+async function compileDagOnce(source: string): Promise<Dag> {
+  const compiler = new Compiler.Driver();
+  return compileDag(source, compiler);
+}
+
+describe("transitive imports", () => {
   test("transitive imports should be cached", async () => {
     global.fetch = vi.fn().mockImplementation((url: string) => {
       if (url === "a.fiz") {
@@ -146,7 +157,7 @@ describe("import cacher", () => {
       return Promise.reject(new Error("Invalid URL"));
     });
     const testSource = `@ "a.fiz"`;
-    const dag = await compileDag(testSource);
+    const dag = await compileDagOnce(testSource);
     expect(dag.getChildDags()).toHaveLength(0);
     const nodeList = dag.getNodeList();
     expect(nodeList).toHaveLength(1);
@@ -166,7 +177,7 @@ describe("import cacher", () => {
     });
 
     const testSource = `@ "a.fiz"`;
-    const dag = await compileDag(testSource);
+    const dag = await compileDagOnce(testSource);
     expect(dag.getChildDags()).toHaveLength(0);
     expect(dag.getNodeList()).toHaveLength(0);
 
@@ -185,7 +196,7 @@ describe("import cacher", () => {
     });
 
     const testSource = `@ "a.fiz"`;
-    const dag = await compileDag(testSource);
+    const dag = await compileDagOnce(testSource);
     expect(dag.getChildDags()).toHaveLength(0);
     expect(dag.getNodeList()).toHaveLength(0);
 
@@ -211,12 +222,79 @@ describe("import cacher", () => {
     });
 
     const testSource = `@ "a.fiz"`;
-    const dag = await compileDag(testSource);
+    const dag = await compileDagOnce(testSource);
     expect(dag.getChildDags()).toHaveLength(2);
 
     expect(global.fetch).toHaveBeenCalledWith("a.fiz");
     expect(global.fetch).toHaveBeenCalledWith("b.fiz");
     expect(global.fetch).toHaveBeenCalledWith("c.fiz");
     expect(global.fetch).toHaveBeenCalledWith("d.fiz");
+  });
+});
+
+describe("dependency analysis utilities", () => {
+  test("empty package location", async () => {
+    const compiler = new Compiler.Driver();
+    const importTree = await compiler.ImportCacher.getDependencyTree("");
+    expect(importTree).toEqual(new Map());
+  });
+  test("transitive imports", async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "a.fiz") {
+        return makeMockResponse(`@ "b.fiz"`);
+      }
+      if (url === "b.fiz") {
+        return makeMockResponse("f()");
+      }
+      return Promise.reject(new Error("Invalid URL"));
+    });
+    const compiler = new Compiler.Driver();
+    const importTree = await compiler.ImportCacher.getDependencyTree("a.fiz");
+    expect(importTree).toEqual(
+      new Map([
+        ["a.fiz", new Set(["b.fiz"])],
+        ["b.fiz", new Set()],
+      ]),
+    );
+  });
+  test("circular imports", async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "a.fiz") {
+        return makeMockResponse(`@ "b.fiz"`);
+      }
+      if (url === "b.fiz") {
+        return makeMockResponse(`@ "a.fiz"`);
+      }
+      return Promise.reject(new Error("Invalid URL"));
+    });
+    const compiler = new Compiler.Driver();
+    const importTree = await compiler.ImportCacher.getDependencyTree("a.fiz");
+    expect(importTree).toEqual(
+      new Map([
+        ["a.fiz", new Set(["b.fiz"])],
+        ["b.fiz", new Set(["a.fiz"])],
+      ]),
+    );
+  });
+  test("flattened diamond dependencies", async () => {
+    global.fetch = vi.fn().mockImplementation((url: string) => {
+      if (url === "a.fiz") {
+        return makeMockResponse(`x @ "b.fiz"; y @ "c.fiz";`);
+      }
+      if (url === "b.fiz") {
+        return makeMockResponse(`@ "d.fiz"`);
+      }
+      if (url === "c.fiz") {
+        return makeMockResponse(`@ "d.fiz"`);
+      }
+      if (url === "d.fiz") {
+        return makeMockResponse("f()");
+      }
+      return Promise.reject(new Error("Invalid URL"));
+    });
+    const compiler = new Compiler.Driver();
+    const importer = compiler.ImportCacher;
+    const importSet = await importer.getFlatDependencyList("a.fiz");
+    expect(importSet).toEqual(new Set(["b.fiz", "c.fiz", "d.fiz"]));
   });
 });

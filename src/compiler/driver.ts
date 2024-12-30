@@ -26,6 +26,10 @@ export namespace Compiler {
       this.importCacher = new ImportCacher(this);
     }
 
+    get ImportCacher(): ImportCacher {
+      return this.importCacher;
+    }
+
     async compile<I>(
       input: I,
       sourceGen: SourceGen<I>,

@@ -2,6 +2,7 @@ import { FIZ_FILE_EXTENSION } from "./constants";
 import { Dag } from "./dag";
 import { Compiler } from "./driver";
 import { Compilation } from "./compilation";
+import { getImportsFromRecipe } from "./astUtility";
 
 interface PackageCache {
   [key: string]: Promise<Compilation>;
@@ -96,5 +97,41 @@ export class ImportCacher {
 
   clearCache(): void {
     this.cache = {};
+  }
+
+  async getDependencyTree(
+    startingPackage: string,
+    seenImports: Set<string> = new Set(),
+  ): Promise<Map<string, Set<string>>> {
+    // Create a map of package locations to their imports for debugging
+    if (seenImports.has(startingPackage)) {
+      return new Map();
+    }
+    const compilation = await this.getPackage(
+      startingPackage,
+      seenImports,
+    ).catch(() => {
+      return null;
+    });
+    if (!compilation) return new Map();
+    const imports = getImportsFromRecipe(compilation.AST);
+    const result = new Map<string, Set<string>>([[startingPackage, imports]]);
+    for (const imp of imports) {
+      const newSeenImports = new Set([...seenImports, startingPackage]);
+      const subTree = await this.getDependencyTree(imp, newSeenImports);
+      for (const [key, value] of subTree) {
+        result.set(key, value);
+      }
+    }
+    return result;
+  }
+
+  async getFlatDependencyList(startingPackage: string): Promise<Set<string>> {
+    const dependencyTree = await this.getDependencyTree(startingPackage);
+    const dependencySetsList = Array.from(dependencyTree.values());
+    const dependencyLists = dependencySetsList.map((depSet) =>
+      Array.from(depSet),
+    );
+    return new Set(dependencyLists.flat());
   }
 }
