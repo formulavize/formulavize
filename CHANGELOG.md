@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.1.0](https://github.com/formulavize/formulavize/compare/v1.0.0...v1.1.0) (2024-12-30)
+
+
+### Features
+
+* allow import assignment ([c6a966e](https://github.com/formulavize/formulavize/commit/c6a966e28b7eaf69ee6944c428cc91c5d68d36a7))
+* **astToDag:** add import statements ([e3d1216](https://github.com/formulavize/formulavize/commit/e3d121642c029b5c19a75ee8bdd07778e0ba56b6))
+* **dag:** add used imports to dag dump ([fc3dc5f](https://github.com/formulavize/formulavize/commit/fc3dc5fcc031aa293db869c62c9166ba900344f7))
+* **importer:** add import traverser for debugging ([bffd5b0](https://github.com/formulavize/formulavize/commit/bffd5b0228b010810f8ff661aa33cccddd41daf3))
+
+
+### Bug Fixes
+
+* **astToDag:** imports are processed sequentially ([3d9d668](https://github.com/formulavize/formulavize/commit/3d9d66843af63a257d93cd73b8903a90b384fd9b))
+* **editorToAst:** long parse trees no longer prematurely truncated ([c73947f](https://github.com/formulavize/formulavize/commit/c73947f4486d232c15580805bc7d89f8ddf72d72))
+* **importer:** protect against circular imports ([265ed23](https://github.com/formulavize/formulavize/commit/265ed23ba908f59e06a113aff621c658ac6d0e99))
+
 ## 1.0.0 (2024-11-12)
 
 
