@@ -171,6 +171,7 @@ describe("transitive imports", () => {
     const dagNode = nodeList[0];
     expect(dagNode.name).toEqual("f");
 
+    expect(dag.UsedImports).toEqual(new Set(["a.fiz", "b.fiz"]));
     expect(global.fetch).toHaveBeenCalledWith("a.fiz");
     expect(global.fetch).toHaveBeenCalledWith("b.fiz");
   });
@@ -187,6 +188,7 @@ describe("transitive imports", () => {
     expect(dag.getChildDags()).toHaveLength(0);
     expect(dag.getNodeList()).toHaveLength(0);
 
+    expect(dag.UsedImports).toEqual(new Set(["a.fiz"]));
     expect(global.fetch).toHaveBeenCalledWith("a.fiz");
   });
 
@@ -205,6 +207,7 @@ describe("transitive imports", () => {
     expect(dag.getChildDags()).toHaveLength(0);
     expect(dag.getNodeList()).toHaveLength(0);
 
+    expect(dag.UsedImports).toEqual(new Set(["a.fiz", "b.fiz"]));
     expect(global.fetch).toHaveBeenCalledWith("a.fiz");
     expect(global.fetch).toHaveBeenCalledWith("b.fiz");
   });
@@ -225,6 +228,7 @@ describe("transitive imports", () => {
     const dag = await compileDagOnce(testSource);
     expect(dag.getChildDags()).toHaveLength(2);
 
+    expect(dag.UsedImports).toEqual(new Set(["a.fiz", "b.fiz", "c.fiz"]));
     expect(global.fetch).toHaveBeenCalledWith("a.fiz");
     expect(global.fetch).toHaveBeenCalledWith("b.fiz");
     expect(global.fetch).toHaveBeenCalledWith("c.fiz");
