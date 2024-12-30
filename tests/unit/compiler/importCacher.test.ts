@@ -130,6 +130,14 @@ function makeMockResponse(recipe: string, valid: boolean = true) {
   });
 }
 
+function makeMockFetchImpl(urlToSrc: Map<string, string>) {
+  return (url: string) => {
+    const source = urlToSrc.get(url);
+    if (source) return makeMockResponse(source);
+    return Promise.reject(new Error("Invalid URL"));
+  };
+}
+
 async function compileDag(
   source: string,
   compiler: Compiler.Driver,
@@ -147,15 +155,14 @@ async function compileDagOnce(source: string): Promise<Dag> {
 
 describe("transitive imports", () => {
   test("transitive imports should be cached", async () => {
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === "a.fiz") {
-        return makeMockResponse(`@ "b.fiz"`);
-      }
-      if (url === "b.fiz") {
-        return makeMockResponse("f()");
-      }
-      return Promise.reject(new Error("Invalid URL"));
-    });
+    global.fetch = vi.fn().mockImplementation(
+      makeMockFetchImpl(
+        new Map([
+          ["a.fiz", `@ "b.fiz"`],
+          ["b.fiz", "f()"],
+        ]),
+      ),
+    );
     const testSource = `@ "a.fiz"`;
     const dag = await compileDagOnce(testSource);
     expect(dag.getChildDags()).toHaveLength(0);
@@ -169,12 +176,11 @@ describe("transitive imports", () => {
   });
 
   test("self imports should not cause infinite loop", async () => {
-    global.fetch = vi.fn().mockImplementationOnce((url: string) => {
-      if (url === "a.fiz") {
-        return makeMockResponse(`@ "a.fiz"`);
-      }
-      return Promise.reject(new Error("Invalid URL"));
-    });
+    global.fetch = vi
+      .fn()
+      .mockImplementationOnce(
+        makeMockFetchImpl(new Map([["a.fiz", `@ "a.fiz"`]])),
+      );
 
     const testSource = `@ "a.fiz"`;
     const dag = await compileDagOnce(testSource);
@@ -185,15 +191,14 @@ describe("transitive imports", () => {
   });
 
   test("circular imports should not cause infinite loop", async () => {
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === "a.fiz") {
-        return makeMockResponse(`@ "b.fiz"`);
-      }
-      if (url === "b.fiz") {
-        return makeMockResponse(`@ "a.fiz"`);
-      }
-      return Promise.reject(new Error("Invalid URL"));
-    });
+    global.fetch = vi.fn().mockImplementation(
+      makeMockFetchImpl(
+        new Map([
+          ["a.fiz", `@ "b.fiz"`],
+          ["b.fiz", `@ "a.fiz"`],
+        ]),
+      ),
+    );
 
     const testSource = `@ "a.fiz"`;
     const dag = await compileDagOnce(testSource);
@@ -205,21 +210,16 @@ describe("transitive imports", () => {
   });
 
   test("diamond dependency is not considered a circular import", async () => {
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === "a.fiz") {
-        return makeMockResponse(`x @ "b.fiz"; y @ "c.fiz";`);
-      }
-      if (url === "b.fiz") {
-        return makeMockResponse(`@ "d.fiz"`);
-      }
-      if (url === "c.fiz") {
-        return makeMockResponse(`@ "d.fiz"`);
-      }
-      if (url === "d.fiz") {
-        return makeMockResponse("f()");
-      }
-      return Promise.reject(new Error("Invalid URL"));
-    });
+    global.fetch = vi.fn().mockImplementation(
+      makeMockFetchImpl(
+        new Map([
+          ["a.fiz", `x @ "b.fiz"; y @ "c.fiz";`],
+          ["b.fiz", `@ "d.fiz"`],
+          ["c.fiz", `@ "d.fiz"`],
+          ["d.fiz", "f()"],
+        ]),
+      ),
+    );
 
     const testSource = `@ "a.fiz"`;
     const dag = await compileDagOnce(testSource);
@@ -239,15 +239,14 @@ describe("dependency analysis utilities", () => {
     expect(importTree).toEqual(new Map());
   });
   test("transitive imports", async () => {
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === "a.fiz") {
-        return makeMockResponse(`@ "b.fiz"`);
-      }
-      if (url === "b.fiz") {
-        return makeMockResponse("f()");
-      }
-      return Promise.reject(new Error("Invalid URL"));
-    });
+    global.fetch = vi.fn().mockImplementation(
+      makeMockFetchImpl(
+        new Map([
+          ["a.fiz", `@ "b.fiz"`],
+          ["b.fiz", "f()"],
+        ]),
+      ),
+    );
     const compiler = new Compiler.Driver();
     const importTree = await compiler.ImportCacher.getDependencyTree("a.fiz");
     expect(importTree).toEqual(
@@ -258,15 +257,14 @@ describe("dependency analysis utilities", () => {
     );
   });
   test("circular imports", async () => {
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === "a.fiz") {
-        return makeMockResponse(`@ "b.fiz"`);
-      }
-      if (url === "b.fiz") {
-        return makeMockResponse(`@ "a.fiz"`);
-      }
-      return Promise.reject(new Error("Invalid URL"));
-    });
+    global.fetch = vi.fn().mockImplementation(
+      makeMockFetchImpl(
+        new Map([
+          ["a.fiz", `@ "b.fiz"`],
+          ["b.fiz", `@ "a.fiz"`],
+        ]),
+      ),
+    );
     const compiler = new Compiler.Driver();
     const importTree = await compiler.ImportCacher.getDependencyTree("a.fiz");
     expect(importTree).toEqual(
@@ -277,21 +275,16 @@ describe("dependency analysis utilities", () => {
     );
   });
   test("flattened diamond dependencies", async () => {
-    global.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === "a.fiz") {
-        return makeMockResponse(`x @ "b.fiz"; y @ "c.fiz";`);
-      }
-      if (url === "b.fiz") {
-        return makeMockResponse(`@ "d.fiz"`);
-      }
-      if (url === "c.fiz") {
-        return makeMockResponse(`@ "d.fiz"`);
-      }
-      if (url === "d.fiz") {
-        return makeMockResponse("f()");
-      }
-      return Promise.reject(new Error("Invalid URL"));
-    });
+    global.fetch = vi.fn().mockImplementation(
+      makeMockFetchImpl(
+        new Map([
+          ["a.fiz", `x @ "b.fiz"; y @ "c.fiz";`],
+          ["b.fiz", `@ "d.fiz"`],
+          ["c.fiz", `@ "d.fiz"`],
+          ["d.fiz", "f()"],
+        ]),
+      ),
+    );
     const compiler = new Compiler.Driver();
     const importer = compiler.ImportCacher;
     const importSet = await importer.getFlatDependencyList("a.fiz");
