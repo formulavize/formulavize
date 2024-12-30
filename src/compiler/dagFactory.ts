@@ -126,11 +126,13 @@ async function processNamespace(
 async function getImportedDag(
   importStmt: ImportTreeNode,
   importer: ImportCacher,
+  workingDag: Dag,
   seenImports: Set<string>,
 ): Promise<Dag> {
   // Imports are processed sequentially to ensure order is respected.
   // Hoisting and parallelizing would be faster, but could result in
   // incorrect behavior if the order of imports matters.
+  workingDag.addUsedImport(importStmt.ImportLocation);
   return importer
     .getPackageDag(importStmt.ImportLocation, seenImports)
     .catch((err) => {
@@ -146,7 +148,12 @@ async function processImport(
   seenImports: Set<string>,
 ): Promise<NodeId> {
   // Process imports referenced by a variable, always returning a node id
-  const importedDag = await getImportedDag(importStmt, importer, seenImports);
+  const importedDag = await getImportedDag(
+    importStmt,
+    importer,
+    workingDag,
+    seenImports,
+  );
   importedDag.Id = uuidv4();
   importedDag.Name = importStmt.ImportName ?? "";
   workingDag.addChildDag(importedDag);
@@ -160,7 +167,12 @@ async function processUnassignedImport(
   seenImports: Set<string>,
 ) {
   // Process imports not referenced by a variable
-  const importedDag = await getImportedDag(importStmt, importer, seenImports);
+  const importedDag = await getImportedDag(
+    importStmt,
+    importer,
+    workingDag,
+    seenImports,
+  );
   if (importStmt.ImportName) {
     importedDag.Id = uuidv4();
     importedDag.Name = importStmt.ImportName;

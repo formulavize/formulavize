@@ -42,6 +42,7 @@ export class Dag {
   private dagLineagePath: string;
   private dagStyleTags: StyleTag[];
   private dagStyleProperties: StyleProperties;
+  private usedImports: Set<string>;
 
   constructor(
     id: DagId,
@@ -68,6 +69,7 @@ export class Dag {
     }
     this.lineagePath = this.getLineagePath();
     this.dagLineagePath = this.getDagLineagePath();
+    this.usedImports = new Set();
   }
 
   addNode(node: DagNode): void {
@@ -88,6 +90,10 @@ export class Dag {
       this.namespaceNameToDagId.set(childDag.name, childDag.id);
     }
     childDag.Parent = this;
+  }
+
+  addUsedImport(usedImport: string): void {
+    this.usedImports.add(usedImport);
   }
 
   private resolveFromMember<K extends keyof Dag, V>(
@@ -242,6 +248,10 @@ export class Dag {
     return this.dagLineagePath;
   }
 
+  get UsedImports(): Set<string> {
+    return this.usedImports;
+  }
+
   getNodeList(): DagNode[] {
     return Array.from(this.nodeMap.values());
   }
@@ -338,6 +348,9 @@ export class Dag {
     dag.getChildDags().forEach((childDag) => {
       this.addChildDag(childDag);
     });
+    dag.UsedImports.forEach((usedImport) => {
+      this.addUsedImport(usedImport);
+    });
   }
 
   debugDumpDag(level: number = 0): string {
@@ -361,6 +374,9 @@ export class Dag {
     }
 
     let result = leftPad + "Dag: " + this.name + "\n";
+    this.UsedImports.forEach((usedImport) => {
+      result += childLeftPad + "Import: " + usedImport + "\n";
+    });
     this.nodeMap.forEach((node) => {
       result +=
         childLeftPad +
