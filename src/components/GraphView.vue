@@ -6,14 +6,18 @@
 import { defineComponent } from "vue";
 import cytoscape from "cytoscape";
 import dagre from "cytoscape-dagre";
-import popper from "cytoscape-popper";
+import cytoscapePopper from "cytoscape-popper";
+import { createPopper } from "@popperjs/core";
 import { makeCyElements } from "../compiler/cyGraphFactory";
 import { makeCyStylesheets } from "../compiler/cyStyleSheetsFactory";
 import { extendCyPopperElements } from "../compiler/cyPopperExtender";
 import { Dag } from "../compiler/dag";
 
 cytoscape.use(dagre);
-cytoscape.use(popper);
+// TODO: Switch popper to floating-ui or tippy
+// https://github.com/cytoscape/cytoscape.js-popper?tab=readme-ov-file#usage-with-popperjs-deprecated
+// @ts-ignore
+cytoscape.use(cytoscapePopper(createPopper));
 
 export default defineComponent({
   name: "GraphView",
