@@ -26,15 +26,15 @@ importers:
       '@codemirror/view':
         specifier: ^6.36.1
         version: 6.36.1
+      '@floating-ui/dom':
+        specifier: ^1.6.12
+        version: 1.6.12
       '@formulavize/lang-fiz':
         specifier: ^0.3.3
         version: 0.3.3
       '@lezer/common':
         specifier: ^1.2.3
         version: 1.2.3
-      '@popperjs/core':
-        specifier: ^2.11.8
-        version: 2.11.8
       cytoscape:
         specifier: ^3.30.4
         version: 3.30.4
@@ -82,9 +82,6 @@ importers:
       '@types/cytoscape-dagre':
         specifier: ^2.3.3
         version: 2.3.3
-      '@types/cytoscape-popper':
-        specifier: ^2.0.4
-        version: 2.0.4
       '@types/lodash':
         specifier: ^4.17.13
         version: 4.17.13
@@ -438,6 +435,15 @@ packages:
     resolution: {integrity: sha512-d9zaMRSTIKDLhctzH12MtXvJKSSUhaHcjV+2Z+GK+EEY7XKpP5yR4x+N3TAcHTcu963nIr+TMcCb4DBCYX1z6Q==}
     engines: {node: ^12.22.0 || ^14.17.0 || >=16.0.0}
 
+  '@floating-ui/core@1.6.8':
+    resolution: {integrity: sha512-7XJ9cPU+yI2QeLS+FCSlqNFZJq8arvswefkZrYI1yQBbftw6FyrZOxYSh+9S7z7TpeWlRt9zJ5IhM1WIL334jA==}
+
+  '@floating-ui/dom@1.6.12':
+    resolution: {integrity: sha512-NP83c0HjokcGVEMeoStg317VD9W7eDlGK7457dMBANbKA6GJZdc7rjujdgqzTaz93jkGgc5P/jeWbaCHnMNc+w==}
+
+  '@floating-ui/utils@0.2.8':
+    resolution: {integrity: sha512-kym7SodPp8/wloecOpcmSnWJsK7M0E5Wg8UcFA+uO4B9s5d0ywXOEro/8HM9x0rW+TljRzul/14UYz3TleT3ig==}
+
   '@formulavize/lang-fiz@0.3.3':
     resolution: {integrity: sha512-IAfL7ljSdawVnZt9HgbGHrJkQAl/82i5lgyfGGo+bLNEmR0CXFyyYvElc5PLsS6I5g+wijYM+Gcyh0w7gbk9Gw==}
     engines: {node: '>=20', pnpm: '>=9'}
@@ -519,9 +525,6 @@ packages:
   '@pkgr/core@0.1.1':
     resolution: {integrity: sha512-cq8o4cWH0ibXh9VGi5P20Tu9XF/0fFXl9EUinr9QfTM7a7p0oTA4iJRCQWppXR1Pg8dSM0UCItCkPwsk9qWWYA==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
-
-  '@popperjs/core@2.11.8':
-    resolution: {integrity: sha512-P1st0aksCrn9sGZhp8GMYwBnQsbvAWsZAX44oXNNvLHGqAOcoVxmjZiohstwQ7SqKnbR47akdNi+uleWD8+g6A==}
 
   '@rollup/rollup-android-arm-eabi@4.29.1':
     resolution: {integrity: sha512-ssKhA8RNltTZLpG6/QNkCSge+7mBQGUqJRisZ2MDQcEGaK93QESEgWK2iOpIDZ7k9zPVkG5AS3ksvD5ZWxmItw==}
@@ -623,9 +626,6 @@ packages:
 
   '@types/cytoscape-dagre@2.3.3':
     resolution: {integrity: sha512-FJBsNMbBZpqNwT6rp5leVYMevWUjnyD1QS8erNMAMWoBifvaVUklXIjE+bllLDSowjM3abXuRvljliSXUU+d1A==}
-
-  '@types/cytoscape-popper@2.0.4':
-    resolution: {integrity: sha512-vGRiAMXeEIoY5ziPO0NrS8xmJyVkT8j8ARzvyD/x6CXciAO1+80Q2/Triyd9/+5I4PeatGo1Pch5YBwDMB1D6A==}
 
   '@types/cytoscape@3.21.8':
     resolution: {integrity: sha512-6Bo9ZDrv0vfwe8Sg/ERc5VL0yU0gYvP4dgZi0fAXYkKHfyHaNqWRMcwYm3mu4sLsXbB8ZuXE75sR7qnaOL5JgQ==}
@@ -2674,6 +2674,17 @@ snapshots:
 
   '@eslint/js@8.57.1': {}
 
+  '@floating-ui/core@1.6.8':
+    dependencies:
+      '@floating-ui/utils': 0.2.8
+
+  '@floating-ui/dom@1.6.12':
+    dependencies:
+      '@floating-ui/core': 1.6.8
+      '@floating-ui/utils': 0.2.8
+
+  '@floating-ui/utils@0.2.8': {}
+
   '@formulavize/lang-fiz@0.3.3':
     dependencies:
       '@codemirror/language': 6.10.8
@@ -2755,8 +2766,6 @@ snapshots:
 
   '@pkgr/core@0.1.1': {}
 
-  '@popperjs/core@2.11.8': {}
-
   '@rollup/rollup-android-arm-eabi@4.29.1':
     optional: true
 
@@ -2820,11 +2829,6 @@ snapshots:
 
   '@types/cytoscape-dagre@2.3.3':
     dependencies:
-      '@types/cytoscape': 3.21.8
-
-  '@types/cytoscape-popper@2.0.4':
-    dependencies:
-      '@popperjs/core': 2.11.8
       '@types/cytoscape': 3.21.8
 
   '@types/cytoscape@3.21.8': {}

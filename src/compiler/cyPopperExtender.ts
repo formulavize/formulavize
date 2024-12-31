@@ -154,6 +154,7 @@ function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
 
   // outer div will receive popper css properties
   const outerDiv = document.createElement("div");
+  outerDiv.style.position = "absolute";
   outerDiv.classList.add(POPPER_OUTER_DIV_CLASS);
   outerDiv.appendChild(innerDiv);
 
