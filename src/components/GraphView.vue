@@ -6,18 +6,53 @@
 import { defineComponent } from "vue";
 import cytoscape from "cytoscape";
 import dagre from "cytoscape-dagre";
-import cytoscapePopper from "cytoscape-popper";
-import { createPopper } from "@popperjs/core";
+import cytoscapePopper, {
+  PopperFactory,
+  PopperInstance,
+  PopperOptions,
+} from "cytoscape-popper";
+import {
+  computePosition,
+  ComputePositionConfig,
+  ReferenceElement,
+  FloatingElement,
+} from "@floating-ui/dom";
 import { makeCyElements } from "../compiler/cyGraphFactory";
 import { makeCyStylesheets } from "../compiler/cyStyleSheetsFactory";
 import { extendCyPopperElements } from "../compiler/cyPopperExtender";
 import { Dag } from "../compiler/dag";
 
+declare module "cytoscape-popper" {
+  interface PopperOptions extends ComputePositionConfig {}
+  interface PopperInstance {
+    update(): void;
+  }
+}
+
+const popperFactory: PopperFactory = (
+  ref: ReferenceElement,
+  content: FloatingElement,
+  opts?: PopperOptions,
+): PopperInstance => {
+  const popperOptions = {
+    // see https://floating-ui.com/docs/computePosition#options
+    ...opts,
+  };
+
+  function update() {
+    computePosition(ref, content, popperOptions).then(({ x, y }) => {
+      Object.assign(content.style, {
+        left: `${x}px`,
+        top: `${y}px`,
+      });
+    });
+  }
+  update();
+  return { update };
+};
+
 cytoscape.use(dagre);
-// TODO: Switch popper to floating-ui or tippy
-// https://github.com/cytoscape/cytoscape.js-popper?tab=readme-ov-file#usage-with-popperjs-deprecated
-// @ts-ignore
-cytoscape.use(cytoscapePopper(createPopper));
+cytoscape.use(cytoscapePopper(popperFactory));
 
 export default defineComponent({
   name: "GraphView",
