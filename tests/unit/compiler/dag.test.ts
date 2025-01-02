@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { Dag } from "../../../src/compiler/dag";
+import { Dag } from "src/compiler/dag";
 
 describe("accessor tests", () => {
   // verify non-trivial accessor behavior

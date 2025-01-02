@@ -1,8 +1,8 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
-import { Dag } from "../../../src/compiler/dag";
-import { ImportCacher } from "../../../src/compiler/importCacher";
-import { Compiler } from "../../../src/compiler/driver";
-import { FIZ_FILE_EXTENSION } from "../../../src/compiler/constants";
+import { Dag } from "src/compiler/dag";
+import { ImportCacher } from "src/compiler/importCacher";
+import { Compiler } from "src/compiler/driver";
+import { FIZ_FILE_EXTENSION } from "src/compiler/constants";
 
 describe("import cacher", () => {
   const mockDag = {};

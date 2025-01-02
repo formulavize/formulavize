@@ -3,8 +3,8 @@ import {
   makeCyNodes,
   makeCyEdges,
   makeCyElements,
-} from "../../../src/compiler/cyGraphFactory";
-import { Dag } from "../../../src/compiler/dag";
+} from "src/compiler/cyGraphFactory";
+import { Dag } from "src/compiler/dag";
 
 describe("makes cytoscape elements", () => {
   test("with two nodes", () => {
