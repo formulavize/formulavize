@@ -11,16 +11,11 @@ import {
   StyleBindingTreeNode as StyleBinding,
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
-} from "../../../src/compiler/ast";
-import { DESCRIPTION_PROPERTY } from "../../../src/compiler/constants";
-import {
-  Dag,
-  StyleTag,
-  StyleProperties,
-  Keyword,
-} from "../../../src/compiler/dag";
-import { makeDag } from "../../../src/compiler/dagFactory";
-import { ImportCacher } from "../../../src/compiler/importCacher";
+} from "src/compiler/ast";
+import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
+import { Dag, StyleTag, StyleProperties, Keyword } from "src/compiler/dag";
+import { makeDag } from "src/compiler/dagFactory";
+import { ImportCacher } from "src/compiler/importCacher";
 
 const dummyImporter = {} as ImportCacher;
 

@@ -1,8 +1,8 @@
 import { describe, test, expect } from "vitest";
 import { EditorState } from "@codemirror/state";
 import { fizLanguage } from "@formulavize/lang-fiz";
-import { CallTreeNode, RecipeTreeNode } from "../../../src/compiler/ast";
-import { Compiler } from "../../../src/compiler/driver";
+import { CallTreeNode, RecipeTreeNode } from "src/compiler/ast";
+import { Compiler } from "src/compiler/driver";
 
 describe("basic compiler driver", () => {
   test("compile from editor state", async () => {

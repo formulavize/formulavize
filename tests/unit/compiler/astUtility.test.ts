@@ -1,12 +1,12 @@
 import { describe, test, expect } from "vitest";
-import { getImportsFromRecipe } from "../../../src/compiler/astUtility";
+import { getImportsFromRecipe } from "src/compiler/astUtility";
 import {
   RecipeTreeNode as Recipe,
   ImportTreeNode as Import,
   AssignmentTreeNode as Assignment,
   LocalVarTreeNode as LocalVariable,
   NamespaceTreeNode as Namespace,
-} from "../../../src/compiler/ast";
+} from "src/compiler/ast";
 
 describe("getImportsFromRecipe", () => {
   test("empty recipe", () => {

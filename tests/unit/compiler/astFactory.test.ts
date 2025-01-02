@@ -1,6 +1,6 @@
 import { describe, test, expect } from "vitest";
-import { parseFromSource } from "../../../src/compiler/driver";
-import { DESCRIPTION_PROPERTY } from "../../../src/compiler/constants";
+import { parseFromSource } from "src/compiler/driver";
+import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
 import {
   RecipeTreeNode as Recipe,
   CallTreeNode as Call,
@@ -14,7 +14,7 @@ import {
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
   BaseTreeNode,
-} from "../../../src/compiler/ast";
+} from "src/compiler/ast";
 
 function makeTree(input: string): BaseTreeNode {
   return parseFromSource(input);

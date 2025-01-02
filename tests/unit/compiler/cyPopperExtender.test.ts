@@ -8,9 +8,9 @@ import {
   DescriptionData,
   SelectorDescriptionPair,
   addCyPopperElementsFromDag,
-} from "../../../src/compiler/cyPopperExtender";
-import { DESCRIPTION_PROPERTY } from "../../../src/compiler/constants";
-import { Dag, StyleProperties } from "../../../src/compiler/dag";
+} from "src/compiler/cyPopperExtender";
+import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
+import { Dag, StyleProperties } from "src/compiler/dag";
 import { Core } from "cytoscape";
 
 function makeDescriptionData(
