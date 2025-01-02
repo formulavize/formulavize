@@ -7,8 +7,8 @@ import { FIZ_FILE_EXTENSION } from "../../../src/compiler/constants";
 describe("import cacher", () => {
   const mockDag = {};
   const mockCompiler = {
-    compile: vi.fn().mockReturnValue({ DAG: mockDag }),
-  } as unknown as Compiler.Driver;
+    compileFromSource: vi.fn().mockReturnValue({ DAG: mockDag }),
+  } as unknown as Compiler;
 
   const packageLocation = `test-package${FIZ_FILE_EXTENSION}`;
   const nonFizPackageLocation = "test-package.txt";
@@ -28,10 +28,8 @@ describe("import cacher", () => {
     const result = await importCacher.getPackageDag(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledWith(packageLocation);
-    expect(mockCompiler.compile).toHaveBeenCalledWith(
+    expect(mockCompiler.compileFromSource).toHaveBeenCalledWith(
       "package source",
-      expect.any(Function),
-      expect.any(Function),
       new Set([packageLocation]),
     );
     expect(result).toEqual(mockDag);
@@ -138,19 +136,10 @@ function makeMockFetchImpl(urlToSrc: Map<string, string>) {
   };
 }
 
-async function compileDag(
-  source: string,
-  compiler: Compiler.Driver,
-): Promise<Dag> {
-  const sourceGen = Compiler.sourceFromSource;
-  const parser = Compiler.parseFromSource;
-  const compilation = await compiler.compile(source, sourceGen, parser);
-  return compilation.DAG;
-}
-
 async function compileDagOnce(source: string): Promise<Dag> {
-  const compiler = new Compiler.Driver();
-  return compileDag(source, compiler);
+  const compiler = new Compiler();
+  const compilation = await compiler.compileFromSource(source);
+  return compilation.DAG;
 }
 
 describe("transitive imports", () => {
@@ -238,7 +227,7 @@ describe("transitive imports", () => {
 
 describe("dependency analysis utilities", () => {
   test("empty package location", async () => {
-    const compiler = new Compiler.Driver();
+    const compiler = new Compiler();
     const importTree = await compiler.ImportCacher.getDependencyTree("");
     expect(importTree).toEqual(new Map());
   });
@@ -251,7 +240,7 @@ describe("dependency analysis utilities", () => {
         ]),
       ),
     );
-    const compiler = new Compiler.Driver();
+    const compiler = new Compiler();
     const importTree = await compiler.ImportCacher.getDependencyTree("a.fiz");
     expect(importTree).toEqual(
       new Map([
@@ -269,7 +258,7 @@ describe("dependency analysis utilities", () => {
         ]),
       ),
     );
-    const compiler = new Compiler.Driver();
+    const compiler = new Compiler();
     const importTree = await compiler.ImportCacher.getDependencyTree("a.fiz");
     expect(importTree).toEqual(
       new Map([
@@ -289,7 +278,7 @@ describe("dependency analysis utilities", () => {
         ]),
       ),
     );
-    const compiler = new Compiler.Driver();
+    const compiler = new Compiler();
     const importer = compiler.ImportCacher;
     const importSet = await importer.getFlatDependencyList("a.fiz");
     expect(importSet).toEqual(new Set(["b.fiz", "c.fiz", "d.fiz"]));

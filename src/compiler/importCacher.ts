@@ -10,9 +10,9 @@ interface PackageCache {
 
 export class ImportCacher {
   private cache: PackageCache;
-  private compiler: Compiler.Driver;
+  private compiler: Compiler;
 
-  constructor(compiler: Compiler.Driver) {
+  constructor(compiler: Compiler) {
     this.cache = {};
     this.compiler = compiler;
   }
@@ -21,12 +21,8 @@ export class ImportCacher {
     source: string,
     seenImports: Set<string>,
   ): Promise<Compilation> {
-    const sourceGen = Compiler.sourceFromSource;
-    const parser = Compiler.parseFromSource;
-    const compilation = await this.compiler.compile(
+    const compilation = await this.compiler.compileFromSource(
       source,
-      sourceGen,
-      parser,
       seenImports,
     );
     return compilation;
