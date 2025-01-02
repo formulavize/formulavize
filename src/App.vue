@@ -63,7 +63,7 @@ export default defineComponent({
     return {
       debugMode: true,
       editorDebounceDelay: 300, // ms
-      compiler: new Compiler.Driver(),
+      compiler: new Compiler(),
       curEditorState: EditorState.create(),
       curAst: new RecipeTreeNode(),
       curDag: new Dag(""),
@@ -71,11 +71,8 @@ export default defineComponent({
   },
   watch: {
     async curEditorState(newEditorState: EditorState) {
-      const curCompilation = await this.compiler.compile(
-        newEditorState,
-        Compiler.sourceFromEditor,
-        Compiler.parseFromEditor,
-      );
+      const curCompilation =
+        await this.compiler.compileFromEditor(newEditorState);
       this.curAst = curCompilation.AST;
       this.curDag = curCompilation.DAG;
     },

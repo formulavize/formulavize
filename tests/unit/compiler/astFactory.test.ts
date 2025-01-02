@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { Compiler } from "../../../src/compiler/driver";
+import { parseFromSource } from "../../../src/compiler/driver";
 import { DESCRIPTION_PROPERTY } from "../../../src/compiler/constants";
 import {
   RecipeTreeNode as Recipe,
@@ -17,7 +17,7 @@ import {
 } from "../../../src/compiler/ast";
 
 function makeTree(input: string): BaseTreeNode {
-  return Compiler.parseFromSource(input);
+  return parseFromSource(input);
 }
 
 describe("inactive elements", () => {

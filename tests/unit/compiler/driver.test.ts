@@ -11,10 +11,8 @@ describe("basic compiler driver", () => {
       extensions: [fizLanguage],
     });
 
-    const sourceGen = Compiler.sourceFromEditor;
-    const parse = Compiler.parseFromEditor;
-    const compiler = new Compiler.Driver();
-    const compilation = await compiler.compile(editorState, sourceGen, parse);
+    const compiler = new Compiler();
+    const compilation = await compiler.compileFromEditor(editorState);
 
     expect(compilation.Source).toBe("f()");
 
@@ -29,10 +27,8 @@ describe("basic compiler driver", () => {
   test("compile from source string", async () => {
     const sourceRecipe = "f()";
 
-    const sourceGen = Compiler.sourceFromSource;
-    const parse = Compiler.parseFromSource;
-    const compiler = new Compiler.Driver();
-    const compilation = await compiler.compile(sourceRecipe, sourceGen, parse);
+    const compiler = new Compiler();
+    const compilation = await compiler.compileFromSource(sourceRecipe);
 
     expect(compilation.Source).toBe("f()");
 
