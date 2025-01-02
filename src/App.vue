@@ -44,7 +44,7 @@ import { EditorState } from "@codemirror/state";
 import { RecipeTreeNode } from "./compiler/ast";
 import { Dag } from "./compiler/dag";
 import { Compiler } from "./compiler/driver";
-// @ts-ignore: remove once @types/splitpanes upgrades dependency to vue 3
+// @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
 import "./tabs-component.css";

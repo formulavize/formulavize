@@ -14,7 +14,7 @@ export interface DagElement {
   styleProperties: StyleProperties;
 }
 
-export interface DagNode extends DagElement {}
+export type DagNode = DagElement;
 
 export interface DagEdge extends DagElement {
   srcNodeId: NodeId;
@@ -295,14 +295,15 @@ export class Dag {
     // e.g. [currentDagId, parentDagId, rootDagId ]
     const lineageIds: DagId[] = [];
     const visitedDags: Set<DagId> = new Set();
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     let currentDag: Dag | null = this;
     while (currentDag) {
       if (visitedDags.has(currentDag.id)) {
         console.warn("Cycle detected in the DAG lineage, stopping traversal");
         break;
       }
-      lineageIds.push(currentDag.id);
       visitedDags.add(currentDag.id);
+      lineageIds.push(currentDag.id);
       currentDag = currentDag.parent;
     }
     return lineageIds;
