@@ -7,7 +7,7 @@ import eslintPluginPrettierRecommended from "eslint-plugin-prettier/recommended"
 
 export default tseslint.config(
   {
-    ignores: ["node_modules/", "dist/"],
+    ignores: ["node_modules/", "dist/", "**/shims-vue.d.ts"],
   },
   {
     files: ["*.ts", "**/*.ts", "*.vue", "**/*.vue"],

@@ -1,5 +1,5 @@
 import { createApp } from "vue";
-//@ts-ignore
+// @ts-expect-error: remove when vue3-tabs-component types are added
 import { Tabs, Tab } from "vue3-tabs-component";
 import App from "./App.vue";
 

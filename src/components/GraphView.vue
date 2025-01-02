@@ -13,7 +13,6 @@ import cytoscapePopper, {
 } from "cytoscape-popper";
 import {
   computePosition,
-  ComputePositionConfig,
   ReferenceElement,
   FloatingElement,
 } from "@floating-ui/dom";
@@ -23,7 +22,7 @@ import { extendCyPopperElements } from "../compiler/cyPopperExtender";
 import { Dag } from "../compiler/dag";
 
 declare module "cytoscape-popper" {
-  interface PopperOptions extends ComputePositionConfig {}
+  // PopperOptions extends ComputePositionConfig from @floating-ui/dom
   interface PopperInstance {
     update(): void;
   }
