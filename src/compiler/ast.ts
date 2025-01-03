@@ -98,7 +98,7 @@ export class CallTreeNode extends BaseTreeNode {
   }
 
   getChildren(): BaseTreeNode[] {
-    const childList: BaseTreeNode[] = this.argList;
+    const childList: BaseTreeNode[] = [...this.argList];
     if (this.styling) childList.push(this.styling);
     return childList;
   }
@@ -134,7 +134,7 @@ export class AssignmentTreeNode extends BaseTreeNode {
   }
 
   getChildren(): BaseTreeNode[] {
-    const childList: BaseTreeNode[] = this.lhs;
+    const childList: BaseTreeNode[] = [...this.lhs];
     if (this.rhs) childList.push(this.rhs);
     return childList;
   }
