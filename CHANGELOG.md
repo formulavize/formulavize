@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/formulavize/formulavize/compare/v1.1.0...v1.1.1) (2025-01-04)
+
+
+### Bug Fixes
+
+* **ast:** remove reference side effect in debugDumpTree ([a9d1618](https://github.com/formulavize/formulavize/commit/a9d1618cf69b4afcff282ee95de46bd8c2941a9f))
+
 ## [1.1.0](https://github.com/formulavize/formulavize/compare/v1.0.0...v1.1.0) (2024-12-30)
 
 
