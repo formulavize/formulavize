@@ -31,7 +31,7 @@
       </tabs>
     </pane>
   </splitpanes>
-  <footer></footer>
+  <ToolBar id="toolbar" />
 </template>
 
 <script lang="ts">
@@ -40,6 +40,7 @@ import TextEditor from "./components/TextEditor.vue";
 import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
 import OperatorsView from "./components/OperatorsView.vue";
+import ToolBar from "./components/ToolBar.vue";
 import { EditorState } from "@codemirror/state";
 import { RecipeTreeNode } from "./compiler/ast";
 import { Dag } from "./compiler/dag";
@@ -58,6 +59,7 @@ export default defineComponent({
     GraphView,
     TextDumpView,
     OperatorsView,
+    ToolBar,
   },
   data() {
     return {
@@ -96,7 +98,9 @@ body,
 </style>
 
 <style scoped>
-#panes {
-  height: 80%;
+#toolbar {
+  position: absolute;
+  top: 0;
+  right: 0;
 }
 </style>
