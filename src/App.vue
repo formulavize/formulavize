@@ -1,20 +1,10 @@
 <template>
   <splitpanes id="panes" class="default-theme">
     <pane>
-      <tabs :options="{ useUrlFragment: false }">
-        <tab name="Recipe">
-          <TextEditor
-            :editor-debounce-delay="editorDebounceDelay"
-            @update-editorstate="updateEditorState"
-          />
-        </tab>
-        <tab name="Operators">
-          <OperatorsView />
-        </tab>
-        <tab name="Style">
-          <p>Test</p>
-        </tab>
-      </tabs>
+      <TextEditor
+        :editor-debounce-delay="editorDebounceDelay"
+        @update-editorstate="updateEditorState"
+      />
     </pane>
     <pane>
       <GraphView v-if="!debugMode" :cur-dag="curDag as Dag" />
@@ -31,7 +21,11 @@
       </tabs>
     </pane>
   </splitpanes>
-  <ToolBar id="toolbar" />
+  <ToolBar
+    id="toolbar"
+    :debug-mode="debugMode"
+    @toggle-debug-mode="toggleDebugMode"
+  />
 </template>
 
 <script lang="ts">
@@ -39,7 +33,6 @@ import { defineComponent } from "vue";
 import TextEditor from "./components/TextEditor.vue";
 import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
-import OperatorsView from "./components/OperatorsView.vue";
 import ToolBar from "./components/ToolBar.vue";
 import { EditorState } from "@codemirror/state";
 import { RecipeTreeNode } from "./compiler/ast";
@@ -58,7 +51,6 @@ export default defineComponent({
     TextEditor,
     GraphView,
     TextDumpView,
-    OperatorsView,
     ToolBar,
   },
   data() {
@@ -82,6 +74,9 @@ export default defineComponent({
   methods: {
     updateEditorState(editorState: EditorState) {
       this.curEditorState = editorState;
+    },
+    toggleDebugMode() {
+      this.debugMode = !this.debugMode;
     },
   },
 });
