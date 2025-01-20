@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="200"
+   height="200"
+   viewBox="0 0 52.916666 52.916668"
+   version="1.1"
+   id="svg5"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs2" />
+  <g
+     id="layer1"
+     style="display:none">
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:0.529167;stroke-linecap:round"
+       id="rect7318"
+       width="5.2916665"
+       height="5.2916665"
+       x="0"
+       y="0" />
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:0.529167;stroke-linecap:round"
+       id="rect7320"
+       width="5.2916665"
+       height="5.2916665"
+       x="10.583333"
+       y="0" />
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:0.529167;stroke-linecap:round"
+       id="rect7322"
+       width="5.2916665"
+       height="5.2916665"
+       x="21.166666"
+       y="0" />
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:0.529167;stroke-linecap:round"
+       id="rect7324"
+       width="5.2916665"
+       height="5.2916665"
+       x="31.75"
+       y="0" />
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:0.529167;stroke-linecap:round"
+       id="rect7146"
+       width="5.2916665"
+       height="5.2916665"
+       x="42.333332"
+       y="0" />
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:0.529167;stroke-linecap:round"
+       id="rect7148"
+       width="5.2916665"
+       height="5.2916665"
+       x="0"
+       y="10.583333" />
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:0.529167;stroke-linecap:round"
+       id="rect7232"
+       width="5.2916665"
+       height="5.2916665"
+       x="0"
+       y="21.166666" />
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:0.529167;stroke-linecap:round"
+       id="rect7234"
+       width="5.2916665"
+       height="5.2916665"
+       x="1.5894572e-07"
+       y="31.75" />
+    <rect
+       style="fill:#000000;stroke:#000000;stroke-width:0.529167;stroke-linecap:round"
+       id="rect7236"
+       width="5.2916665"
+       height="5.2916665"
+       x="1.5894572e-07"
+       y="42.333332" />
+    <rect
+       style="fill:#ffffff;stroke:#000000;stroke-width:0.529167;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="rect19682"
+       width="42.333332"
+       height="42.333332"
+       x="5.2916665"
+       y="5.2916665" />
+  </g>
+  <g
+     id="layer9"
+     style="display:inline">
+    <path
+       id="path19035"
+       style="fill:#80ebff;fill-opacity:1;stroke:none;stroke-width:0.657831;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none"
+       d="M 26.458333,9.6908963 A 16.445775,16.445775 0 0 0 10.012557,26.136672 16.445775,16.445775 0 0 0 23.169178,42.24004 v 3.631563 l 3.289155,6.57831 3.289155,-6.57831 V 42.24004 A 16.445775,16.445775 0 0 0 42.904109,26.136672 16.445775,16.445775 0 0 0 26.458333,9.6908963 Z" />
+  </g>
+  <g
+     id="layer4"
+     style="display:none">
+    <path
+       id="path17669"
+       style="fill:#00ffff;stroke:#000000;stroke-width:2;stroke-linecap:round"
+       d="m 100,60 a 39.999999,39.999999 0 0 0 -40,40 39.999999,39.999999 0 0 0 30,38.70312 V 140 l 10,20 10,-20 v -1.29688 A 39.999999,39.999999 0 0 0 140,100 39.999999,39.999999 0 0 0 100,60 Z"
+       transform="scale(0.26458333)" />
+  </g>
+  <g
+     id="layer10"
+     style="display:inline">
+    <path
+       id="path19290"
+       style="fill:#33acff;fill-opacity:1;stroke:none;stroke-width:0.657831;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none"
+       d="m 23.169178,3.112586 v 17.327167 a 6.57831,6.57831 0 0 0 -3.289155,5.696919 6.57831,6.57831 0 0 0 6.57831,6.57831 6.57831,6.57831 0 0 0 6.57831,-6.57831 6.57831,6.57831 0 0 0 -3.289155,-5.696277 V 3.112586 l -3.289155,6.5783103 z" />
+  </g>
+  <g
+     id="layer3"
+     style="display:none">
+    <path
+       id="path7462"
+       style="fill:#ffffff;stroke:#000000;stroke-width:2;stroke-linecap:round"
+       d="M 90,40 V 82.679688 A 19.999999,19.999999 0 0 0 80,100 19.999999,19.999999 0 0 0 100,120 19.999999,19.999999 0 0 0 120,100 19.999999,19.999999 0 0 0 110,82.681641 V 40 l -10,20 z"
+       transform="scale(0.26458333)" />
+    <circle
+       style="fill:#ffffff;stroke:#000000;stroke-width:0.529167;stroke-linecap:round;stroke-miterlimit:4;stroke-dasharray:none"
+       id="path19288"
+       cx="26.458332"
+       cy="26.458332"
+       r="5.2916665" />
+  </g>
+  <g
+     id="layer2">
+    <text
+       xml:space="preserve"
+       style="font-size:13.1566px;line-height:1.25;font-family:Courier;-inkscape-font-specification:Courier;word-spacing:0px;fill:#000000;stroke-width:0.328915"
+       x="22.475346"
+       y="28.992191"
+       id="text1269"><tspan
+         id="tspan1267"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-family:Courier;-inkscape-font-specification:Courier;fill:#000000;stroke-width:0.328915"
+         x="22.475346"
+         y="28.992191">v</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.1566px;line-height:1.25;font-family:Courier;-inkscape-font-specification:Courier;word-spacing:0px;display:inline;stroke-width:0.328915"
+       x="12.136207"
+       y="29.377638"
+       id="text9248"><tspan
+         id="tspan9246"
+         style="font-style:normal;font-variant:normal;font-weight:bold;font-stretch:normal;font-size:13.1566px;font-family:Courier;-inkscape-font-specification:Courier;stroke-width:0.328915"
+         x="12.136207"
+         y="29.377638">ƒ</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.1566px;line-height:1.25;font-family:Courier;-inkscape-font-specification:Courier;word-spacing:0px;display:inline;stroke-width:0.328915"
+       x="16.703749"
+       y="28.770559"
+       id="text15606"><tspan
+         id="tspan15604"
+         style="font-weight:bold;stroke-width:0.328915"
+         x="16.703749"
+         y="28.770559">(</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-size:13.1566px;line-height:1.25;font-family:Courier;-inkscape-font-specification:Courier;word-spacing:0px;display:inline;stroke-width:0.328915"
+       x="28.234093"
+       y="28.770559"
+       id="text17002"><tspan
+         id="tspan17000"
+         style="font-weight:bold;stroke-width:0.328915"
+         x="28.234093"
+         y="28.770559">)</tspan></text>
+  </g>
+</svg>
