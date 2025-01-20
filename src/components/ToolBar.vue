@@ -15,12 +15,21 @@
         location="bottom"
       />
     </v-btn>
+    <v-btn
+      icon
+      density="comfortable"
+      href="https://github.com/formulavize/formulavize"
+      target="_blank"
+    >
+      <v-icon :icon="mdiGithub"></v-icon>
+      <v-tooltip activator="parent" text="View on GitHub" location="bottom" />
+    </v-btn>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import { mdiApplicationParenthesesOutline } from "@mdi/js";
+import { mdiGithub, mdiApplicationParenthesesOutline } from "@mdi/js";
 export default defineComponent({
   name: "ToolBar",
   props: {
@@ -33,6 +42,7 @@ export default defineComponent({
   data() {
     return {
       mdiApplicationParenthesesOutline,
+      mdiGithub,
     };
   },
   methods: {
@@ -47,6 +57,8 @@ export default defineComponent({
 .toolbar {
   display: flex;
   align-items: center;
+  gap: 0.5em;
+  padding: 1em;
 }
 #logo {
   height: 2em;
