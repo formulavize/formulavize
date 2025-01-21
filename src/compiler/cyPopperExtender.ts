@@ -118,9 +118,9 @@ export function getCompoundNodeDescriptions(
   return Array.from(compNodeDesc, ([id, descData]) => [`node#${id}`, descData]);
 }
 
-function clearAllPopperDivs() {
+function clearAllPopperDivs(canvasElement: HTMLElement) {
   const popperOuterDivArray = Array.from(
-    document.getElementsByClassName(POPPER_OUTER_DIV_CLASS),
+    canvasElement.getElementsByClassName(POPPER_OUTER_DIV_CLASS),
   );
   popperOuterDivArray.forEach((popperOuterDiv) => {
     popperOuterDiv.remove();
@@ -202,10 +202,12 @@ export function addCyPopperElementsFromDag(
   });
 }
 
-export function extendCyPopperElements(cy: cytoscape.Core, dag: Dag) {
-  clearAllPopperDivs();
-
-  const canvasElement = document.getElementById("canvas") ?? document.body;
+export function extendCyPopperElements(
+  cy: cytoscape.Core,
+  dag: Dag,
+  canvasElement: HTMLElement,
+) {
+  clearAllPopperDivs(canvasElement);
 
   addCyPopperElementsFromDag(cy, canvasElement, dag);
 
@@ -213,7 +215,7 @@ export function extendCyPopperElements(cy: cytoscape.Core, dag: Dag) {
   cy.on("zoom", () => {
     const zoomLevel = cy.zoom();
     const popperInnerDivArray = Array.from(
-      document.getElementsByClassName(POPPER_INNER_DIV_CLASS),
+      canvasElement.getElementsByClassName(POPPER_INNER_DIV_CLASS),
     );
     popperInnerDivArray.forEach((popperInnerDiv) => {
       const popperDivElement = popperInnerDiv as HTMLElement;
