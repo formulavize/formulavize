@@ -55,7 +55,7 @@ export default defineComponent({
   },
   data() {
     return {
-      debugMode: true,
+      debugMode: false,
       editorDebounceDelay: 300, // ms
       compiler: new Compiler(),
       curEditorState: EditorState.create(),

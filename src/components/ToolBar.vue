@@ -2,34 +2,49 @@
   <div class="toolbar">
     <img id="logo" src="/assets/formulavize_logo.svg" alt="Formulavize logo" />
     <h1>formulavize</h1>
-    <v-btn
-      icon
-      density="comfortable"
-      :active="debugMode"
-      @click="emitToggleDebugModeEvent"
-    >
-      <v-icon :icon="mdiApplicationParenthesesOutline"></v-icon>
-      <v-tooltip
-        activator="parent"
-        text="Toggle Debug Mode"
-        location="bottom"
-      />
-    </v-btn>
-    <v-btn
-      icon
-      density="comfortable"
-      href="https://github.com/formulavize/formulavize"
-      target="_blank"
-    >
-      <v-icon :icon="mdiGithub"></v-icon>
-      <v-tooltip activator="parent" text="View on GitHub" location="bottom" />
-    </v-btn>
+    <v-btn-group density="comfortable">
+      <v-btn icon>
+        <v-icon :icon="mdiExport"></v-icon>
+        <v-tooltip activator="parent" text="Export" location="bottom" />
+        <v-menu activator="parent">
+          <v-list>
+            <v-list-item @click="emitExportPngEvent">
+              <v-list-item-title>Export as PNG</v-list-item-title>
+            </v-list-item>
+            <v-list-item @click="emitExportSvgEvent">
+              <v-list-item-title>Export as SVG</v-list-item-title>
+            </v-list-item>
+          </v-list>
+        </v-menu>
+      </v-btn>
+      <v-btn icon :active="debugMode" @click="emitToggleDebugModeEvent">
+        <v-icon :icon="mdiApplicationParenthesesOutline"></v-icon>
+        <v-tooltip
+          activator="parent"
+          text="Toggle Debug Mode"
+          location="bottom"
+        />
+      </v-btn>
+      <v-btn
+        icon
+        href="https://github.com/formulavize/formulavize"
+        target="_blank"
+      >
+        <v-icon :icon="mdiGithub"></v-icon>
+        <v-tooltip activator="parent" text="View on GitHub" location="bottom" />
+      </v-btn>
+    </v-btn-group>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import { mdiGithub, mdiApplicationParenthesesOutline } from "@mdi/js";
+import {
+  mdiExport,
+  mdiApplicationParenthesesOutline,
+  mdiGithub,
+} from "@mdi/js";
+import { PNG, SVG } from "../compiler/constants";
 export default defineComponent({
   name: "ToolBar",
   props: {
@@ -38,9 +53,10 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ["toggle-debug-mode"],
+  emits: ["toggle-debug-mode", "export"],
   data() {
     return {
+      mdiExport,
       mdiApplicationParenthesesOutline,
       mdiGithub,
     };
@@ -48,6 +64,12 @@ export default defineComponent({
   methods: {
     emitToggleDebugModeEvent() {
       this.$emit("toggle-debug-mode");
+    },
+    emitExportPngEvent() {
+      this.$emit("export", PNG);
+    },
+    emitExportSvgEvent() {
+      this.$emit("export", SVG);
     },
   },
 });
