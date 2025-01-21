@@ -94,7 +94,11 @@ export default defineComponent({
       const newStylesheets = makeCyStylesheets(this.curDag);
       this.cy.style(newStylesheets);
 
-      extendCyPopperElements(this.cy, this.curDag);
+      extendCyPopperElements(
+        this.cy,
+        this.curDag,
+        this.$refs.canvas as HTMLElement,
+      );
 
       Promise.resolve().then(() => {
         this.cy.layout({ name: "dagre" }).run(); // most expensive operation
