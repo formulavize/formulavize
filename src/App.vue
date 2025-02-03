@@ -30,6 +30,7 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
+import { cloneDeep } from "lodash";
 import TextEditor from "./components/TextEditor.vue";
 import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
@@ -77,6 +78,9 @@ export default defineComponent({
     },
     toggleDebugMode() {
       this.debugMode = !this.debugMode;
+      // repaint the conditionally rendered GraphView
+      const existingEditorState = cloneDeep(this.curEditorState);
+      this.updateEditorState(existingEditorState as EditorState);
     },
   },
 });
