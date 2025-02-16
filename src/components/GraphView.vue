@@ -4,6 +4,7 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
+import { match } from "ts-pattern";
 import cytoscape from "cytoscape";
 import dagre from "cytoscape-dagre";
 import cytoscapePopper, {
@@ -20,6 +21,7 @@ import { makeCyElements } from "../compiler/cyGraphFactory";
 import { makeCyStylesheets } from "../compiler/cyStyleSheetsFactory";
 import { extendCyPopperElements } from "../compiler/cyPopperExtender";
 import { Dag } from "../compiler/dag";
+import { ImageExportFormat } from "../compiler/constants";
 
 declare module "cytoscape-popper" {
   // PopperOptions extends ComputePositionConfig from @floating-ui/dom
@@ -103,6 +105,16 @@ export default defineComponent({
       Promise.resolve().then(() => {
         this.cy.layout({ name: "dagre" }).run(); // most expensive operation
       });
+    },
+    exportImage(exportType: ImageExportFormat) {
+      const imgData = match(exportType)
+        .with(ImageExportFormat.PNG, () => this.cy.png({ full: true }))
+        .with(ImageExportFormat.JPG, () => this.cy.jpg({ full: true }))
+        .exhaustive();
+      const a = document.createElement("a");
+      a.href = imgData;
+      a.download = this.curDag.Id + "." + exportType;
+      a.click();
     },
   },
 });
