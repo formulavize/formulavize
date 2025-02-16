@@ -66,6 +66,10 @@ export default defineComponent({
       type: Dag,
       default: new Dag(""),
     },
+    lockPositions: {
+      type: Boolean,
+      default: true,
+    },
   },
   data() {
     return {
@@ -78,7 +82,7 @@ export default defineComponent({
     },
   },
   mounted(): void {
-    this.cy.autoungrabify(true);
+    this.cy.autoungrabify(this.lockPositions);
     this.cy.mount(this.$refs.canvas as HTMLElement);
   },
   methods: {

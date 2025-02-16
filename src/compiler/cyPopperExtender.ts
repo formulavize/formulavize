@@ -175,6 +175,9 @@ function addDescriptionPopper(
         return popperDiv;
       },
     });
+    cyElement.on("position", () => {
+      popperElement.update();
+    });
     cy.on("pan zoom resize", () => {
       popperElement.update();
     });
