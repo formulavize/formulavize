@@ -14,6 +14,9 @@
             <v-list-item @click="emitExportJpgEvent">
               <v-list-item-title>Export as JPG</v-list-item-title>
             </v-list-item>
+            <v-list-item @click="emitExportSvgEvent">
+              <v-list-item-title>Export as SVG</v-list-item-title>
+            </v-list-item>
           </v-list>
         </v-menu>
       </v-btn>
@@ -70,6 +73,9 @@ export default defineComponent({
     },
     emitExportJpgEvent() {
       this.$emit("export", ImageExportFormat.JPG);
+    },
+    emitExportSvgEvent() {
+      this.$emit("export", ImageExportFormat.SVG);
     },
   },
 });

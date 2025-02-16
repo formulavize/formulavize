@@ -9,4 +9,5 @@ export const FIZ_FILE_EXTENSION: string = ".fiz";
 export enum ImageExportFormat {
   PNG = "png",
   JPG = "jpg",
+  SVG = "svg",
 }

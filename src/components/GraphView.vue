@@ -17,11 +17,14 @@ import {
   ReferenceElement,
   FloatingElement,
 } from "@floating-ui/dom";
+// @ts-expect-error: missing types
+import svg from "cytoscape-svg";
 import { makeCyElements } from "../compiler/cyGraphFactory";
 import { makeCyStylesheets } from "../compiler/cyStyleSheetsFactory";
 import { extendCyPopperElements } from "../compiler/cyPopperExtender";
 import { Dag } from "../compiler/dag";
 import { ImageExportFormat } from "../compiler/constants";
+import { saveAs } from "file-saver";
 
 declare module "cytoscape-popper" {
   // PopperOptions extends ComputePositionConfig from @floating-ui/dom
@@ -54,6 +57,7 @@ const popperFactory: PopperFactory = (
 
 cytoscape.use(dagre);
 cytoscape.use(cytoscapePopper(popperFactory));
+cytoscape.use(svg);
 
 export default defineComponent({
   name: "GraphView",
@@ -107,14 +111,37 @@ export default defineComponent({
       });
     },
     exportImage(exportType: ImageExportFormat) {
-      const imgData = match(exportType)
-        .with(ImageExportFormat.PNG, () => this.cy.png({ full: true }))
-        .with(ImageExportFormat.JPG, () => this.cy.jpg({ full: true }))
+      // Issue: the svg exporter rasterizes images in the graph.
+      // The workaround for exporting large images is to export a scaled up
+      // raster image and then downscale it in an image editor.
+      // Ideally, this issue should be addressed in the underlying library.
+      // Speculatively, we might be able to swap the image tags in the svg.
+      const scaleFactor = 1;
+      const imgBlob = match(exportType)
+        .with(ImageExportFormat.PNG, () => {
+          return this.cy.png({
+            full: true,
+            scale: scaleFactor,
+            output: "blob",
+          });
+        })
+        .with(ImageExportFormat.JPG, () => {
+          return this.cy.jpg({
+            full: true,
+            scale: scaleFactor,
+            output: "blob",
+          });
+        })
+        .with(ImageExportFormat.SVG, () => {
+          // @ts-expect-error: missing types
+          const svgData = this.cy.svg({ full: true, scale: scaleFactor });
+          return new Blob([svgData], {
+            type: "image/svg+xml;charset=utf-8",
+          });
+        })
         .exhaustive();
-      const a = document.createElement("a");
-      a.href = imgData;
-      a.download = this.curDag.Id + "." + exportType;
-      a.click();
+      const fileName = this.curDag.Id + "." + exportType;
+      saveAs(imgBlob, fileName);
     },
   },
 });
