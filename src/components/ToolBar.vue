@@ -11,8 +11,8 @@
             <v-list-item @click="emitExportPngEvent">
               <v-list-item-title>Export as PNG</v-list-item-title>
             </v-list-item>
-            <v-list-item @click="emitExportSvgEvent">
-              <v-list-item-title>Export as SVG</v-list-item-title>
+            <v-list-item @click="emitExportJpgEvent">
+              <v-list-item-title>Export as JPG</v-list-item-title>
             </v-list-item>
           </v-list>
         </v-menu>
@@ -44,7 +44,7 @@ import {
   mdiApplicationParenthesesOutline,
   mdiGithub,
 } from "@mdi/js";
-import { PNG, SVG } from "../compiler/constants";
+import { ImageExportFormat } from "../compiler/constants";
 export default defineComponent({
   name: "ToolBar",
   props: {
@@ -66,10 +66,10 @@ export default defineComponent({
       this.$emit("toggle-debug-mode");
     },
     emitExportPngEvent() {
-      this.$emit("export", PNG);
+      this.$emit("export", ImageExportFormat.PNG);
     },
-    emitExportSvgEvent() {
-      this.$emit("export", SVG);
+    emitExportJpgEvent() {
+      this.$emit("export", ImageExportFormat.JPG);
     },
   },
 });

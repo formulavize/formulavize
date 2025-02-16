@@ -7,10 +7,10 @@
       />
     </pane>
     <pane>
-      <GraphView v-if="!debugMode" :cur-dag="curDag as Dag" />
+      <GraphView v-if="!debugMode" ref="graphView" :cur-dag="curDag as Dag" />
       <tabs v-else :options="{ useUrlFragment: false }">
         <tab name="Output">
-          <GraphView :cur-dag="curDag as Dag" />
+          <GraphView ref="graphView" :cur-dag="curDag as Dag" />
         </tab>
         <tab name="AST">
           <TextDumpView title="AST Dump" :content="curAst.debugDumpTree()" />
@@ -25,12 +25,14 @@
     id="toolbar"
     :debug-mode="debugMode"
     @toggle-debug-mode="toggleDebugMode"
+    @export="handleExportEvent"
   />
 </template>
 
 <script lang="ts">
 import { defineComponent } from "vue";
 import { cloneDeep } from "lodash";
+import { ImageExportFormat } from "./compiler/constants";
 import TextEditor from "./components/TextEditor.vue";
 import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
@@ -81,6 +83,10 @@ export default defineComponent({
       // repaint the conditionally rendered GraphView
       const existingEditorState = cloneDeep(this.curEditorState);
       this.updateEditorState(existingEditorState as EditorState);
+    },
+    handleExportEvent(exportType: ImageExportFormat) {
+      const graphView = this.$refs.graphView as typeof GraphView;
+      graphView.exportImage(exportType);
     },
   },
 });
