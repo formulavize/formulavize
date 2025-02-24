@@ -63,8 +63,7 @@ import { VForm } from "vuetify/components";
 
 const fileNameRules = [
   (v: string) => !!v || "File name is required",
-  (v: string) =>
-    v.length <= 255 || "File name must be less than 255 characters",
+  (v: string) => v.length < 256 || "File name must be less than 256 characters",
 ];
 const fileTypeRules = [(v: string) => !!v || "File type is required"];
 const scalingRules = [
