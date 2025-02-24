@@ -25,7 +25,11 @@
     id="toolbar"
     :debug-mode="debugMode"
     @toggle-debug-mode="toggleDebugMode"
-    @export="handleExportEvent"
+    @export-initiated="openExportPopup"
+  />
+  <ExportOptionsPopup
+    ref="exportOptionsPopup"
+    @export-with-options="handleExport"
   />
 </template>
 
@@ -37,6 +41,7 @@ import TextEditor from "./components/TextEditor.vue";
 import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
 import ToolBar from "./components/ToolBar.vue";
+import ExportOptionsPopup from "./components/ExportOptionsPopup.vue";
 import { EditorState } from "@codemirror/state";
 import { RecipeTreeNode } from "./compiler/ast";
 import { Dag } from "./compiler/dag";
@@ -55,6 +60,7 @@ export default defineComponent({
     GraphView,
     TextDumpView,
     ToolBar,
+    ExportOptionsPopup,
   },
   data() {
     return {
@@ -84,9 +90,18 @@ export default defineComponent({
       const existingEditorState = cloneDeep(this.curEditorState);
       this.updateEditorState(existingEditorState as EditorState);
     },
-    handleExportEvent(exportType: ImageExportFormat) {
+    openExportPopup() {
+      const exportOptionsPopup = this.$refs
+        .exportOptionsPopup as typeof ExportOptionsPopup;
+      exportOptionsPopup.openPopup();
+    },
+    handleExport(exportOptions: {
+      fileName: string;
+      fileType: ImageExportFormat;
+      scalingFactor: number;
+    }) {
       const graphView = this.$refs.graphView as typeof GraphView;
-      graphView.exportImage(exportType);
+      graphView.exportImage(exportOptions);
     },
   },
 });

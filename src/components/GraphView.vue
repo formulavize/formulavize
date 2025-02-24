@@ -114,14 +114,20 @@ export default defineComponent({
         this.cy.layout({ name: "dagre" }).run(); // most expensive operation
       });
     },
-    exportImage(exportType: ImageExportFormat) {
+    exportImage(exportOptions: {
+      fileName: string;
+      fileType: ImageExportFormat;
+      scalingFactor: number;
+    }) {
       // Issue: the svg exporter rasterizes images in the graph.
       // The workaround for exporting large images is to export a scaled up
       // raster image and then downscale it in an image editor.
       // Ideally, this issue should be addressed in the underlying library.
       // Speculatively, we might be able to swap the image tags in the svg.
-      const scaleFactor = 1;
-      const imgBlob = match(exportType)
+      // Svg export is still a useful starting point for those who want to
+      // manually edit layouts in an svg editor.
+      const scaleFactor = exportOptions.scalingFactor;
+      const imgBlob = match(exportOptions.fileType)
         .with(ImageExportFormat.PNG, () => {
           return this.cy.png({
             full: true,
@@ -144,7 +150,7 @@ export default defineComponent({
           });
         })
         .exhaustive();
-      const fileName = this.curDag.Id + "." + exportType;
+      const fileName = exportOptions.fileName + "." + exportOptions.fileType;
       saveAs(imgBlob, fileName);
     },
   },
