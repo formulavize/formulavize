@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.2.0](https://github.com/formulavize/formulavize/compare/v1.1.1...v1.2.0) (2025-02-24)
+
+
+### Features
+
+* **ExportOptionsPopup:** add export options popup ([c083200](https://github.com/formulavize/formulavize/commit/c083200ae8b5080aa76270fc179b455f6958544f))
+* **GraphView:** add basic image export ([ac6d833](https://github.com/formulavize/formulavize/commit/ac6d8333ec0ad63827e324d2ec094e3bc0b7df3f))
+* **GraphView:** add svg image export ([561c62a](https://github.com/formulavize/formulavize/commit/561c62aa62f19a6d2da995efb02c7ccbe3baafd6))
+* **toolbar:** add app title to toolbar ([3c9b76d](https://github.com/formulavize/formulavize/commit/3c9b76d28a59697e27b84e84bdc31c6cc6a75090))
+* **toolbar:** add debugMode toggle button ([7aab4e6](https://github.com/formulavize/formulavize/commit/7aab4e69b8977aaaf036b9418c74b5e66aedf3f9))
+* **toolbar:** add view github button ([b7d6bb3](https://github.com/formulavize/formulavize/commit/b7d6bb3a176825fc588447ac566cc741bdaac3e7))
+
+
+### Bug Fixes
+
+* **ExportOptionsPopup:** correct file name length validation message ([fbcab95](https://github.com/formulavize/formulavize/commit/fbcab95901a10baa40f514a1578981cbb0c8d3da))
+* **ui:** repaint GraphView on toggling debugMode ([dd9ce7b](https://github.com/formulavize/formulavize/commit/dd9ce7b977f5dad012b0d3b66636e7b386e7257b))
+
 ## [1.1.1](https://github.com/formulavize/formulavize/compare/v1.1.0...v1.1.1) (2025-01-04)
 
 
