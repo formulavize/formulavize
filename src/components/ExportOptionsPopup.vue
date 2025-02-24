@@ -62,15 +62,20 @@ import { ImageExportFormat } from "../compiler/constants";
 import { VForm } from "vuetify/components";
 
 const fileNameRules = [
-  (v: string) => !!v || "File name is required",
-  (v: string) => v.length < 256 || "File name must be less than 256 characters",
+  (fileName: string) => !!fileName || "File name is required",
+  (fileName: string) =>
+    fileName.length < 256 || "File name must be less than 256 characters",
 ];
-const fileTypeRules = [(v: string) => !!v || "File type is required"];
+const fileTypeRules = [
+  (fileType: string) => !!fileType || "File type is required",
+];
 const scalingRules = [
-  (v: number) => !!v || "Scaling percentage is required",
-  (v: number) => v > 0 || "Scaling percentage must be greater than 0",
-  (v: number) =>
-    v <= 10000 || "Scaling percentage must be less than or equal to 10000",
+  (scalingPct: number) => !!scalingPct || "Scaling percentage is required",
+  (scalingPct: number) =>
+    scalingPct > 0 || "Scaling percentage must be greater than 0",
+  (scalingPct: number) =>
+    scalingPct <= 10000 ||
+    "Scaling percentage must be less than or equal to 10000",
 ];
 
 export default defineComponent({
