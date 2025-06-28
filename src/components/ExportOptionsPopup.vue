@@ -42,13 +42,13 @@
         </v-form>
       </v-card-text>
       <v-card-actions>
-        <v-btn @click="closePopup">
-          <v-icon :icon="mdiCloseCircleOutline" class="mr-1" />
-          Close
-        </v-btn>
         <v-btn :disabled="!isFormValid" @click="exportFile">
           <v-icon :icon="mdiDownload" class="mr-1" />
           Download
+        </v-btn>
+        <v-btn @click="closePopup">
+          <v-icon :icon="mdiCloseCircleOutline" class="mr-1" />
+          Close
         </v-btn>
       </v-card-actions>
     </v-card>
