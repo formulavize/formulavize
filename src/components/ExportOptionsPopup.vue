@@ -2,7 +2,7 @@
   <v-dialog v-model="isExportPopupActive">
     <v-card class="pa-4">
       <v-card-title id="export-options-title">
-        <v-icon :icon="mdiExport" />
+        <v-icon :icon="mdiExport" class="mr-1" />
         Export
       </v-card-title>
       <v-card-text>
@@ -43,11 +43,11 @@
       </v-card-text>
       <v-card-actions>
         <v-btn @click="closePopup">
-          <v-icon :icon="mdiCloseCircleOutline" />
+          <v-icon :icon="mdiCloseCircleOutline" class="mr-1" />
           Close
         </v-btn>
         <v-btn :disabled="!isFormValid" @click="exportFile">
-          <v-icon :icon="mdiDownload" />
+          <v-icon :icon="mdiDownload" class="mr-1" />
           Download
         </v-btn>
       </v-card-actions>
