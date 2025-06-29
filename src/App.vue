@@ -26,11 +26,13 @@
     :debug-mode="debugMode"
     @toggle-debug-mode="toggleDebugMode"
     @export-initiated="openExportPopup"
+    @open-options="showOptionsPopup = true"
   />
   <ExportOptionsPopup
     ref="exportOptionsPopup"
     @export-with-options="handleExport"
   />
+  <OptionsPopup v-model:show-options="showOptionsPopup" />
 </template>
 
 <script lang="ts">
@@ -42,6 +44,7 @@ import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
 import ToolBar from "./components/ToolBar.vue";
 import ExportOptionsPopup from "./components/ExportOptionsPopup.vue";
+import OptionsPopup from "./components/OptionsPopup.vue";
 import { EditorState } from "@codemirror/state";
 import { RecipeTreeNode } from "./compiler/ast";
 import { Dag } from "./compiler/dag";
@@ -61,6 +64,7 @@ export default defineComponent({
     TextDumpView,
     ToolBar,
     ExportOptionsPopup,
+    OptionsPopup,
   },
   data() {
     return {
@@ -70,6 +74,7 @@ export default defineComponent({
       curEditorState: EditorState.create(),
       curAst: new RecipeTreeNode(),
       curDag: new Dag(""),
+      showOptionsPopup: false,
     };
   },
   watch: {

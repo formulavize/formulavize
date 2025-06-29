@@ -23,6 +23,10 @@
         <v-icon :icon="mdiGithub" />
         <v-tooltip activator="parent" text="View on GitHub" location="bottom" />
       </v-btn>
+      <v-btn icon @click="emitOpenOptionsEvent">
+        <v-icon :icon="mdiCogOutline" />
+        <v-tooltip activator="parent" text="Options" location="bottom" />
+      </v-btn>
     </v-btn-group>
   </div>
 </template>
@@ -33,6 +37,7 @@ import {
   mdiExport,
   mdiApplicationParenthesesOutline,
   mdiGithub,
+  mdiCogOutline,
 } from "@mdi/js";
 export default defineComponent({
   name: "ToolBar",
@@ -42,11 +47,12 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ["toggle-debug-mode", "export-initiated"],
+  emits: ["toggle-debug-mode", "export-initiated", "open-options"],
   setup() {
     return {
       mdiExport,
       mdiApplicationParenthesesOutline,
+      mdiCogOutline,
       mdiGithub,
     };
   },
@@ -56,6 +62,9 @@ export default defineComponent({
     },
     emitExportEvent() {
       this.$emit("export-initiated");
+    },
+    emitOpenOptionsEvent() {
+      this.$emit("open-options");
     },
   },
 });
