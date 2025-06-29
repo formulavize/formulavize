@@ -3,11 +3,11 @@
     <img id="logo" src="/assets/formulavize_logo.svg" alt="Formulavize logo" />
     <h1>formulavize</h1>
     <v-btn-group density="comfortable">
-      <v-btn icon @click="emitExportEvent">
+      <v-btn icon @click="$emit('open-export')">
         <v-icon :icon="mdiExport" />
         <v-tooltip activator="parent" text="Export" location="bottom" />
       </v-btn>
-      <v-btn icon :active="debugMode" @click="emitToggleDebugModeEvent">
+      <v-btn icon :active="debugMode" @click="$emit('toggle-debug-mode')">
         <v-icon :icon="mdiApplicationParenthesesOutline" />
         <v-tooltip
           activator="parent"
@@ -23,7 +23,7 @@
         <v-icon :icon="mdiGithub" />
         <v-tooltip activator="parent" text="View on GitHub" location="bottom" />
       </v-btn>
-      <v-btn icon @click="emitOpenOptionsEvent">
+      <v-btn icon @click="$emit('open-options')">
         <v-icon :icon="mdiCogOutline" />
         <v-tooltip activator="parent" text="Options" location="bottom" />
       </v-btn>
@@ -47,7 +47,7 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ["toggle-debug-mode", "export-initiated", "open-options"],
+  emits: ["toggle-debug-mode", "open-export", "open-options"],
   setup() {
     return {
       mdiExport,
@@ -55,17 +55,6 @@ export default defineComponent({
       mdiCogOutline,
       mdiGithub,
     };
-  },
-  methods: {
-    emitToggleDebugModeEvent() {
-      this.$emit("toggle-debug-mode");
-    },
-    emitExportEvent() {
-      this.$emit("export-initiated");
-    },
-    emitOpenOptionsEvent() {
-      this.$emit("open-options");
-    },
   },
 });
 </script>
