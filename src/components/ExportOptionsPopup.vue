@@ -1,9 +1,13 @@
 <template>
-  <v-dialog v-model="isExportPopupActive">
+  <v-dialog
+    :model-value="showExport"
+    persistent
+    @update:model-value="$emit('update:showExport', $event)"
+  >
     <v-card class="pa-4">
-      <v-card-title id="export-options-title">
-        <v-icon :icon="mdiExport" class="mr-1" />
-        Export
+      <v-card-title class="d-flex align-center">
+        <v-icon :icon="mdiExport" class="mr-2" />
+        <span>Export</span>
       </v-card-title>
       <v-card-text>
         <v-form ref="exportForm" validate-on="eager">
@@ -44,11 +48,11 @@
       <v-card-actions>
         <v-btn :disabled="!isFormValid" @click="exportFile">
           <v-icon :icon="mdiDownload" class="mr-1" />
-          Download
+          <span>Download</span>
         </v-btn>
-        <v-btn @click="closePopup">
+        <v-btn @click="$emit('update:showExport', false)">
           <v-icon :icon="mdiCloseCircleOutline" class="mr-1" />
-          Close
+          <span>Close</span>
         </v-btn>
       </v-card-actions>
     </v-card>
@@ -80,7 +84,13 @@ const scalingRules = [
 
 export default defineComponent({
   name: "ExportOptionsPopup",
-  emits: ["close-export-popup", "export-with-options"],
+  props: {
+    showExport: {
+      type: Boolean,
+      required: true,
+    },
+  },
+  emits: ["update:showExport", "export-with-options"],
   setup() {
     const exportForm = ref<InstanceType<typeof VForm> | null>(null);
     return {
@@ -95,7 +105,6 @@ export default defineComponent({
   },
   data() {
     return {
-      isExportPopupActive: false,
       formatOptions: Object.values(ImageExportFormat),
       fileName: "formulavize",
       fileType: ImageExportFormat.PNG,
@@ -108,12 +117,6 @@ export default defineComponent({
     },
   },
   methods: {
-    openPopup() {
-      this.isExportPopupActive = true;
-    },
-    closePopup() {
-      this.isExportPopupActive = false;
-    },
     exportFile() {
       if (!this.isFormValid) return;
       const exportOptions = {
@@ -122,17 +125,7 @@ export default defineComponent({
         scalingFactor: this.scalingPct / 100,
       };
       this.$emit("export-with-options", exportOptions);
-      this.closePopup();
     },
   },
 });
 </script>
-
-<style>
-#export-options-title {
-  display: flex;
-  align-items: center;
-  justify-content: start;
-  gap: 0.2em;
-}
-</style>
