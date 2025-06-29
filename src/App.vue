@@ -25,11 +25,11 @@
     id="toolbar"
     :debug-mode="debugMode"
     @toggle-debug-mode="toggleDebugMode"
-    @open-export="openExportPopup"
+    @open-export="showExportPopup = true"
     @open-options="showOptionsPopup = true"
   />
   <ExportOptionsPopup
-    ref="exportOptionsPopup"
+    v-model:show-export="showExportPopup"
     @export-with-options="handleExport"
   />
   <OptionsPopup v-model:show-options="showOptionsPopup" />
@@ -74,6 +74,7 @@ export default defineComponent({
       curEditorState: EditorState.create(),
       curAst: new RecipeTreeNode(),
       curDag: new Dag(""),
+      showExportPopup: false,
       showOptionsPopup: false,
     };
   },
@@ -94,11 +95,6 @@ export default defineComponent({
       // repaint the conditionally rendered GraphView
       const existingEditorState = cloneDeep(this.curEditorState);
       this.updateEditorState(existingEditorState as EditorState);
-    },
-    openExportPopup() {
-      const exportOptionsPopup = this.$refs
-        .exportOptionsPopup as typeof ExportOptionsPopup;
-      exportOptionsPopup.openPopup();
     },
     handleExport(exportOptions: {
       fileName: string;
