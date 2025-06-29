@@ -24,7 +24,7 @@
     "@floating-ui/dom": "^1.7.2",
     "@formulavize/lang-fiz": "^0.3.3",
     "@lezer/common": "^1.2.3",
-    "cytoscape": "^3.32.0",
+    "cytoscape": "^3.30.4",
     "cytoscape-dagre": "^2.5.0",
     "cytoscape-popper": "^4.0.1",
     "cytoscape-svg": "^0.4.0",
