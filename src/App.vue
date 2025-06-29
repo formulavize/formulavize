@@ -25,7 +25,7 @@
     id="toolbar"
     :debug-mode="debugMode"
     @toggle-debug-mode="toggleDebugMode"
-    @export-initiated="openExportPopup"
+    @open-export="openExportPopup"
     @open-options="showOptionsPopup = true"
   />
   <ExportOptionsPopup
