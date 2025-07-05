@@ -15,6 +15,9 @@
           <v-col cols="12" class="py-1">
             <v-checkbox
               label="Tab to Indent"
+              :messages="
+                tabToIndent ? 'Press Esc to ignore next Tab indent' : ''
+              "
               :model-value="tabToIndent"
               @update:model-value="$emit('update:tabToIndent', $event)"
             />
