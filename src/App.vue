@@ -3,6 +3,7 @@
     <pane>
       <TextEditor
         :editor-debounce-delay="editorDebounceDelay"
+        :tab-to-indent="tabToIndent"
         @update-editorstate="updateEditorState"
       />
     </pane>
@@ -32,7 +33,10 @@
     v-model:show-export="showExportPopup"
     @export-with-options="handleExport"
   />
-  <OptionsPopup v-model:show-options="showOptionsPopup" />
+  <OptionsPopup
+    v-model:show-options="showOptionsPopup"
+    v-model:tab-to-indent="tabToIndent"
+  />
 </template>
 
 <script lang="ts">
@@ -76,6 +80,7 @@ export default defineComponent({
       curDag: new Dag(""),
       showExportPopup: false,
       showOptionsPopup: false,
+      tabToIndent: false,
     };
   },
   watch: {

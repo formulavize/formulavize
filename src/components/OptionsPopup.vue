@@ -10,7 +10,15 @@
         <span>Options</span>
       </v-card-title>
       <v-card-text>
-        <span>Options go here.</span>
+        <v-row>
+          <v-col cols="4">
+            <v-checkbox
+              label="Tab to Indent"
+              :model-value="tabToIndent"
+              @update:model-value="$emit('update:tabToIndent', $event)"
+            />
+          </v-col>
+        </v-row>
       </v-card-text>
       <v-card-actions>
         <v-btn @click="$emit('update:showOptions', false)">
@@ -32,10 +40,17 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
+    tabToIndent: {
+      type: Boolean,
+      required: true,
+    },
   },
-  emits: ["update:showOptions"],
+  emits: ["update:showOptions", "update:tabToIndent"],
   setup() {
-    return { mdiCloseCircleOutline, mdiCogOutline };
+    return {
+      mdiCloseCircleOutline,
+      mdiCogOutline,
+    };
   },
 });
 </script>
