@@ -4,10 +4,15 @@
 
 <script lang="ts">
 import { debounce } from "lodash";
-import { defineComponent } from "vue";
+import { defineComponent, watch } from "vue";
 
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
-import { defaultKeymap, history, historyKeymap } from "@codemirror/commands";
+import {
+  defaultKeymap,
+  history,
+  historyKeymap,
+  indentWithTab,
+} from "@codemirror/commands";
 import {
   bracketMatching,
   defaultHighlightStyle,
@@ -16,7 +21,7 @@ import {
   syntaxHighlighting,
 } from "@codemirror/language";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Compartment, Extension } from "@codemirror/state";
 import {
   EditorView,
   ViewUpdate,
@@ -38,12 +43,27 @@ export default defineComponent({
       type: Number,
       default: 300, // ms
     },
+    tabToIndent: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ["update-editorstate"],
   mounted() {
     const emitEditorState = debounce((updatedState: EditorState): void => {
       this.$emit("update-editorstate", updatedState);
     }, this.editorDebounceDelay);
+    const getKeymap = (isTabbingOn: boolean): Extension => {
+      return keymap.of([
+        ...defaultKeymap,
+        ...historyKeymap,
+        ...searchKeymap,
+        ...foldKeymap,
+        ...closeBracketsKeymap,
+        ...(isTabbingOn ? [indentWithTab] : []),
+      ]);
+    };
+    const keymapCompartment = new Compartment();
     const editorState = EditorState.create({
       extensions: [
         lineNumbers(),
@@ -63,13 +83,7 @@ export default defineComponent({
         EditorView.updateListener.of((v: ViewUpdate): void => {
           if (v.docChanged) emitEditorState(v.state);
         }),
-        keymap.of([
-          ...defaultKeymap,
-          ...historyKeymap,
-          ...searchKeymap,
-          ...foldKeymap,
-          ...closeBracketsKeymap,
-        ]),
+        keymapCompartment.of(getKeymap(this.tabToIndent)),
         fizLanguage,
       ],
     });
@@ -78,6 +92,14 @@ export default defineComponent({
       parent: this.$refs.editorview as Element,
     });
     view.focus();
+    watch(
+      () => this.tabToIndent,
+      (isTabbingOn) => {
+        view.dispatch({
+          effects: keymapCompartment.reconfigure(getKeymap(isTabbingOn)),
+        });
+      },
+    );
   },
 });
 </script>
