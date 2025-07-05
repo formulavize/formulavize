@@ -2,6 +2,7 @@
   <v-dialog
     :model-value="showOptions"
     persistent
+    max-width="400px"
     @update:model-value="$emit('update:showOptions', $event)"
   >
     <v-card class="pa-4">
@@ -9,9 +10,9 @@
         <v-icon :icon="mdiCogOutline" class="mr-1" />
         <span>Options</span>
       </v-card-title>
-      <v-card-text>
+      <v-card-text class="py-2">
         <v-row>
-          <v-col cols="4">
+          <v-col cols="12" class="py-1">
             <v-checkbox
               label="Tab to Indent"
               :model-value="tabToIndent"
