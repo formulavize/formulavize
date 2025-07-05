@@ -2,6 +2,7 @@
   <v-dialog
     :model-value="showExport"
     persistent
+    max-width="600px"
     @update:model-value="$emit('update:showExport', $event)"
   >
     <v-card class="pa-4">
