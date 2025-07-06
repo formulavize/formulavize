@@ -13,6 +13,9 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "lib": ["esnext", "dom"],
-    "types": ["vite/client"]
+    "types": ["vite/client"],
+    // Bypass upstream type issues with Vuetify
+    // https://github.com/vuetifyjs/vuetify/issues/21227
+    "skipLibCheck": true
   }
 }
