@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.3.0](https://github.com/formulavize/formulavize/compare/v1.2.0...v1.3.0) (2025-07-06)
+
+
+### Features
+
+* **OptionsPopup:** add an OptionsPopup component ([a2fe6a6](https://github.com/formulavize/formulavize/commit/a2fe6a6beba48501f156dbf7f876254189e4ea45))
+* **OptionsPopup:** add Esc key message to Tab to Indent checkbox ([edb8935](https://github.com/formulavize/formulavize/commit/edb89350aa67a690631c4b2d6b0d0900cce9b552))
+* **TextEditor:** add tab to indent toggle option ([7a8938d](https://github.com/formulavize/formulavize/commit/7a8938d6343a82f3c4b13e47208c572747f3b1cf))
+
+
+### Bug Fixes
+
+* **ExportOptionsPopup:** add spacing between icons and text ([0929047](https://github.com/formulavize/formulavize/commit/0929047e38e93ff97d2a72f6204cad1f837ab1e2))
+* **OptionsPopup:** constrain max width of option popup ([01769e0](https://github.com/formulavize/formulavize/commit/01769e06f0e35c5073c749c97ceca9d59a677a98))
+
 ## [1.2.0](https://github.com/formulavize/formulavize/compare/v1.1.1...v1.2.0) (2025-02-24)
 
 
