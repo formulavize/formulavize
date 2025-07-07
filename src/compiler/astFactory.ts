@@ -18,6 +18,16 @@ import {
   ImportTreeNode,
   QualifiableIdentifier,
 } from "./ast";
+import { CompilationError as Error } from "./compilationErrors";
+
+function makeError(c: TreeCursor, errorMsg: string): Error {
+  return {
+    position: { from: c.from, to: c.to },
+    message: errorMsg,
+    severity: "error",
+    source: "AST",
+  };
+}
 
 function makeNullableChild<Result>(
   childName: string,
@@ -226,13 +236,25 @@ function makeStatement(c: TreeCursor, t: Text): StatementTreeNode | null {
 // text positions in the document. Though inefficient, reproducing the tree after
 // every change is the cleanest approach. Memoize / optimize later.
 // https://discuss.codemirror.net/t/efficient-reuse-of-productions-of-the-parse-tree/2944
-export function makeRecipeTree(tree: Tree, text: Text): RecipeTreeNode {
+export function makeRecipeTree(
+  tree: Tree,
+  text: Text,
+): { ast: RecipeTreeNode; errors: Error[] } {
   const cursor = tree.cursor();
+  // Errors array to collect any compilation errors
+  const errors: Error[] = [];
 
-  if (cursor.name === "") return new RecipeTreeNode();
+  if (cursor.name === "") return { ast: new RecipeTreeNode(), errors };
 
-  if (cursor.name !== "Recipe") console.error("Failed to parse ", cursor.name);
+  if (cursor.name !== "Recipe") {
+    errors.push(
+      makeError(
+        cursor,
+        `Expected Recipe node type but received '${cursor.name}' instead`,
+      ),
+    );
+  }
 
   const statements = getStatements(cursor, text);
-  return new RecipeTreeNode(statements);
+  return { ast: new RecipeTreeNode(statements), errors: errors };
 }
