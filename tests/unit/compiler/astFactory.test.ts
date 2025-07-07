@@ -15,27 +15,36 @@ import {
   ImportTreeNode as Import,
   BaseTreeNode,
 } from "src/compiler/ast";
+import { CompilationError as Error } from "src/compiler/compilationErrors";
 
 function makeTree(input: string): BaseTreeNode {
-  return parseFromSource(input);
+  return parseFromSource(input).ast;
+}
+
+function getErrors(input: string): Error[] {
+  return parseFromSource(input).errors;
 }
 
 describe("inactive elements", () => {
   test("with empty string", () => {
     const input = "";
     expect(makeTree(input)).toEqual(new Recipe());
+    expect(getErrors(input)).toEqual([]);
   });
   test("with whitespaces", () => {
     const input = " \n\t";
     expect(makeTree(input)).toEqual(new Recipe());
+    expect(getErrors(input)).toEqual([]);
   });
   test("line comment", () => {
     const input = "// line comment";
     expect(makeTree(input)).toEqual(new Recipe());
+    expect(getErrors(input)).toEqual([]);
   });
   test("block comment", () => {
     const input = "/* block comment */";
     expect(makeTree(input)).toEqual(new Recipe());
+    expect(getErrors(input)).toEqual([]);
   });
 });
 

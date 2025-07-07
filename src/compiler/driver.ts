@@ -6,16 +6,20 @@ import { makeRecipeTree } from "./astFactory";
 import { makeDag } from "./dagFactory";
 import { Compilation } from "./compilation";
 import { ImportCacher } from "./importCacher";
+import { CompilationError as Error } from "./compilationErrors";
 
 interface SourceGen<I> {
   (input: I): string;
 }
 
 interface Parse<I> {
-  (input: I): RecipeTreeNode;
+  (input: I): { ast: RecipeTreeNode; errors: Error[] };
 }
 
-export function parseFromSource(sourceRecipe: string): RecipeTreeNode {
+export function parseFromSource(sourceRecipe: string): {
+  ast: RecipeTreeNode;
+  errors: Error[];
+} {
   const tree = fizLanguage.parser.parse(sourceRecipe);
   const editorState = EditorState.create({ extensions: [fizLanguage] });
   const text = editorState.toText(sourceRecipe);
@@ -40,7 +44,7 @@ export class Compiler {
     seenImports: Set<string> = new Set(),
   ): Promise<Compilation> {
     const source = sourceGen(input);
-    const ast = parse(input);
+    const { ast } = parse(input);
     const dag = await makeDag(ast, this.importCacher, seenImports);
     return new Compilation(source, ast, dag);
   }
@@ -50,7 +54,10 @@ export class Compiler {
       return editorState.doc.toString();
     }
 
-    function parseFromEditor(editorState: EditorState): RecipeTreeNode {
+    function parseFromEditor(editorState: EditorState): {
+      ast: RecipeTreeNode;
+      errors: Error[];
+    } {
       const tree = syntaxTree(editorState);
       const text = editorState.doc;
       return makeRecipeTree(tree, text);
