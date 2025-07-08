@@ -1,5 +1,10 @@
+export interface Position {
+  from: number;
+  to: number;
+}
+
 export interface CompilationError {
-  position: { from: number; to: number };
+  position: Position;
   message: string;
   severity: "error" | "warning" | "info" | "hint";
   source: string;

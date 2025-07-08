@@ -17,8 +17,16 @@ import {
 } from "src/compiler/ast";
 import { CompilationError as Error } from "src/compiler/compilationErrors";
 
+function stripPositions(node: BaseTreeNode): BaseTreeNode {
+  node.Position = null;
+  for (const child of node.getChildren()) {
+    stripPositions(child);
+  }
+  return node;
+}
+
 function makeTree(input: string): BaseTreeNode {
-  return parseFromSource(input).ast;
+  return stripPositions(parseFromSource(input).ast);
 }
 
 function getErrors(input: string): Error[] {
@@ -344,5 +352,101 @@ describe("incomplete statements", () => {
   test("import statement with no path", () => {
     const input = "n @";
     expect(makeTree(input)).toEqual(new Recipe([new Import("", "n")]));
+  });
+});
+
+describe("node positions", () => {
+  function makeTreeWithPositions(input: string): BaseTreeNode {
+    return parseFromSource(input).ast;
+  }
+
+  test("single variable", () => {
+    const input = "x";
+    expect(makeTreeWithPositions(input)).toEqual(
+      new Recipe([new QualifiedVariable(["x"], { from: 0, to: 1 })], {
+        from: 0,
+        to: 1,
+      }),
+    );
+  });
+
+  test("alias", () => {
+    const input = "a = b";
+    expect(makeTreeWithPositions(input)).toEqual(
+      new Recipe(
+        [
+          new Alias(
+            new LocalVariable("a", null, { from: 0, to: 1 }),
+            new QualifiedVariable(["b"], { from: 4, to: 5 }),
+            { from: 0, to: 5 },
+          ),
+        ],
+        { from: 0, to: 5 },
+      ),
+    );
+  });
+
+  test("call with argument", () => {
+    const input = "foo(bar)";
+    expect(makeTreeWithPositions(input)).toEqual(
+      new Recipe(
+        [
+          new Call(
+            "foo",
+            [new QualifiedVariable(["bar"], { from: 4, to: 7 })],
+            null,
+            { from: 0, to: 8 },
+          ),
+        ],
+        { from: 0, to: 8 },
+      ),
+    );
+  });
+  test("call with multiple arguments", () => {
+    const input = "foo(bar, baz)";
+    expect(makeTreeWithPositions(input)).toEqual(
+      new Recipe(
+        [
+          new Call(
+            "foo",
+            [
+              new QualifiedVariable(["bar"], { from: 4, to: 7 }),
+              new QualifiedVariable(["baz"], { from: 9, to: 12 }),
+            ],
+            null,
+            { from: 0, to: 13 },
+          ),
+        ],
+        { from: 0, to: 13 },
+      ),
+    );
+  });
+
+  test("namespace with style", () => {
+    const input = "n[]{#s}";
+    expect(makeTreeWithPositions(input)).toEqual(
+      new Recipe(
+        [
+          new Namespace(
+            "n",
+            [],
+            [],
+            new Style(undefined, [["s"]], { from: 3, to: 7 }),
+            { from: 0, to: 7 },
+          ),
+        ],
+        { from: 0, to: 7 },
+      ),
+    );
+  });
+
+  test("import statement", () => {
+    const input = 'n @ "path"';
+    expect(makeTreeWithPositions(input)).toEqual(
+      new Recipe([new Import("path", "n", { from: 0, to: 10 })], {
+        from: 0,
+        to: 10,
+      }),
+    );
   });
 });

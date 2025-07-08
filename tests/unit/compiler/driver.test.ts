@@ -16,7 +16,11 @@ describe("basic compiler driver", () => {
 
     expect(compilation.Source).toBe("f()");
 
-    const expectedAst = new RecipeTreeNode([new CallTreeNode("f", [])]);
+    const expectedPosition = { from: 0, to: 3 };
+    const expectedAst = new RecipeTreeNode(
+      [new CallTreeNode("f", [], null, expectedPosition)],
+      expectedPosition,
+    );
     expect(compilation.AST).toEqual(expectedAst);
 
     const nodeList = compilation.DAG.getNodeList();
@@ -32,7 +36,11 @@ describe("basic compiler driver", () => {
 
     expect(compilation.Source).toBe("f()");
 
-    const expectedAst = new RecipeTreeNode([new CallTreeNode("f", [])]);
+    const expectedPosition = { from: 0, to: 3 };
+    const expectedAst = new RecipeTreeNode(
+      [new CallTreeNode("f", [], null, expectedPosition)],
+      expectedPosition,
+    );
     expect(compilation.AST).toEqual(expectedAst);
 
     const nodeList = compilation.DAG.getNodeList();
