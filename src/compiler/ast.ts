@@ -1,3 +1,5 @@
+import { Position } from "./compilationErrors";
+
 export enum NodeType {
   Call,
   Assignment,
@@ -14,13 +16,25 @@ export enum NodeType {
 
 export abstract class BaseTreeNode {
   protected type: NodeType;
+  protected position: Position | null;
 
-  constructor(type: NodeType) {
+  constructor(type: NodeType, position: Position | null = null) {
     this.type = type;
+    this.position = position;
   }
 
   get Type(): NodeType {
     return this.type;
+  }
+
+  get Position(): Position | null {
+    return this.position;
+  }
+
+  set Position(position: Position | null) {
+    // Primarily intended for tests to nullify position
+    // so test cases can focus on structural comparison
+    this.position = position;
   }
 
   abstract getChildren(): BaseTreeNode[];
@@ -57,8 +71,11 @@ export type StatementTreeNode =
 export class RecipeTreeNode extends BaseTreeNode {
   private statements: StatementTreeNode[];
 
-  constructor(init_stmts: StatementTreeNode[] = []) {
-    super(NodeType.Recipe);
+  constructor(
+    init_stmts: StatementTreeNode[] = [],
+    position: Position | null = null,
+  ) {
+    super(NodeType.Recipe, position);
     this.statements = init_stmts;
   }
 
@@ -90,8 +107,9 @@ export class CallTreeNode extends BaseTreeNode {
     name: string,
     argList: ValueTreeNode[],
     styling: StyleTreeNode | null = null,
+    position: Position | null = null,
   ) {
-    super(NodeType.Call);
+    super(NodeType.Call, position);
     this.name = name;
     this.argList = argList;
     this.styling = styling;
@@ -127,8 +145,9 @@ export class AssignmentTreeNode extends BaseTreeNode {
   constructor(
     varList: LocalVarTreeNode[],
     rhs: CallTreeNode | NamespaceTreeNode | ImportTreeNode | null,
+    position: Position | null = null,
   ) {
-    super(NodeType.Assignment);
+    super(NodeType.Assignment, position);
     this.lhs = varList;
     this.rhs = rhs;
   }
@@ -156,8 +175,12 @@ export class AliasTreeNode extends BaseTreeNode {
   private lhs: LocalVarTreeNode | null;
   private rhs: QualifiedVarTreeNode | null;
 
-  constructor(lhs: LocalVarTreeNode | null, rhs: QualifiedVarTreeNode | null) {
-    super(NodeType.Alias);
+  constructor(
+    lhs: LocalVarTreeNode | null,
+    rhs: QualifiedVarTreeNode | null,
+    position: Position | null = null,
+  ) {
+    super(NodeType.Alias, position);
     this.lhs = lhs;
     this.rhs = rhs;
   }
@@ -188,8 +211,12 @@ export class LocalVarTreeNode extends BaseTreeNode {
   private varName: string;
   private styling: StyleTreeNode | null;
 
-  constructor(value: string, styling: StyleTreeNode | null = null) {
-    super(NodeType.LocalVariable);
+  constructor(
+    value: string,
+    styling: StyleTreeNode | null = null,
+    position: Position | null = null,
+  ) {
+    super(NodeType.LocalVariable, position);
     this.varName = value;
     this.styling = styling;
   }
@@ -214,8 +241,8 @@ export class LocalVarTreeNode extends BaseTreeNode {
 export class QualifiedVarTreeNode extends BaseTreeNode {
   private qualifiedVarName: QualifiableIdentifier;
 
-  constructor(value: QualifiableIdentifier) {
-    super(NodeType.QualifiedVariable);
+  constructor(value: QualifiableIdentifier, position: Position | null = null) {
+    super(NodeType.QualifiedVariable, position);
     this.qualifiedVarName = value;
   }
 
@@ -239,8 +266,9 @@ export class StyleTreeNode extends BaseTreeNode {
   constructor(
     initMap: Map<string, string> = new Map(),
     initTags: QualifiableIdentifier[] = [],
+    position: Position | null = null,
   ) {
-    super(NodeType.Style);
+    super(NodeType.Style, position);
     this.keyValueMap = initMap;
     this.styleTagList = initTags;
   }
@@ -283,9 +311,10 @@ export class NamedStyleTreeNode extends BaseTreeNode {
 
   constructor(
     styleName: string = "",
-    styleNode: StyleTreeNode = new StyleTreeNode(),
+    styleNode: StyleTreeNode = new StyleTreeNode(new Map(), [], null),
+    position: Position | null = null,
   ) {
-    super(NodeType.NamedStyle);
+    super(NodeType.NamedStyle, position);
     this.styleName = styleName;
     this.styleNode = styleNode;
   }
@@ -314,8 +343,9 @@ export class StyleBindingTreeNode extends BaseTreeNode {
   constructor(
     keyword: string = "",
     styleTagList: QualifiableIdentifier[] = [],
+    position: Position | null = null,
   ) {
-    super(NodeType.StyleBinding);
+    super(NodeType.StyleBinding, position);
     this.keyword = keyword;
     this.styleTagList = styleTagList;
   }
@@ -353,8 +383,9 @@ export class NamespaceTreeNode extends BaseTreeNode {
     statements: StatementTreeNode[] = [],
     argList: ValueTreeNode[] = [],
     styling: StyleTreeNode | null = null,
+    position: Position | null = null,
   ) {
-    super(NodeType.Namespace);
+    super(NodeType.Namespace, position);
     this.name = name;
     this.statements = statements;
     this.argList = argList;
@@ -392,8 +423,12 @@ export class ImportTreeNode extends BaseTreeNode {
   private importLocation: string;
   private importName: string | null;
 
-  constructor(importPath: string, importName: string | null = null) {
-    super(NodeType.Import);
+  constructor(
+    importPath: string,
+    importName: string | null = null,
+    position: Position | null = null,
+  ) {
+    super(NodeType.Import, position);
     this.importLocation = importPath;
     this.importName = importName === "" ? null : importName;
   }
