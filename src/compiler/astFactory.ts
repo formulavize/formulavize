@@ -18,7 +18,11 @@ import {
   ImportTreeNode,
   QualifiableIdentifier,
 } from "./ast";
-import { CompilationError as Error, Position } from "./compilationErrors";
+import {
+  CompilationError as Error,
+  Position,
+  DEFAULT_POSITION,
+} from "./compilationErrors";
 
 function getPosition(c: TreeCursor): Position {
   return { from: c.from, to: c.to };
@@ -144,12 +148,12 @@ function getArgList(c: TreeCursor, t: Text, e: Error[]): ValueTreeNode[] {
         .with("Call", () => makeCall(candidateValue.cursor(), t, e))
         .with("RhsVariable", () => makeRhsVariable(candidateValue.cursor(), t))
         .otherwise(() => {
-          e.push(
-            makeError(
-              candidateValue.cursor(),
-              `Unknown argument type '${candidateValue.name}'`,
-            ),
+          const err = makeError(
+            candidateValue.cursor(),
+            `Unknown argument type '${candidateValue.name}'`,
           );
+          e.push(err);
+          console.debug(err);
           return null;
         }),
     )
@@ -252,7 +256,9 @@ function makeStatement(
     .with("LineComment", () => null)
     .with("BlockComment", () => null)
     .otherwise(() => {
-      e.push(makeError(c, `Unknown statement type '${c.node.name}'`));
+      const err = makeError(c, `Unknown statement type '${c.node.name}'`);
+      e.push(err);
+      console.debug(err);
       return null;
     });
 }
@@ -271,15 +277,15 @@ export function makeRecipeTree(
   const errors: Error[] = [];
 
   if (cursor.name === "")
-    return { ast: new RecipeTreeNode([], { from: 0, to: 0 }), errors };
+    return { ast: new RecipeTreeNode([], DEFAULT_POSITION), errors };
 
   if (cursor.name !== "Recipe") {
-    errors.push(
-      makeError(
-        cursor,
-        `Expected Recipe node but received '${cursor.name}' instead`,
-      ),
+    const err = makeError(
+      cursor,
+      `Expected Recipe node but received '${cursor.name}' instead`,
     );
+    errors.push(err);
+    console.debug(err);
   }
 
   const statements = getStatements(cursor, text, errors);
