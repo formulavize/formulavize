@@ -3,6 +3,8 @@ export interface Position {
   to: number;
 }
 
+export const DEFAULT_POSITION: Position = { from: 0, to: 0 };
+
 export interface CompilationError {
   position: Position;
   message: string;
