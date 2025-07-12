@@ -44,9 +44,14 @@ export class Compiler {
     seenImports: Set<string> = new Set(),
   ): Promise<Compilation> {
     const source = sourceGen(input);
-    const { ast } = parse(input);
-    const { dag } = await makeDag(ast, this.importCacher, seenImports);
-    return new Compilation(source, ast, dag);
+    const { ast, errors: parseErrors } = parse(input);
+    const { dag, errors: dagErrors } = await makeDag(
+      ast,
+      this.importCacher,
+      seenImports,
+    );
+    const errors = [...parseErrors, ...dagErrors];
+    return new Compilation(source, ast, dag, errors);
   }
 
   compileFromEditor(editorState: EditorState): Promise<Compilation> {

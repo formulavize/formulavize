@@ -1,16 +1,19 @@
 import { RecipeTreeNode } from "./ast";
 import { Dag } from "./dag";
+import { CompilationError as Error } from "./compilationErrors";
 
 export class Compilation {
   // keep intermediate states for debugging
   private source: string;
   private ast: RecipeTreeNode;
   private dag: Dag;
+  private errors: Error[];
 
-  constructor(source: string, ast: RecipeTreeNode, dag: Dag) {
+  constructor(source: string, ast: RecipeTreeNode, dag: Dag, errors: Error[]) {
     this.source = source;
     this.ast = ast;
     this.dag = dag;
+    this.errors = errors;
   }
 
   get Source(): string {
@@ -23,5 +26,9 @@ export class Compilation {
 
   get DAG(): Dag {
     return this.dag;
+  }
+
+  get Errors(): Error[] {
+    return this.errors;
   }
 }
