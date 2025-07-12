@@ -45,7 +45,7 @@ export class Compiler {
   ): Promise<Compilation> {
     const source = sourceGen(input);
     const { ast } = parse(input);
-    const dag = await makeDag(ast, this.importCacher, seenImports);
+    const { dag } = await makeDag(ast, this.importCacher, seenImports);
     return new Compilation(source, ast, dag);
   }
 
