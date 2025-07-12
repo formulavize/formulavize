@@ -16,12 +16,13 @@ import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
 import { Dag, StyleTag, StyleProperties, Keyword } from "src/compiler/dag";
 import { makeDag } from "src/compiler/dagFactory";
 import { ImportCacher } from "src/compiler/importCacher";
+import { DEFAULT_POSITION } from "src/compiler/compilationErrors";
 
 const dummyImporter = {} as ImportCacher;
 
 describe("node tests", () => {
   async function makeDagAndReturnNodeNames(recipe: Recipe): Promise<string[]> {
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     return dag
       .getNodeList()
       .map((node) => node.name)
@@ -30,7 +31,7 @@ describe("node tests", () => {
 
   test("empty recipe", async () => {
     const recipe = new Recipe();
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     expect(dag).toEqual(new Dag(dag.Id));
   });
   test("one node", async () => {
@@ -90,7 +91,7 @@ describe("edge tests", () => {
   async function makeDagAndReturnEdgeNames(
     recipe: Recipe,
   ): Promise<NodeNamePair[]> {
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
     const edgeList = getDagEdgeNames(dag, nodeIdToNameMap);
     return dag
@@ -293,7 +294,7 @@ describe("edge tests", () => {
         [new QualifiedVariable(["y"]), new Call("h", [])],
       ),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
     const rawEdgeList = dag
       .getEdgeList()
@@ -317,7 +318,7 @@ describe("edge tests", () => {
       new Assignment([new LocalVariable("y")], new Namespace()),
       new Call("g", [new QualifiedVariable(["y"])]),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
 
     const edgeList = dag.getEdgeList();
@@ -334,7 +335,7 @@ describe("edge tests", () => {
       new Assignment([new LocalVariable("y")], new Namespace("child")),
       new Call("g", [new QualifiedVariable(["y"])]),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
 
     const edgeList = dag.getEdgeList();
@@ -352,7 +353,7 @@ describe("style tests", () => {
   async function makeDagAndReturnStyleMap(
     recipe: Recipe,
   ): Promise<Map<string, StyleProperties>> {
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     return dag.getFlattenedStyles();
   }
 
@@ -408,7 +409,7 @@ describe("style tests", () => {
     const recipe = new Recipe([
       new Call("f", [], new Style(sampleMap, [["s"]])),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
@@ -424,7 +425,7 @@ describe("style tests", () => {
       ),
       new Call("g", [new QualifiedVariable(["x"])]),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const dagEdgeList = dag.getEdgeList();
     expect(dagEdgeList).toHaveLength(1);
     const dagEdge = dagEdgeList[0];
@@ -448,7 +449,7 @@ describe("style tests", () => {
         new QualifiedVariable(["y"]),
       ]),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const dagEdgeList = dag.getEdgeList();
     expect(dagEdgeList).toHaveLength(2);
     let dagEdge1 = dagEdgeList[0];
@@ -470,7 +471,7 @@ describe("style tests", () => {
       ),
       new Namespace("child", [new Call("g", [new QualifiedVariable(["x"])])]),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     expect(dag.getEdgeList()).toHaveLength(0);
     const childDags = dag.getChildDags();
     expect(childDags).toHaveLength(1);
@@ -493,7 +494,7 @@ describe("style tests", () => {
         new Call("g", [new QualifiedVariable(["x"])]),
       ]),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     expect(dag.getEdgeList()).toHaveLength(0);
     const childDags = dag.getChildDags();
     expect(childDags).toHaveLength(1);
@@ -512,7 +513,7 @@ describe("style tests", () => {
         new Call("g", [], new Style(undefined, [["s"]])),
       ]),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const childDags = dag.getChildDags();
     expect(childDags).toHaveLength(1);
     const childDag = childDags[0];
@@ -528,7 +529,7 @@ describe("style tests", () => {
       new Namespace("child", [new NamedStyle("s", new Style(sampleMap))]),
       new Call("g", [], new Style(undefined, [["child", "s"]])),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
@@ -548,7 +549,7 @@ describe("style tests", () => {
         ),
       ),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
@@ -576,7 +577,7 @@ describe("style tests", () => {
       ),
       new Call("g", [new QualifiedVariable(["x"])]),
     ]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const dagEdgeList = dag.getEdgeList();
     expect(dagEdgeList).toHaveLength(1);
     const dagEdge = dagEdgeList[0];
@@ -591,20 +592,20 @@ describe("style tests", () => {
 describe("style binding tests", () => {
   test("no style binding", async () => {
     const recipe = new Recipe([]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const defaultBindings = dag.getStyleBindings();
     expect(defaultBindings).toEqual(new Map<Keyword, StyleTag[]>());
   });
   test("empty style binding", async () => {
     const recipe = new Recipe([new StyleBinding("x", [])]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const styleBindings = dag.getStyleBindings();
     const expectedBinding = new Map<Keyword, StyleTag[]>([["x", []]]);
     expect(styleBindings).toEqual(expectedBinding);
   });
   test("style bind multiple styles", async () => {
     const recipe = new Recipe([new StyleBinding("x", [["a"], ["b"]])]);
-    const dag = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImporter);
     const styleBindings = dag.getStyleBindings();
     const expectedBinding = new Map<Keyword, StyleTag[]>([
       ["x", [["a"], ["b"]]],
@@ -627,7 +628,7 @@ describe("import tests", () => {
 
   test("imported anonymous namespace", async () => {
     const recipe = new Recipe([new Import("path")]);
-    const dag = await makeDag(recipe, mockImporter);
+    const { dag } = await makeDag(recipe, mockImporter);
     expect(dag.getChildDags()).toHaveLength(0);
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
@@ -636,7 +637,7 @@ describe("import tests", () => {
   });
   test("imported named namespace", async () => {
     const recipe = new Recipe([new Import("path", "alias")]);
-    const dag = await makeDag(recipe, mockImporter);
+    const { dag } = await makeDag(recipe, mockImporter);
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getChildDags()).toHaveLength(1);
     const childDag = dag.getChildDags()[0];
@@ -651,7 +652,7 @@ describe("import tests", () => {
       new Assignment([new LocalVariable("x")], new Import("path")),
       new Call("y", [new QualifiedVariable(["x"])]),
     ]);
-    const dag = await makeDag(recipe, mockImporter);
+    const { dag } = await makeDag(recipe, mockImporter);
     expect(dag.getChildDags()).toHaveLength(1);
     const childDag = dag.getChildDags()[0];
     expect(childDag.Name).toEqual("");
@@ -668,7 +669,7 @@ describe("import tests", () => {
       new Assignment([new LocalVariable("x")], new Import("path", "alias")),
       new Call("y", [new QualifiedVariable(["x"])]),
     ]);
-    const dag = await makeDag(recipe, mockImporter);
+    const { dag } = await makeDag(recipe, mockImporter);
     expect(dag.getChildDags()).toHaveLength(1);
     const childDag = dag.getChildDags()[0];
     expect(childDag.Name).toEqual("alias");
@@ -689,11 +690,111 @@ describe("import tests", () => {
 
   test("continue after problematic import", async () => {
     const recipe = new Recipe([new Import("path"), new Call("f", [])]);
-    const dag = await makeDag(recipe, mockImporterError);
+    const { dag } = await makeDag(recipe, mockImporterError);
     expect(dag.getChildDags()).toHaveLength(0);
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
     const dagNode = dagNodeList[0];
     expect(dagNode.name).toEqual("f");
+  });
+});
+
+describe("error reporting", () => {
+  test("argListToEdgeInfo reports error when variable not found", async () => {
+    const recipe = new Recipe([
+      new Call("f", [new QualifiedVariable(["not_found_var"])]),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Variable not_found_var not found");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("DAG");
+
+    const dagNodeList = dag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
+    const dagNode = dagNodeList[0];
+    expect(dagNode.name).toEqual("f");
+  });
+  test("alias reports error when variable not found", async () => {
+    const recipe = new Recipe([
+      new Alias(
+        new LocalVariable("b"),
+        new QualifiedVariable(["not_found_var"]),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual(
+      "Variable not_found_var not found for alias b",
+    );
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("DAG");
+
+    expect(dag.getNodeList()).toHaveLength(0);
+    expect(dag.getEdgeList()).toHaveLength(0);
+  });
+  test("named style reports error when referenced style tag not found", async () => {
+    const recipe = new Recipe([
+      new NamedStyle("t", new Style(undefined, [["missingStyle"]])),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Style tag missingStyle not found");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("DAG");
+
+    const styleMap = dag.getFlattenedStyles();
+    expect(styleMap.get("t")).toEqual(new Map());
+  });
+  test("error reporting when import fails", async () => {
+    const mockImporterError = {
+      getPackageDag: async () => {
+        throw new Error("import error");
+      },
+    } as unknown as ImportCacher;
+
+    const recipe = new Recipe([new Import("bad_path")]);
+    const { dag, errors } = await makeDag(recipe, mockImporterError);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Import failed: Error: import error");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("DAG");
+
+    expect(dag.getNodeList()).toHaveLength(0);
+    expect(dag.getEdgeList()).toHaveLength(0);
+    expect(dag.getChildDags()).toHaveLength(0);
+  });
+  test("error uses default position when node has no position", async () => {
+    const recipe = new Recipe([
+      new Call("f", [new QualifiedVariable(["not_found_var"])]),
+    ]);
+    const { errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].position).toEqual(DEFAULT_POSITION);
+  });
+  test("error uses node position when available", async () => {
+    const recipe = new Recipe(
+      [
+        new Call(
+          "f",
+          [new QualifiedVariable(["not_found_var"], { from: 2, to: 16 })],
+          undefined,
+          {
+            from: 0,
+            to: 17,
+          },
+        ),
+      ],
+      { from: 0, to: 17 },
+    );
+    const { errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].position).toEqual({ from: 2, to: 16 });
   });
 });

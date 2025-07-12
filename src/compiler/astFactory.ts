@@ -148,12 +148,12 @@ function getArgList(c: TreeCursor, t: Text, e: Error[]): ValueTreeNode[] {
         .with("Call", () => makeCall(candidateValue.cursor(), t, e))
         .with("RhsVariable", () => makeRhsVariable(candidateValue.cursor(), t))
         .otherwise(() => {
-          const err = makeError(
+          const errMsg = makeError(
             candidateValue.cursor(),
             `Unknown argument type '${candidateValue.name}'`,
           );
-          e.push(err);
-          console.debug(err);
+          e.push(errMsg);
+          console.debug(errMsg);
           return null;
         }),
     )
@@ -256,9 +256,9 @@ function makeStatement(
     .with("LineComment", () => null)
     .with("BlockComment", () => null)
     .otherwise(() => {
-      const err = makeError(c, `Unknown statement type '${c.node.name}'`);
-      e.push(err);
-      console.debug(err);
+      const errMsg = makeError(c, `Unknown statement type '${c.node.name}'`);
+      e.push(errMsg);
+      console.debug(errMsg);
       return null;
     });
 }
@@ -280,12 +280,12 @@ export function makeRecipeTree(
     return { ast: new RecipeTreeNode([], DEFAULT_POSITION), errors };
 
   if (cursor.name !== "Recipe") {
-    const err = makeError(
+    const errMsg = makeError(
       cursor,
       `Expected Recipe node but received '${cursor.name}' instead`,
     );
-    errors.push(err);
-    console.debug(err);
+    errors.push(errMsg);
+    console.debug(errMsg);
   }
 
   const statements = getStatements(cursor, text, errors);

@@ -2,6 +2,7 @@ import { match } from "ts-pattern";
 import { v4 as uuidv4 } from "uuid";
 
 import {
+  BaseTreeNode,
   RecipeTreeNode,
   CallTreeNode,
   AssignmentTreeNode,
@@ -17,6 +18,10 @@ import {
 } from "./ast";
 import { Dag, NodeId, StyleProperties, DagId, DagStyle } from "./dag";
 import { ImportCacher } from "./importCacher";
+import {
+  CompilationError as Error,
+  DEFAULT_POSITION,
+} from "./compilationErrors";
 
 function makeDagStyle(styleNode: StyleTreeNode): DagStyle {
   return {
@@ -31,15 +36,29 @@ type IncomingEdgeInfo = {
   varStyle: DagStyle | null;
 };
 
+function makeDagError(node: BaseTreeNode, message: string): Error {
+  return {
+    position: node.Position ?? DEFAULT_POSITION,
+    message: message,
+    severity: "error",
+    source: "DAG",
+  };
+}
+
 function argListToEdgeInfo(
   argList: ValueTreeNode[],
   workingDag: Dag,
+  errors: Error[],
 ): IncomingEdgeInfo[] {
   return argList
     .map((arg) =>
       match(arg.Type)
         .with(NodeType.Call, () => {
-          const argNodeId = processCall(arg as CallTreeNode, workingDag);
+          const argNodeId = processCall(
+            arg as CallTreeNode,
+            workingDag,
+            errors,
+          );
           return { nodeId: argNodeId, varName: "", varStyle: null };
         })
         .with(NodeType.QualifiedVariable, () => {
@@ -48,7 +67,9 @@ function argListToEdgeInfo(
           const varStyle = workingDag.getVarStyle(varName) ?? null;
           const candidateSrcNodeId = workingDag.getVarNode(varName);
           if (!candidateSrcNodeId) {
-            console.warn("Unable to find variable with name ", varName);
+            const errMsg = makeDagError(arg, `Variable ${varName} not found`);
+            errors.push(errMsg);
+            console.debug(errMsg);
             return null;
           }
           return {
@@ -58,7 +79,9 @@ function argListToEdgeInfo(
           };
         })
         .otherwise(() => {
-          console.error("Unknown node type ", arg.Type);
+          const errMsg = makeDagError(arg, `Unknown argument type ${arg.Type}`);
+          errors.push(errMsg);
+          console.debug(errMsg);
           return null;
         }),
     )
@@ -85,7 +108,11 @@ function addIncomingEdgesToDag(
   });
 }
 
-function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
+function processCall(
+  callStmt: CallTreeNode,
+  workingDag: Dag,
+  errors: Error[],
+): NodeId {
   const thisNodeId = uuidv4();
   const thisNode = {
     id: thisNodeId,
@@ -95,7 +122,11 @@ function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
   };
   workingDag.addNode(thisNode);
 
-  const incomingEdgeInfoList = argListToEdgeInfo(callStmt.ArgList, workingDag);
+  const incomingEdgeInfoList = argListToEdgeInfo(
+    callStmt.ArgList,
+    workingDag,
+    errors,
+  );
   addIncomingEdgesToDag(incomingEdgeInfoList, thisNodeId, workingDag);
 
   return thisNodeId;
@@ -104,6 +135,7 @@ function processCall(callStmt: CallTreeNode, workingDag: Dag): NodeId {
 async function processNamespace(
   namespaceStmt: NamespaceTreeNode,
   workingDag: Dag,
+  errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string>,
 ): Promise<NodeId> {
@@ -111,13 +143,18 @@ async function processNamespace(
   const childDag = makeSubDag(
     subDagId,
     namespaceStmt,
+    errors,
     importer,
     seenImports,
     workingDag,
   );
   workingDag.addChildDag(await childDag);
 
-  const dagIncomingEdges = argListToEdgeInfo(namespaceStmt.ArgList, workingDag);
+  const dagIncomingEdges = argListToEdgeInfo(
+    namespaceStmt.ArgList,
+    workingDag,
+    errors,
+  );
   addIncomingEdgesToDag(dagIncomingEdges, subDagId, workingDag);
 
   return subDagId;
@@ -126,6 +163,7 @@ async function processNamespace(
 async function getImportedDag(
   importStmt: ImportTreeNode,
   importer: ImportCacher,
+  errors: Error[],
   workingDag: Dag,
   seenImports: Set<string>,
 ): Promise<Dag> {
@@ -136,14 +174,17 @@ async function getImportedDag(
   return importer
     .getPackageDag(importStmt.ImportLocation, seenImports)
     .catch((err) => {
-      console.warn("Import failed: ", err);
-      return Promise.reject(`Import Failure: ${err}`);
+      const errMsg = makeDagError(importStmt, `Import failed: ${err}`);
+      errors.push(errMsg);
+      console.debug(errMsg);
+      return Promise.reject(err);
     });
 }
 
 async function processImport(
   importStmt: ImportTreeNode,
   workingDag: Dag,
+  errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string>,
 ): Promise<NodeId> {
@@ -151,6 +192,7 @@ async function processImport(
   const importedDag = await getImportedDag(
     importStmt,
     importer,
+    errors,
     workingDag,
     seenImports,
   );
@@ -163,6 +205,7 @@ async function processImport(
 async function processUnassignedImport(
   importStmt: ImportTreeNode,
   workingDag: Dag,
+  errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string>,
 ) {
@@ -170,6 +213,7 @@ async function processUnassignedImport(
   const importedDag = await getImportedDag(
     importStmt,
     importer,
+    errors,
     workingDag,
     seenImports,
   );
@@ -191,17 +235,19 @@ function mergeMap<K, V>(mutableMap: Map<K, V>, mapToAdd: Map<K, V>): void {
 async function processAssignmentRhs(
   rhsNode: CallTreeNode | NamespaceTreeNode | ImportTreeNode,
   workingDag: Dag,
+  errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string>,
 ): Promise<NodeId> {
   return match(rhsNode.Type)
     .with(NodeType.Call, () => {
-      return processCall(rhsNode as CallTreeNode, workingDag);
+      return processCall(rhsNode as CallTreeNode, workingDag, errors);
     })
     .with(NodeType.Namespace, () => {
       return processNamespace(
         rhsNode as NamespaceTreeNode,
         workingDag,
+        errors,
         importer,
         seenImports,
       );
@@ -210,19 +256,26 @@ async function processAssignmentRhs(
       return processImport(
         rhsNode as ImportTreeNode,
         workingDag,
+        errors,
         importer,
         seenImports,
       );
     })
     .otherwise(() => {
-      console.error("Unknown node type ", rhsNode.Type);
-      return Promise.reject(`Unknown node type ${rhsNode.Type}`);
+      const errMsg = makeDagError(
+        rhsNode,
+        `Invalid right hand side type ${rhsNode.Type}`,
+      );
+      errors.push(errMsg);
+      console.debug(errMsg);
+      return Promise.reject(`Invalid right hand side type ${rhsNode.Type}`);
     });
 }
 
 export async function makeSubDag(
   dagId: DagId,
   dagNamespaceStmt: NamespaceTreeNode,
+  errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string> = new Set(),
   parentDag?: Dag,
@@ -241,7 +294,7 @@ export async function makeSubDag(
     await match(stmt.Type)
       .with(NodeType.Call, () => {
         const callStmt = stmt as CallTreeNode;
-        processCall(callStmt, curLevelDag);
+        processCall(callStmt, curLevelDag, errors);
       })
       .with(NodeType.Assignment, async () => {
         const assignmentStmt = stmt as AssignmentTreeNode;
@@ -249,10 +302,11 @@ export async function makeSubDag(
         const thisNodeId = await processAssignmentRhs(
           assignmentStmt.Rhs,
           curLevelDag,
+          errors,
           importer,
           seenImports,
         ).catch((err) => {
-          console.warn("Assignment failed: ", err);
+          console.debug("Assignment failure:", err);
           return null;
         });
         if (!thisNodeId) return;
@@ -270,7 +324,12 @@ export async function makeSubDag(
         const rhsName = aliasStmt.Rhs!.QualifiedVarName;
         const RhsReferentNodeId = curLevelDag.getVarNode(rhsName);
         if (!RhsReferentNodeId) {
-          console.warn(`var ${rhsName} not found`);
+          const errMsg = makeDagError(
+            aliasStmt.Rhs,
+            `Variable ${rhsName} not found for alias ${lhsName}`,
+          );
+          errors.push(errMsg);
+          console.debug(errMsg);
           return;
         }
         curLevelDag.setVarNode(lhsName, RhsReferentNodeId);
@@ -288,7 +347,12 @@ export async function makeSubDag(
           const referentStyle = curLevelDag.getStyle(styleTag);
           if (!referentStyle) {
             // styles must be declared before usage
-            console.warn(`styleTag ${styleTag} not found`);
+            const errMsg = makeDagError(
+              styleNode,
+              `Style tag ${styleTag} not found`,
+            );
+            errors.push(errMsg);
+            console.debug(errMsg);
             return;
           }
           mergeMap(workingStyleProperties, referentStyle);
@@ -311,6 +375,7 @@ export async function makeSubDag(
         await processNamespace(
           namespaceStmt,
           curLevelDag,
+          errors,
           importer,
           seenImports,
         );
@@ -320,28 +385,37 @@ export async function makeSubDag(
         await processUnassignedImport(
           importStmt,
           curLevelDag,
+          errors,
           importer,
           seenImports,
         ).catch((err) => {
-          console.warn(err);
+          console.debug(err);
         });
       })
       .otherwise(() => {
-        console.error("Unknown node type ", stmt.Type);
+        const errMsg = makeDagError(
+          stmt,
+          `Unknown statement type ${stmt.Type}`,
+        );
+        errors.push(errMsg);
+        console.debug(errMsg);
       });
   }
   return curLevelDag;
 }
 
-export function makeDag(
+export async function makeDag(
   recipe: RecipeTreeNode,
   importer: ImportCacher,
   seenImports: Set<string> = new Set(),
-): Promise<Dag> {
-  return makeSubDag(
+): Promise<{ dag: Dag; errors: Error[] }> {
+  const errors: Error[] = [];
+  const dag = await makeSubDag(
     uuidv4(),
     new NamespaceTreeNode("", recipe.Statements),
+    errors,
     importer,
     seenImports,
   );
+  return { dag, errors };
 }
