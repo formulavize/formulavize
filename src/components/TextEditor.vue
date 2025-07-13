@@ -20,6 +20,7 @@ import {
   foldKeymap,
   syntaxHighlighting,
 } from "@codemirror/language";
+import { linter, Diagnostic } from "@codemirror/lint";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
 import { EditorState, Compartment, Extension } from "@codemirror/state";
 import {
@@ -46,6 +47,10 @@ export default defineComponent({
     tabToIndent: {
       type: Boolean,
       default: false,
+    },
+    codeDiagnostics: {
+      type: Array as () => Diagnostic[],
+      default: () => [],
     },
   },
   emits: ["update-editorstate"],
@@ -79,6 +84,9 @@ export default defineComponent({
         closeBrackets(),
         syntaxHighlighting(defaultHighlightStyle),
         highlightSpecialChars(),
+        linter(() => {
+          return this.codeDiagnostics;
+        }),
         EditorView.lineWrapping,
         EditorView.updateListener.of((v: ViewUpdate): void => {
           if (v.docChanged) emitEditorState(v.state);

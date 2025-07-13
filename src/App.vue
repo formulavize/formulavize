@@ -4,6 +4,7 @@
       <TextEditor
         :editor-debounce-delay="editorDebounceDelay"
         :tab-to-indent="tabToIndent"
+        :code-diagnostics="curDiagnostics"
         @update-editorstate="updateEditorState"
       />
     </pane>
@@ -42,6 +43,8 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import { cloneDeep } from "lodash";
+import { EditorState } from "@codemirror/state";
+import { Diagnostic } from "@codemirror/lint";
 import { ImageExportFormat } from "./compiler/constants";
 import TextEditor from "./components/TextEditor.vue";
 import GraphView from "./components/GraphView.vue";
@@ -49,10 +52,11 @@ import TextDumpView from "./components/TextDumpView.vue";
 import ToolBar from "./components/ToolBar.vue";
 import ExportOptionsPopup from "./components/ExportOptionsPopup.vue";
 import OptionsPopup from "./components/OptionsPopup.vue";
-import { EditorState } from "@codemirror/state";
 import { RecipeTreeNode } from "./compiler/ast";
 import { Dag } from "./compiler/dag";
 import { Compiler } from "./compiler/driver";
+import { CompilationError } from "./compiler/compilationErrors";
+import { errorToDiagnostic } from "./compiler/errorReporter";
 // @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -78,6 +82,8 @@ export default defineComponent({
       curEditorState: EditorState.create(),
       curAst: new RecipeTreeNode(),
       curDag: new Dag(""),
+      curErrors: [] as CompilationError[],
+      curDiagnostics: [] as Diagnostic[],
       showExportPopup: false,
       showOptionsPopup: false,
       tabToIndent: false,
@@ -89,6 +95,8 @@ export default defineComponent({
         await this.compiler.compileFromEditor(newEditorState);
       this.curAst = curCompilation.AST;
       this.curDag = curCompilation.DAG;
+      this.curErrors = curCompilation.Errors;
+      this.curDiagnostics = curCompilation.Errors.map(errorToDiagnostic);
     },
   },
   methods: {
