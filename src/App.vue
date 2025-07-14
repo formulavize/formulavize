@@ -20,6 +20,12 @@
         <tab name="DAG">
           <TextDumpView title="DAG Dump" :content="curDag.debugDumpDag()" />
         </tab>
+        <tab name="Errors">
+          <TextDumpView
+            title="Error Report"
+            :content="curErrorReporter.makeErrorReport(curErrors)"
+          />
+        </tab>
       </tabs>
     </pane>
   </splitpanes>
@@ -43,7 +49,7 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import { cloneDeep } from "lodash";
-import { EditorState } from "@codemirror/state";
+import { EditorState, Text } from "@codemirror/state";
 import { Diagnostic } from "@codemirror/lint";
 import { ImageExportFormat } from "./compiler/constants";
 import TextEditor from "./components/TextEditor.vue";
@@ -56,7 +62,7 @@ import { RecipeTreeNode } from "./compiler/ast";
 import { Dag } from "./compiler/dag";
 import { Compiler } from "./compiler/driver";
 import { CompilationError } from "./compiler/compilationErrors";
-import { errorToDiagnostic } from "./compiler/errorReporter";
+import { errorToDiagnostic, ErrorReporter } from "./compiler/errorReporter";
 // @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -84,6 +90,7 @@ export default defineComponent({
       curDag: new Dag(""),
       curErrors: [] as CompilationError[],
       curDiagnostics: [] as Diagnostic[],
+      curErrorReporter: new ErrorReporter(Text.empty),
       showExportPopup: false,
       showOptionsPopup: false,
       tabToIndent: false,
@@ -97,6 +104,7 @@ export default defineComponent({
       this.curDag = curCompilation.DAG;
       this.curErrors = curCompilation.Errors;
       this.curDiagnostics = curCompilation.Errors.map(errorToDiagnostic);
+      this.curErrorReporter = new ErrorReporter(newEditorState.doc);
     },
   },
   methods: {
