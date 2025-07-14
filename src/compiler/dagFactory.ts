@@ -67,7 +67,7 @@ function argListToEdgeInfo(
           const varStyle = workingDag.getVarStyle(varName) ?? null;
           const candidateSrcNodeId = workingDag.getVarNode(varName);
           if (!candidateSrcNodeId) {
-            const errMsg = makeDagError(arg, `Variable ${varName} not found`);
+            const errMsg = makeDagError(arg, `Variable '${varName}' not found`);
             errors.push(errMsg);
             console.debug(errMsg);
             return null;
@@ -79,7 +79,10 @@ function argListToEdgeInfo(
           };
         })
         .otherwise(() => {
-          const errMsg = makeDagError(arg, `Unknown argument type ${arg.Type}`);
+          const errMsg = makeDagError(
+            arg,
+            `Unknown argument type '${arg.Type}'`,
+          );
           errors.push(errMsg);
           console.debug(errMsg);
           return null;
@@ -264,11 +267,11 @@ async function processAssignmentRhs(
     .otherwise(() => {
       const errMsg = makeDagError(
         rhsNode,
-        `Invalid right hand side type ${rhsNode.Type}`,
+        `Invalid right hand side type '${rhsNode.Type}'`,
       );
       errors.push(errMsg);
       console.debug(errMsg);
-      return Promise.reject(`Invalid right hand side type ${rhsNode.Type}`);
+      return Promise.reject(`Invalid right hand side type '${rhsNode.Type}'`);
     });
 }
 
@@ -326,7 +329,7 @@ export async function makeSubDag(
         if (!RhsReferentNodeId) {
           const errMsg = makeDagError(
             aliasStmt.Rhs,
-            `Variable ${rhsName} not found for alias ${lhsName}`,
+            `Variable '${rhsName}' not found for alias '${lhsName}'`,
           );
           errors.push(errMsg);
           console.debug(errMsg);
@@ -349,7 +352,7 @@ export async function makeSubDag(
             // styles must be declared before usage
             const errMsg = makeDagError(
               styleNode,
-              `Style tag ${styleTag} not found`,
+              `Style tag '${styleTag}' not found`,
             );
             errors.push(errMsg);
             console.debug(errMsg);
@@ -395,7 +398,7 @@ export async function makeSubDag(
       .otherwise(() => {
         const errMsg = makeDagError(
           stmt,
-          `Unknown statement type ${stmt.Type}`,
+          `Unknown statement type '${stmt.Type}'`,
         );
         errors.push(errMsg);
         console.debug(errMsg);

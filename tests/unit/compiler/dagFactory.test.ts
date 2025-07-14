@@ -707,7 +707,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Variable not_found_var not found");
+    expect(errors[0].message).toEqual("Variable 'not_found_var' not found");
     expect(errors[0].severity).toEqual("error");
     expect(errors[0].source).toEqual("DAG");
 
@@ -727,7 +727,7 @@ describe("error reporting", () => {
 
     expect(errors).toHaveLength(1);
     expect(errors[0].message).toEqual(
-      "Variable not_found_var not found for alias b",
+      "Variable 'not_found_var' not found for alias 'b'",
     );
     expect(errors[0].severity).toEqual("error");
     expect(errors[0].source).toEqual("DAG");
@@ -742,7 +742,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Style tag missingStyle not found");
+    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
     expect(errors[0].severity).toEqual("error");
     expect(errors[0].source).toEqual("DAG");
 
