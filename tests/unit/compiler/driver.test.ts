@@ -83,6 +83,6 @@ describe("basic compiler driver", () => {
     expect(nodeList[0].name).toEqual("f");
 
     expect(compilation.Errors).toHaveLength(1);
-    expect(compilation.Errors[0].message).toEqual("Variable x not found");
+    expect(compilation.Errors[0].message).toEqual("Variable 'x' not found");
   });
 });
