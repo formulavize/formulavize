@@ -36,13 +36,29 @@ type IncomingEdgeInfo = {
   varStyle: DagStyle | null;
 };
 
-function makeDagError(node: BaseTreeNode, message: string): Error {
+function makeError(
+  node: BaseTreeNode,
+  message: string,
+  source: "Internal" | "Reference" | "Import",
+): Error {
   return {
     position: node.Position ?? DEFAULT_POSITION,
-    message: message,
+    message,
     severity: "error",
-    source: "DAG",
+    source,
   };
+}
+
+function makeInternalError(node: BaseTreeNode, errorMsg: string): Error {
+  return makeError(node, errorMsg, "Internal");
+}
+
+function makeRefError(node: BaseTreeNode, message: string): Error {
+  return makeError(node, message, "Reference");
+}
+
+function makeImportError(node: BaseTreeNode, message: string): Error {
+  return makeError(node, message, "Import");
 }
 
 function argListToEdgeInfo(
@@ -67,7 +83,7 @@ function argListToEdgeInfo(
           const varStyle = workingDag.getVarStyle(varName) ?? null;
           const candidateSrcNodeId = workingDag.getVarNode(varName);
           if (!candidateSrcNodeId) {
-            const errMsg = makeDagError(arg, `Variable '${varName}' not found`);
+            const errMsg = makeRefError(arg, `Variable '${varName}' not found`);
             errors.push(errMsg);
             console.debug(errMsg);
             return null;
@@ -79,12 +95,12 @@ function argListToEdgeInfo(
           };
         })
         .otherwise(() => {
-          const errMsg = makeDagError(
+          const errMsg = makeInternalError(
             arg,
             `Unknown argument type '${arg.Type}'`,
           );
           errors.push(errMsg);
-          console.debug(errMsg);
+          console.error(errMsg);
           return null;
         }),
     )
@@ -177,7 +193,7 @@ async function getImportedDag(
   return importer
     .getPackageDag(importStmt.ImportLocation, seenImports)
     .catch((err) => {
-      const errMsg = makeDagError(importStmt, `Import failed: ${err}`);
+      const errMsg = makeImportError(importStmt, `Import failed: ${err}`);
       errors.push(errMsg);
       console.debug(errMsg);
       return Promise.reject(err);
@@ -265,12 +281,12 @@ async function processAssignmentRhs(
       );
     })
     .otherwise(() => {
-      const errMsg = makeDagError(
+      const errMsg = makeInternalError(
         rhsNode,
         `Invalid right hand side type '${rhsNode.Type}'`,
       );
       errors.push(errMsg);
-      console.debug(errMsg);
+      console.error(errMsg);
       return Promise.reject(`Invalid right hand side type '${rhsNode.Type}'`);
     });
 }
@@ -327,7 +343,7 @@ export async function makeSubDag(
         const rhsName = aliasStmt.Rhs!.QualifiedVarName;
         const RhsReferentNodeId = curLevelDag.getVarNode(rhsName);
         if (!RhsReferentNodeId) {
-          const errMsg = makeDagError(
+          const errMsg = makeRefError(
             aliasStmt.Rhs,
             `Variable '${rhsName}' not found for alias '${lhsName}'`,
           );
@@ -350,7 +366,7 @@ export async function makeSubDag(
           const referentStyle = curLevelDag.getStyle(styleTag);
           if (!referentStyle) {
             // styles must be declared before usage
-            const errMsg = makeDagError(
+            const errMsg = makeRefError(
               styleNode,
               `Style tag '${styleTag}' not found`,
             );
@@ -396,12 +412,12 @@ export async function makeSubDag(
         });
       })
       .otherwise(() => {
-        const errMsg = makeDagError(
+        const errMsg = makeInternalError(
           stmt,
           `Unknown statement type '${stmt.Type}'`,
         );
         errors.push(errMsg);
-        console.debug(errMsg);
+        console.error(errMsg);
       });
   }
   return curLevelDag;

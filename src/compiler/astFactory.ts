@@ -28,12 +28,12 @@ function getPosition(c: TreeCursor): Position {
   return { from: c.from, to: c.to };
 }
 
-function makeError(c: TreeCursor, errorMsg: string): Error {
+function makeInternalError(c: TreeCursor, errorMsg: string): Error {
   return {
     position: getPosition(c),
     message: errorMsg,
     severity: "error",
-    source: "AST",
+    source: "Internal",
   };
 }
 
@@ -148,12 +148,12 @@ function getArgList(c: TreeCursor, t: Text, e: Error[]): ValueTreeNode[] {
         .with("Call", () => makeCall(candidateValue.cursor(), t, e))
         .with("RhsVariable", () => makeRhsVariable(candidateValue.cursor(), t))
         .otherwise(() => {
-          const errMsg = makeError(
+          const errMsg = makeInternalError(
             candidateValue.cursor(),
             `Unknown argument type '${candidateValue.name}'`,
           );
           e.push(errMsg);
-          console.debug(errMsg);
+          console.error(errMsg);
           return null;
         }),
     )
@@ -256,9 +256,12 @@ function makeStatement(
     .with("LineComment", () => null)
     .with("BlockComment", () => null)
     .otherwise(() => {
-      const errMsg = makeError(c, `Unknown statement type '${c.node.name}'`);
+      const errMsg = makeInternalError(
+        c,
+        `Unknown statement type '${c.node.name}'`,
+      );
       e.push(errMsg);
-      console.debug(errMsg);
+      console.error(errMsg);
       return null;
     });
 }
@@ -280,12 +283,12 @@ export function makeRecipeTree(
     return { ast: new RecipeTreeNode([], DEFAULT_POSITION), errors };
 
   if (cursor.name !== "Recipe") {
-    const errMsg = makeError(
+    const errMsg = makeInternalError(
       cursor,
       `Expected Recipe node but received '${cursor.name}' instead`,
     );
     errors.push(errMsg);
-    console.debug(errMsg);
+    console.error(errMsg);
   }
 
   const statements = getStatements(cursor, text, errors);

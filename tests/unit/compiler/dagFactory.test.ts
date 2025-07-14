@@ -709,7 +709,7 @@ describe("error reporting", () => {
     expect(errors).toHaveLength(1);
     expect(errors[0].message).toEqual("Variable 'not_found_var' not found");
     expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("DAG");
+    expect(errors[0].source).toEqual("Reference");
 
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
@@ -730,7 +730,7 @@ describe("error reporting", () => {
       "Variable 'not_found_var' not found for alias 'b'",
     );
     expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("DAG");
+    expect(errors[0].source).toEqual("Reference");
 
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
@@ -744,7 +744,7 @@ describe("error reporting", () => {
     expect(errors).toHaveLength(1);
     expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
     expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("DAG");
+    expect(errors[0].source).toEqual("Reference");
 
     const styleMap = dag.getFlattenedStyles();
     expect(styleMap.get("t")).toEqual(new Map());
@@ -762,7 +762,7 @@ describe("error reporting", () => {
     expect(errors).toHaveLength(1);
     expect(errors[0].message).toEqual("Import failed: Error: import error");
     expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("DAG");
+    expect(errors[0].source).toEqual("Import");
 
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
