@@ -735,20 +735,6 @@ describe("error reporting", () => {
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
   });
-  test("named style reports error when referenced style tag not found", async () => {
-    const recipe = new Recipe([
-      new NamedStyle("t", new Style(undefined, [["missingStyle"]])),
-    ]);
-    const { dag, errors } = await makeDag(recipe, dummyImporter);
-
-    expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Reference");
-
-    const styleMap = dag.getFlattenedStyles();
-    expect(styleMap.get("t")).toEqual(new Map());
-  });
   test("error reporting when import fails", async () => {
     const mockImporterError = {
       getPackageDag: async () => {
@@ -796,5 +782,140 @@ describe("error reporting", () => {
 
     expect(errors).toHaveLength(1);
     expect(errors[0].position).toEqual({ from: 2, to: 16 });
+  });
+  test("call with missing style tag reports error", async () => {
+    const recipe = new Recipe([
+      new Call("f", [], new Style(undefined, [["missingStyle"]])),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Reference");
+
+    const dagNodeList = dag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
+    const dagNode = dagNodeList[0];
+    expect(dagNode.name).toEqual("f");
+    expect(dagNode.styleTags).toEqual([["missingStyle"]]);
+  });
+  test("namespace with missing style tag reports error", async () => {
+    const recipe = new Recipe([
+      new Namespace(
+        "ns",
+        [new Call("f", [])],
+        [],
+        new Style(undefined, [["missingStyle"]]),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Reference");
+
+    expect(dag.getChildDags()).toHaveLength(1);
+    const childDag = dag.getChildDags()[0];
+    expect(childDag.Name).toEqual("ns");
+  });
+  test("assignment with styled variable missing style tag reports error", async () => {
+    const recipe = new Recipe([
+      new Assignment(
+        [new LocalVariable("x", new Style(undefined, [["missingStyle"]]))],
+        new Call("f", []),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Reference");
+
+    const dagNodeList = dag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
+    const dagNode = dagNodeList[0];
+    expect(dagNode.name).toEqual("f");
+  });
+  test("alias with styled variable missing style tag reports error", async () => {
+    const recipe = new Recipe([
+      new Assignment([new LocalVariable("a")], new Call("f", [])),
+      new Alias(
+        new LocalVariable("b", new Style(undefined, [["missingStyle"]])),
+        new QualifiedVariable(["a"]),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Reference");
+
+    const dagNodeList = dag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
+    const dagNode = dagNodeList[0];
+    expect(dagNode.name).toEqual("f");
+  });
+  test("named style with missing style tag reports error", async () => {
+    const recipe = new Recipe([
+      new NamedStyle("t", new Style(undefined, [["missingStyle"]])),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Reference");
+
+    const styleMap = dag.getFlattenedStyles();
+    expect(styleMap.get("t")).toEqual(new Map());
+  });
+  test("multiple missing style tags in same statement reports multiple errors", async () => {
+    const recipe = new Recipe([
+      new Call(
+        "f",
+        [],
+        new Style(undefined, [["missingStyle1"], ["missingStyle2"]]),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(2);
+    expect(errors[0].message).toEqual("Style tag 'missingStyle1' not found");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Reference");
+    expect(errors[1].message).toEqual("Style tag 'missingStyle2' not found");
+    expect(errors[1].severity).toEqual("error");
+    expect(errors[1].source).toEqual("Reference");
+
+    const dagNodeList = dag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
+    const dagNode = dagNodeList[0];
+    expect(dagNode.name).toEqual("f");
+  });
+  test("mixed valid and invalid style tags reports only missing ones", async () => {
+    const recipe = new Recipe([
+      new NamedStyle("validStyle", new Style(new Map([["color", "red"]]))),
+      new Call(
+        "f",
+        [],
+        new Style(undefined, [["validStyle"], ["missingStyle"]]),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Reference");
+
+    const dagNodeList = dag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
+    const dagNode = dagNodeList[0];
+    expect(dagNode.name).toEqual("f");
+    expect(dagNode.styleTags).toEqual([["validStyle"], ["missingStyle"]]);
   });
 });
