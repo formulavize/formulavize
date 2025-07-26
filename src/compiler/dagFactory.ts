@@ -311,20 +311,33 @@ async function processAssignmentRhs(
     });
 }
 
-function checkAssignmentSides(
+function checkRHS(
   stmt: AssignmentTreeNode | AliasTreeNode,
   errors: Error[],
 ): void {
-  if (!stmt.Lhs) {
-    const errMsg = makeSyntaxError(stmt, "Left hand side is missing");
-    errors.push(errMsg);
-    console.debug(errMsg);
-  }
   if (!stmt.Rhs) {
     const errMsg = makeSyntaxError(stmt, "Right hand side is missing");
     errors.push(errMsg);
     console.debug(errMsg);
   }
+}
+
+function checkAssignmentSides(stmt: AssignmentTreeNode, errors: Error[]): void {
+  if (stmt.Lhs.length === 0) {
+    const errMsg = makeSyntaxError(stmt, "Left hand side is missing");
+    errors.push(errMsg);
+    console.debug(errMsg);
+  }
+  checkRHS(stmt, errors);
+}
+
+function checkAliasSides(stmt: AliasTreeNode, errors: Error[]): void {
+  if (!stmt.Lhs) {
+    const errMsg = makeSyntaxError(stmt, "Left hand side is missing");
+    errors.push(errMsg);
+    console.debug(errMsg);
+  }
+  checkRHS(stmt, errors);
 }
 
 export async function makeSubDag(
@@ -356,7 +369,7 @@ export async function makeSubDag(
       })
       .with(NodeType.Assignment, async () => {
         const assignmentStmt = stmt as AssignmentTreeNode;
-        if (!assignmentStmt.Lhs || !assignmentStmt.Rhs) {
+        if (assignmentStmt.Lhs.length === 0 || !assignmentStmt.Rhs) {
           checkAssignmentSides(assignmentStmt, errors);
           return;
         }
@@ -381,7 +394,7 @@ export async function makeSubDag(
       .with(NodeType.Alias, () => {
         const aliasStmt = stmt as AliasTreeNode;
         if (!aliasStmt.Lhs || !aliasStmt.Rhs) {
-          checkAssignmentSides(aliasStmt, errors);
+          checkAliasSides(aliasStmt, errors);
           return;
         }
 
