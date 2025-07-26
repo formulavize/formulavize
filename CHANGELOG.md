@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.4.0](https://github.com/formulavize/formulavize/compare/v1.3.0...v1.4.0) (2025-07-26)
+
+
+### Features
+
+* **dagFactory:** make error messages for incomplete assignments ([3632c00](https://github.com/formulavize/formulavize/commit/3632c007b498a7f77ff4eeaa12bf91f7640c7016))
+* **dagFactory:** undefined style tag usage creates error message ([99b884c](https://github.com/formulavize/formulavize/commit/99b884cfa74511843a89aa6396ff4895d4e6c14a))
+* **ErrorReporter:** add error report tab to debug mode ([7fe07eb](https://github.com/formulavize/formulavize/commit/7fe07eb20c77cdd3af28b59a03e65c126653ebf9))
+* **TextEditor:** editor displays code error diagnostics ([1aa81f3](https://github.com/formulavize/formulavize/commit/1aa81f3f0103a0d5aa47499b847da4b44cca33ea))
+
+
+### Bug Fixes
+
+* **dagFactory:** add quotes around variable names in error messages ([b6786ab](https://github.com/formulavize/formulavize/commit/b6786ab32abc7ebba9134047f2eba365e356d4fd))
+* **dagFactory:** more concise import error message ([67d2812](https://github.com/formulavize/formulavize/commit/67d2812679a8211c01364dddcf6a484535355ea2))
+* **dagFactory:** undefined StyleTag errors only underline the tag ([ac3da46](https://github.com/formulavize/formulavize/commit/ac3da4643ba9f3d991d88d39e8c2604e56507788))
+
 ## [1.3.0](https://github.com/formulavize/formulavize/compare/v1.2.0...v1.3.0) (2025-07-06)
 
 
