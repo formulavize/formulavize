@@ -761,7 +761,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, mockImporterError);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Import failed: Error: import error");
+    expect(errors[0].message).toEqual("import error");
     expect(errors[0].severity).toEqual("error");
     expect(errors[0].source).toEqual("Import");
 
