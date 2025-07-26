@@ -17,7 +17,10 @@ import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
 import { Dag, StyleTag, StyleProperties, Keyword } from "src/compiler/dag";
 import { makeDag } from "src/compiler/dagFactory";
 import { ImportCacher } from "src/compiler/importCacher";
-import { DEFAULT_POSITION } from "src/compiler/compilationErrors";
+import {
+  DEFAULT_POSITION,
+  CompilationError,
+} from "src/compiler/compilationErrors";
 
 const dummyImporter = {} as ImportCacher;
 
@@ -715,6 +718,38 @@ describe("import tests", () => {
 });
 
 describe("error reporting", () => {
+  function expectError(
+    error: CompilationError,
+    expectedError: {
+      message: string;
+      severity: string;
+      source: string;
+    },
+  ): void {
+    expect(error.message).toEqual(expectedError.message);
+    expect(error.severity).toEqual(expectedError.severity);
+    expect(error.source).toEqual(expectedError.source);
+  }
+  function expectReferenceError(
+    error: CompilationError,
+    expectedMessage: string,
+  ): void {
+    expectError(error, {
+      message: expectedMessage,
+      severity: "error",
+      source: "Reference",
+    });
+  }
+  function expectSyntaxError(
+    error: CompilationError,
+    expectedMessage: string,
+  ): void {
+    expectError(error, {
+      message: expectedMessage,
+      severity: "error",
+      source: "Syntax",
+    });
+  }
   test("argListToEdgeInfo reports error when variable not found", async () => {
     const recipe = new Recipe([
       new Call("f", [new QualifiedVariable(["not_found_var"])]),
@@ -722,9 +757,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Variable 'not_found_var' not found");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Reference");
+    expectReferenceError(errors[0], "Variable 'not_found_var' not found");
 
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
@@ -741,11 +774,10 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual(
+    expectReferenceError(
+      errors[0],
       "Variable 'not_found_var' not found for alias 'b'",
     );
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Reference");
 
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
@@ -761,9 +793,11 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, mockImporterError);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("import error");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Import");
+    expectError(errors[0], {
+      message: "import error",
+      severity: "error",
+      source: "Import",
+    });
 
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
@@ -809,9 +843,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Reference");
+    expectReferenceError(errors[0], "Style tag 'missingStyle' not found");
 
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
@@ -831,9 +863,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Reference");
+    expectReferenceError(errors[0], "Style tag 'missingStyle' not found");
 
     expect(dag.getChildDags()).toHaveLength(1);
     const childDag = dag.getChildDags()[0];
@@ -854,9 +884,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Reference");
+    expectReferenceError(errors[0], "Style tag 'missingStyle' not found");
 
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
@@ -877,9 +905,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Reference");
+    expectReferenceError(errors[0], "Style tag 'missingStyle' not found");
 
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
@@ -896,9 +922,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Reference");
+    expectReferenceError(errors[0], "Style tag 'missingStyle' not found");
 
     const styleMap = dag.getFlattenedStyles();
     expect(styleMap.get("t")).toEqual(new Map());
@@ -917,12 +941,8 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(2);
-    expect(errors[0].message).toEqual("Style tag 'missingStyle1' not found");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Reference");
-    expect(errors[1].message).toEqual("Style tag 'missingStyle2' not found");
-    expect(errors[1].severity).toEqual("error");
-    expect(errors[1].source).toEqual("Reference");
+    expectReferenceError(errors[0], "Style tag 'missingStyle1' not found");
+    expectReferenceError(errors[1], "Style tag 'missingStyle2' not found");
 
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
@@ -944,9 +964,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Style tag 'missingStyle' not found");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Reference");
+    expectReferenceError(errors[0], "Style tag 'missingStyle' not found");
 
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
@@ -959,9 +977,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Left hand side is missing");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Syntax");
+    expectSyntaxError(errors[0], "Left hand side is missing");
 
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(0);
@@ -971,9 +987,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Right hand side is missing");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Syntax");
+    expectSyntaxError(errors[0], "Right hand side is missing");
 
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
@@ -983,12 +997,8 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(2);
-    expect(errors[0].message).toEqual("Left hand side is missing");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Syntax");
-    expect(errors[1].message).toEqual("Right hand side is missing");
-    expect(errors[1].severity).toEqual("error");
-    expect(errors[1].source).toEqual("Syntax");
+    expectSyntaxError(errors[0], "Left hand side is missing");
+    expectSyntaxError(errors[1], "Right hand side is missing");
 
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
@@ -1001,9 +1011,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Left hand side is missing");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Syntax");
+    expectSyntaxError(errors[0], "Left hand side is missing");
 
     const dagNodeList = dag.getNodeList();
     expect(dagNodeList).toHaveLength(1);
@@ -1015,9 +1023,7 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expect(errors[0].message).toEqual("Right hand side is missing");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Syntax");
+    expectSyntaxError(errors[0], "Right hand side is missing");
 
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
@@ -1027,12 +1033,8 @@ describe("error reporting", () => {
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(2);
-    expect(errors[0].message).toEqual("Left hand side is missing");
-    expect(errors[0].severity).toEqual("error");
-    expect(errors[0].source).toEqual("Syntax");
-    expect(errors[1].message).toEqual("Right hand side is missing");
-    expect(errors[1].severity).toEqual("error");
-    expect(errors[1].source).toEqual("Syntax");
+    expectSyntaxError(errors[0], "Left hand side is missing");
+    expectSyntaxError(errors[1], "Right hand side is missing");
 
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
