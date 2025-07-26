@@ -954,4 +954,87 @@ describe("error reporting", () => {
     expect(dagNode.name).toEqual("f");
     expect(dagNode.styleTags).toEqual([["validStyle"], ["missingStyle"]]);
   });
+  test("assignment with missing left hand side reports error", async () => {
+    const recipe = new Recipe([new Assignment([], new Call("f", []))]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Left hand side is missing");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Syntax");
+
+    const dagNodeList = dag.getNodeList();
+    expect(dagNodeList).toHaveLength(0);
+  });
+  test("assignment with missing right hand side reports error", async () => {
+    const recipe = new Recipe([new Assignment([new LocalVariable("x")], null)]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Right hand side is missing");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Syntax");
+
+    expect(dag.getNodeList()).toHaveLength(0);
+    expect(dag.getEdgeList()).toHaveLength(0);
+  });
+  test("assignment with missing both sides reports multiple errors", async () => {
+    const recipe = new Recipe([new Assignment([], null)]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(2);
+    expect(errors[0].message).toEqual("Left hand side is missing");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Syntax");
+    expect(errors[1].message).toEqual("Right hand side is missing");
+    expect(errors[1].severity).toEqual("error");
+    expect(errors[1].source).toEqual("Syntax");
+
+    expect(dag.getNodeList()).toHaveLength(0);
+    expect(dag.getEdgeList()).toHaveLength(0);
+  });
+  test("alias with missing left hand side reports error", async () => {
+    const recipe = new Recipe([
+      new Assignment([new LocalVariable("a")], new Call("f", [])),
+      new Alias(null, new QualifiedVariable(["a"])),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Left hand side is missing");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Syntax");
+
+    const dagNodeList = dag.getNodeList();
+    expect(dagNodeList).toHaveLength(1);
+    const dagNode = dagNodeList[0];
+    expect(dagNode.name).toEqual("f");
+  });
+  test("alias with missing right hand side reports error", async () => {
+    const recipe = new Recipe([new Alias(new LocalVariable("b"), null)]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toEqual("Right hand side is missing");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Syntax");
+
+    expect(dag.getNodeList()).toHaveLength(0);
+    expect(dag.getEdgeList()).toHaveLength(0);
+  });
+  test("alias with missing both sides reports multiple errors", async () => {
+    const recipe = new Recipe([new Alias(null, null)]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(2);
+    expect(errors[0].message).toEqual("Left hand side is missing");
+    expect(errors[0].severity).toEqual("error");
+    expect(errors[0].source).toEqual("Syntax");
+    expect(errors[1].message).toEqual("Right hand side is missing");
+    expect(errors[1].severity).toEqual("error");
+    expect(errors[1].source).toEqual("Syntax");
+
+    expect(dag.getNodeList()).toHaveLength(0);
+    expect(dag.getEdgeList()).toHaveLength(0);
+  });
 });
