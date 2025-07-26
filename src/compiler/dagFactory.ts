@@ -219,7 +219,7 @@ async function getImportedDag(
   return importer
     .getPackageDag(importStmt.ImportLocation, seenImports)
     .catch((err) => {
-      const errMsg = makeImportError(importStmt, `Import failed: ${err}`);
+      const errMsg = makeImportError(importStmt, err.message);
       errors.push(errMsg);
       console.debug(errMsg);
       return Promise.reject(err);
