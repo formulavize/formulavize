@@ -39,7 +39,7 @@ type IncomingEdgeInfo = {
 function makeError(
   node: BaseTreeNode,
   message: string,
-  source: "Internal" | "Reference" | "Import",
+  source: "Internal" | "Syntax" | "Reference" | "Import",
 ): Error {
   return {
     position: node.Position ?? DEFAULT_POSITION,
@@ -51,6 +51,10 @@ function makeError(
 
 function makeInternalError(node: BaseTreeNode, errorMsg: string): Error {
   return makeError(node, errorMsg, "Internal");
+}
+
+function makeSyntaxError(node: BaseTreeNode, message: string): Error {
+  return makeError(node, message, "Syntax");
 }
 
 function makeRefError(node: BaseTreeNode, message: string): Error {
@@ -307,6 +311,22 @@ async function processAssignmentRhs(
     });
 }
 
+function checkAssignmentSides(
+  stmt: AssignmentTreeNode | AliasTreeNode,
+  errors: Error[],
+): void {
+  if (!stmt.Lhs) {
+    const errMsg = makeSyntaxError(stmt, "Left hand side is missing");
+    errors.push(errMsg);
+    console.debug(errMsg);
+  }
+  if (!stmt.Rhs) {
+    const errMsg = makeSyntaxError(stmt, "Right hand side is missing");
+    errors.push(errMsg);
+    console.debug(errMsg);
+  }
+}
+
 export async function makeSubDag(
   dagId: DagId,
   dagNamespaceStmt: NamespaceTreeNode,
@@ -336,7 +356,10 @@ export async function makeSubDag(
       })
       .with(NodeType.Assignment, async () => {
         const assignmentStmt = stmt as AssignmentTreeNode;
-        if (!assignmentStmt.Lhs || !assignmentStmt.Rhs) return;
+        if (!assignmentStmt.Lhs || !assignmentStmt.Rhs) {
+          checkAssignmentSides(assignmentStmt, errors);
+          return;
+        }
         const thisNodeId = await processAssignmentRhs(
           assignmentStmt.Rhs,
           curLevelDag,
@@ -357,7 +380,10 @@ export async function makeSubDag(
       })
       .with(NodeType.Alias, () => {
         const aliasStmt = stmt as AliasTreeNode;
-        if (!aliasStmt.Lhs || !aliasStmt.Rhs) return;
+        if (!aliasStmt.Lhs || !aliasStmt.Rhs) {
+          checkAssignmentSides(aliasStmt, errors);
+          return;
+        }
 
         checkStyleTagsExist(aliasStmt.Lhs.Styling, curLevelDag, errors);
 
