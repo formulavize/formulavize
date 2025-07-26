@@ -7,6 +7,7 @@ import {
   LocalVarTreeNode as LocalVariable,
   QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
+  StyleTagTreeNode as StyleTagNode,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   NamespaceTreeNode as Namespace,
@@ -370,7 +371,7 @@ describe("style tests", () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new NamedStyle("s", new Style(sampleMap)),
-      new NamedStyle("t", new Style(undefined, [["s"]])),
+      new NamedStyle("t", new Style(undefined, [new StyleTagNode(["s"])])),
     ]);
     const expectedMap: Map<string, StyleProperties> = new Map([
       ["s", sampleMap],
@@ -384,7 +385,7 @@ describe("style tests", () => {
     const localMap: StyleProperties = new Map([["a", "new"]]);
     const recipe = new Recipe([
       new NamedStyle("s", new Style(sampleMap)),
-      new NamedStyle("t", new Style(localMap, [["s"]])),
+      new NamedStyle("t", new Style(localMap, [new StyleTagNode(["s"])])),
     ]);
     const expectedMap: Map<string, StyleProperties> = new Map([
       ["s", sampleMap],
@@ -396,7 +397,7 @@ describe("style tests", () => {
 
   test("named style undeclared tag", async () => {
     const recipe = new Recipe([
-      new NamedStyle("s", new Style(undefined, [["s"]])),
+      new NamedStyle("s", new Style(undefined, [new StyleTagNode(["s"])])),
     ]);
     const expectedMap: Map<string, StyleProperties> = new Map([
       ["s", new Map()],
@@ -407,7 +408,7 @@ describe("style tests", () => {
   test("call styled", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
-      new Call("f", [], new Style(sampleMap, [["s"]])),
+      new Call("f", [], new Style(sampleMap, [new StyleTagNode(["s"])])),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const dagNodeList = dag.getNodeList();
@@ -420,7 +421,12 @@ describe("style tests", () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new Assignment(
-        [new LocalVariable("x", new Style(sampleMap, [["s"]]))],
+        [
+          new LocalVariable(
+            "x",
+            new Style(sampleMap, [new StyleTagNode(["s"])]),
+          ),
+        ],
         new Call("f", []),
       ),
       new Call("g", [new QualifiedVariable(["x"])]),
@@ -439,7 +445,10 @@ describe("style tests", () => {
       new NamedStyle("s", new Style(sampleMap)),
       new Assignment(
         [
-          new LocalVariable("x", new Style(undefined, [["s"]])),
+          new LocalVariable(
+            "x",
+            new Style(undefined, [new StyleTagNode(["s"])]),
+          ),
           new LocalVariable("y", new Style(sampleMap2, [])),
         ],
         new Call("f", []),
@@ -510,7 +519,7 @@ describe("style tests", () => {
     const recipe = new Recipe([
       new NamedStyle("s", new Style(sampleMap)),
       new Namespace("child", [
-        new Call("g", [], new Style(undefined, [["s"]])),
+        new Call("g", [], new Style(undefined, [new StyleTagNode(["s"])])),
       ]),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
@@ -527,7 +536,11 @@ describe("style tests", () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new Namespace("child", [new NamedStyle("s", new Style(sampleMap))]),
-      new Call("g", [], new Style(undefined, [["child", "s"]])),
+      new Call(
+        "g",
+        [],
+        new Style(undefined, [new StyleTagNode(["child", "s"])]),
+      ),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const dagNodeList = dag.getNodeList();
@@ -604,7 +617,9 @@ describe("style binding tests", () => {
     expect(styleBindings).toEqual(expectedBinding);
   });
   test("style bind multiple styles", async () => {
-    const recipe = new Recipe([new StyleBinding("x", [["a"], ["b"]])]);
+    const recipe = new Recipe([
+      new StyleBinding("x", [new StyleTagNode(["a"]), new StyleTagNode(["b"])]),
+    ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const styleBindings = dag.getStyleBindings();
     const expectedBinding = new Map<Keyword, StyleTag[]>([
@@ -785,7 +800,11 @@ describe("error reporting", () => {
   });
   test("call with missing style tag reports error", async () => {
     const recipe = new Recipe([
-      new Call("f", [], new Style(undefined, [["missingStyle"]])),
+      new Call(
+        "f",
+        [],
+        new Style(undefined, [new StyleTagNode(["missingStyle"])]),
+      ),
     ]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
@@ -806,7 +825,7 @@ describe("error reporting", () => {
         "ns",
         [new Call("f", [])],
         [],
-        new Style(undefined, [["missingStyle"]]),
+        new Style(undefined, [new StyleTagNode(["missingStyle"])]),
       ),
     ]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
@@ -823,7 +842,12 @@ describe("error reporting", () => {
   test("assignment with styled variable missing style tag reports error", async () => {
     const recipe = new Recipe([
       new Assignment(
-        [new LocalVariable("x", new Style(undefined, [["missingStyle"]]))],
+        [
+          new LocalVariable(
+            "x",
+            new Style(undefined, [new StyleTagNode(["missingStyle"])]),
+          ),
+        ],
         new Call("f", []),
       ),
     ]);
@@ -843,7 +867,10 @@ describe("error reporting", () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("a")], new Call("f", [])),
       new Alias(
-        new LocalVariable("b", new Style(undefined, [["missingStyle"]])),
+        new LocalVariable(
+          "b",
+          new Style(undefined, [new StyleTagNode(["missingStyle"])]),
+        ),
         new QualifiedVariable(["a"]),
       ),
     ]);
@@ -861,7 +888,10 @@ describe("error reporting", () => {
   });
   test("named style with missing style tag reports error", async () => {
     const recipe = new Recipe([
-      new NamedStyle("t", new Style(undefined, [["missingStyle"]])),
+      new NamedStyle(
+        "t",
+        new Style(undefined, [new StyleTagNode(["missingStyle"])]),
+      ),
     ]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
@@ -878,7 +908,10 @@ describe("error reporting", () => {
       new Call(
         "f",
         [],
-        new Style(undefined, [["missingStyle1"], ["missingStyle2"]]),
+        new Style(undefined, [
+          new StyleTagNode(["missingStyle1"]),
+          new StyleTagNode(["missingStyle2"]),
+        ]),
       ),
     ]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
@@ -902,7 +935,10 @@ describe("error reporting", () => {
       new Call(
         "f",
         [],
-        new Style(undefined, [["validStyle"], ["missingStyle"]]),
+        new Style(undefined, [
+          new StyleTagNode(["validStyle"]),
+          new StyleTagNode(["missingStyle"]),
+        ]),
       ),
     ]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
