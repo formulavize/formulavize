@@ -9,6 +9,7 @@ import {
   LocalVarTreeNode as LocalVariable,
   QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
+  StyleTagTreeNode as StyleTag,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   NamespaceTreeNode as Namespace,
@@ -157,7 +158,10 @@ describe("style nodes", () => {
         new Assignment(
           [
             new LocalVariable("a", new Style(new Map([["b", "1"]]))),
-            new LocalVariable("c", new Style(undefined, [["d"], ["e"]])),
+            new LocalVariable(
+              "c",
+              new Style(undefined, [new StyleTag(["d"]), new StyleTag(["e"])]),
+            ),
           ],
           new Call("f", []),
         ),
@@ -169,7 +173,7 @@ describe("style nodes", () => {
     expect(makeTree(input)).toEqual(
       new Recipe([
         new Alias(
-          new LocalVariable("x", new Style(undefined, [["y"]])),
+          new LocalVariable("x", new Style(undefined, [new StyleTag(["y"])])),
           new QualifiedVariable(["z"]),
         ),
       ]),
@@ -178,7 +182,9 @@ describe("style nodes", () => {
   test("styled namespace", () => {
     const input = "n[]{#s}";
     expect(makeTree(input)).toEqual(
-      new Recipe([new Namespace("n", [], [], new Style(undefined, [["s"]]))]),
+      new Recipe([
+        new Namespace("n", [], [], new Style(undefined, [new StyleTag(["s"])])),
+      ]),
     );
   });
   test("style with mixed types", () => {
@@ -193,7 +199,7 @@ describe("style nodes", () => {
               ["c--d", "2"],
               ["e_f", "3,4,5"],
             ]),
-            [["x"], ["y"], ["z"]],
+            [new StyleTag(["x"]), new StyleTag(["y"]), new StyleTag(["z"])],
           ),
         ),
       ]),
@@ -246,7 +252,13 @@ describe("style bindings", () => {
   test("style bind multiple styles", () => {
     const input = "%x{#a #b #c}";
     expect(makeTree(input)).toEqual(
-      new Recipe([new StyleBinding("x", [["a"], ["b"], ["c"]])]),
+      new Recipe([
+        new StyleBinding("x", [
+          new StyleTag(["a"]),
+          new StyleTag(["b"]),
+          new StyleTag(["c"]),
+        ]),
+      ]),
     );
   });
 });
@@ -283,7 +295,7 @@ describe("multiple statements", () => {
             new Alias(new LocalVariable("z"), new QualifiedVariable(["x"])),
           ],
           [new QualifiedVariable(["a"]), new Call("b", [])],
-          new Style(undefined, [["s"]]),
+          new Style(undefined, [new StyleTag(["s"])]),
         ),
       ]),
     );
@@ -431,7 +443,10 @@ describe("node positions", () => {
             "n",
             [],
             [],
-            new Style(undefined, [["s"]], { from: 3, to: 7 }),
+            new Style(undefined, [new StyleTag(["s"], { from: 4, to: 6 })], {
+              from: 3,
+              to: 7,
+            }),
             { from: 0, to: 7 },
           ),
         ],

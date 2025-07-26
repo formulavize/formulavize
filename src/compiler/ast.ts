@@ -10,6 +10,7 @@ export enum NodeType {
   Style,
   NamedStyle,
   StyleBinding,
+  StyleTag,
   Namespace,
   Import,
 }
@@ -207,6 +208,27 @@ export class AliasTreeNode extends BaseTreeNode {
 
 export type QualifiableIdentifier = string[];
 
+export class StyleTagTreeNode extends BaseTreeNode {
+  private qualifiableTagName: QualifiableIdentifier;
+
+  constructor(value: QualifiableIdentifier, position: Position | null = null) {
+    super(NodeType.StyleTag, position);
+    this.qualifiableTagName = value;
+  }
+
+  getChildren(): BaseTreeNode[] {
+    return [];
+  }
+
+  debugDump(): string {
+    return "StyleTag: " + this.qualifiableTagName.join(".");
+  }
+
+  get QualifiedTagName(): QualifiableIdentifier {
+    return this.qualifiableTagName;
+  }
+}
+
 export class LocalVarTreeNode extends BaseTreeNode {
   private varName: string;
   private styling: StyleTreeNode | null;
@@ -261,11 +283,11 @@ export class QualifiedVarTreeNode extends BaseTreeNode {
 
 export class StyleTreeNode extends BaseTreeNode {
   private keyValueMap: Map<string, string>;
-  private styleTagList: QualifiableIdentifier[];
+  private styleTagList: StyleTagTreeNode[];
 
   constructor(
     initMap: Map<string, string> = new Map(),
-    initTags: QualifiableIdentifier[] = [],
+    initTags: StyleTagTreeNode[] = [],
     position: Position | null = null,
   ) {
     super(NodeType.Style, position);
@@ -277,17 +299,17 @@ export class StyleTreeNode extends BaseTreeNode {
     this.keyValueMap.set(key, value);
   }
 
-  addStyleTag(styleTag: QualifiableIdentifier): void {
+  addStyleTag(styleTag: StyleTagTreeNode): void {
     this.styleTagList.push(styleTag);
   }
 
   getChildren(): BaseTreeNode[] {
-    return [];
+    return this.styleTagList;
   }
 
   debugDump(): string {
     const styleTagListStr = this.styleTagList
-      .map((tag) => tag.join("."))
+      .map((tag) => tag.QualifiedTagName.join("."))
       .join(", ");
     const keyValueMapStr = JSON.stringify(Object.fromEntries(this.keyValueMap));
     return (
@@ -300,7 +322,7 @@ export class StyleTreeNode extends BaseTreeNode {
     return this.keyValueMap;
   }
 
-  get StyleTagList(): QualifiableIdentifier[] {
+  get StyleTagList(): StyleTagTreeNode[] {
     return this.styleTagList;
   }
 }
@@ -338,11 +360,11 @@ export class NamedStyleTreeNode extends BaseTreeNode {
 
 export class StyleBindingTreeNode extends BaseTreeNode {
   private keyword: string;
-  private styleTagList: QualifiableIdentifier[];
+  private styleTagList: StyleTagTreeNode[];
 
   constructor(
     keyword: string = "",
-    styleTagList: QualifiableIdentifier[] = [],
+    styleTagList: StyleTagTreeNode[] = [],
     position: Position | null = null,
   ) {
     super(NodeType.StyleBinding, position);
@@ -351,12 +373,12 @@ export class StyleBindingTreeNode extends BaseTreeNode {
   }
 
   getChildren(): BaseTreeNode[] {
-    return [];
+    return this.styleTagList;
   }
 
   debugDump(): string {
     const styleTagListStr = this.styleTagList
-      .map((tag) => tag.join("."))
+      .map((tag) => tag.QualifiedTagName.join("."))
       .join(", ");
     return (
       `StyleBinding: ${this.keyword} ` + `StyleTagList: [${styleTagListStr}]`
@@ -367,7 +389,7 @@ export class StyleBindingTreeNode extends BaseTreeNode {
     return this.keyword;
   }
 
-  get StyleTagList(): QualifiableIdentifier[] {
+  get StyleTagList(): StyleTagTreeNode[] {
     return this.styleTagList;
   }
 }

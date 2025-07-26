@@ -12,11 +12,11 @@ import {
   QualifiedVarTreeNode,
   LocalVarTreeNode,
   StyleTreeNode,
+  StyleTagTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
   NamespaceTreeNode,
   ImportTreeNode,
-  QualifiableIdentifier,
 } from "./ast";
 import {
   CompilationError as Error,
@@ -79,14 +79,20 @@ function getJoinedStringLiterals(c: TreeCursor, t: Text): string | null {
   return descriptionLines.length > 0 ? descriptionLines.join("\n") : null;
 }
 
-function getStyleTagNames(c: TreeCursor, t: Text): QualifiableIdentifier[] {
+function getStyleTagNames(c: TreeCursor, t: Text): StyleTagTreeNode[] {
   return c.node
     .getChildren("StyleTag")
-    .map((styleTag) => getQualifiableIdentifer(styleTag.cursor(), t));
+    .map(
+      (styleTag) =>
+        new StyleTagTreeNode(
+          getQualifiableIdentifer(styleTag.cursor(), t),
+          getPosition(styleTag.cursor()),
+        ),
+    );
 }
 
 function makeStyle(c: TreeCursor, t: Text, _e: Error[]): StyleTreeNode {
-  const styleTags: QualifiableIdentifier[] = getStyleTagNames(c, t);
+  const styleTags: StyleTagTreeNode[] = getStyleTagNames(c, t);
   const styleDeclaredPropertyValues = new Map<string, string>(
     c.node.getChildren("StyleDeclaration").map((styleDec) => {
       const propName = getTextFromChild("PropertyName", styleDec.cursor(), t);
@@ -130,7 +136,7 @@ function makeStyleBinding(
   e: Error[],
 ): StyleBindingTreeNode {
   const keyword = getTextFromChild("Identifier", c, t);
-  const styleTagList: QualifiableIdentifier[] =
+  const styleTagList: StyleTagTreeNode[] =
     makeNullableChild("StyleTagList", getStyleTagNames, c, t, e) ?? [];
   return new StyleBindingTreeNode(keyword, styleTagList, getPosition(c));
 }
