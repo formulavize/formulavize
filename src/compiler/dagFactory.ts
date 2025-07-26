@@ -68,12 +68,12 @@ function checkStyleTagsExist(
 ): void {
   // add error message if styleTags are not declared before usage
   if (!styleNode) return;
-  const styleTags = styleNode.StyleTagList.map((tag) => tag.QualifiedTagName);
-  styleTags.forEach((styleTag) => {
-    if (!workingDag?.getStyle(styleTag)) {
+  styleNode.StyleTagList.forEach((styleTag) => {
+    const styleTagName = styleTag.QualifiedTagName;
+    if (!workingDag?.getStyle(styleTagName)) {
       const errMsg = makeRefError(
-        styleNode,
-        `Style tag '${styleTag.join(".")}' not found`,
+        styleTag,
+        `Style tag '${styleTagName.join(".")}' not found`,
       );
       errors.push(errMsg);
       console.debug(errMsg);
