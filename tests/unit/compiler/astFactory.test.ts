@@ -5,7 +5,6 @@ import {
   RecipeTreeNode as Recipe,
   CallTreeNode as Call,
   AssignmentTreeNode as Assignment,
-  AliasTreeNode as Alias,
   LocalVarTreeNode as LocalVariable,
   QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
@@ -68,15 +67,7 @@ describe("single statements", () => {
     const input = "x";
     expect(makeTree(input)).toEqual(new Recipe([new QualifiedVariable(["x"])]));
   });
-  test("alias statement", () => {
-    const input = "y = x";
-    expect(makeTree(input)).toEqual(
-      new Recipe([
-        new Alias(new LocalVariable("y"), new QualifiedVariable(["x"])),
-      ]),
-    );
-  });
-  test("assignment statement", () => {
+  test("assignment with call", () => {
     const input = "a, b = c()";
     expect(makeTree(input)).toEqual(
       new Recipe([
@@ -84,6 +75,14 @@ describe("single statements", () => {
           [new LocalVariable("a"), new LocalVariable("b")],
           new Call("c", []),
         ),
+      ]),
+    );
+  });
+  test("assignment with variable", () => {
+    const input = "y = x";
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new Assignment([new LocalVariable("y")], new QualifiedVariable(["x"])),
       ]),
     );
   });
@@ -151,7 +150,7 @@ describe("style nodes", () => {
       new Recipe([new Call("f", [], new Style(new Map([["x", "1"]])))]),
     );
   });
-  test("styled assignment", () => {
+  test("styled assignment with call", () => {
     const input = "a{b:1}, c{#d #e} = f()";
     expect(makeTree(input)).toEqual(
       new Recipe([
@@ -168,12 +167,12 @@ describe("style nodes", () => {
       ]),
     );
   });
-  test("styled alias", () => {
+  test("styled assignment with variable", () => {
     const input = "x{#y} = z";
     expect(makeTree(input)).toEqual(
       new Recipe([
-        new Alias(
-          new LocalVariable("x", new Style(undefined, [new StyleTag(["y"])])),
+        new Assignment(
+          [new LocalVariable("x", new Style(undefined, [new StyleTag(["y"])]))],
           new QualifiedVariable(["z"]),
         ),
       ]),
@@ -269,7 +268,7 @@ describe("multiple statements", () => {
     expect(makeTree(input)).toEqual(
       new Recipe([
         new Assignment([new LocalVariable("y")], new Call("f", [])),
-        new Alias(new LocalVariable("x"), new QualifiedVariable(["y"])),
+        new Assignment([new LocalVariable("x")], new QualifiedVariable(["y"])),
         new Call("z", [new QualifiedVariable(["x"])]),
       ]),
     );
@@ -279,7 +278,7 @@ describe("multiple statements", () => {
     expect(makeTree(input)).toEqual(
       new Recipe([
         new Assignment([new LocalVariable("y")], new Call("f", [])),
-        new Alias(new LocalVariable("x"), new QualifiedVariable(["y"])),
+        new Assignment([new LocalVariable("x")], new QualifiedVariable(["y"])),
         new Call("z", [new QualifiedVariable(["x"])]),
       ]),
     );
@@ -292,7 +291,10 @@ describe("multiple statements", () => {
           "n",
           [
             new Assignment([new LocalVariable("y")], new Call("f", [])),
-            new Alias(new LocalVariable("z"), new QualifiedVariable(["x"])),
+            new Assignment(
+              [new LocalVariable("z")],
+              new QualifiedVariable(["x"]),
+            ),
           ],
           [new QualifiedVariable(["a"]), new Call("b", [])],
           new Style(undefined, [new StyleTag(["s"])]),
@@ -335,7 +337,7 @@ describe("incomplete statements", () => {
     const input = "x=y //test \ny=f(\n\t z()";
     expect(makeTree(input)).toEqual(
       new Recipe([
-        new Alias(new LocalVariable("x"), new QualifiedVariable(["y"])),
+        new Assignment([new LocalVariable("x")], new QualifiedVariable(["y"])),
         new Assignment(
           [new LocalVariable("y")],
           new Call("f", [new Call("z", [])]),
@@ -382,13 +384,13 @@ describe("node positions", () => {
     );
   });
 
-  test("alias", () => {
+  test("assignment", () => {
     const input = "a = b";
     expect(makeTreeWithPositions(input)).toEqual(
       new Recipe(
         [
-          new Alias(
-            new LocalVariable("a", null, { from: 0, to: 1 }),
+          new Assignment(
+            [new LocalVariable("a", null, { from: 0, to: 1 })],
             new QualifiedVariable(["b"], { from: 4, to: 5 }),
             { from: 0, to: 5 },
           ),

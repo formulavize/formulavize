@@ -3,7 +3,6 @@ import {
   RecipeTreeNode as Recipe,
   CallTreeNode as Call,
   AssignmentTreeNode as Assignment,
-  AliasTreeNode as Alias,
   LocalVarTreeNode as LocalVariable,
   QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
@@ -14,13 +13,13 @@ import {
 describe("debugDumpTree consistency", () => {
   test("dumping nodes with children has no side effects", () => {
     const callNode = new Call("f", []);
-    const assignmentNode = new Assignment([new LocalVariable("x")], callNode);
-    const aliasNode = new Alias(
-      new LocalVariable("y"),
+    const assignCallNode = new Assignment([new LocalVariable("x")], callNode);
+    const assignVarNode = new Assignment(
+      [new LocalVariable("y")],
       new QualifiedVariable(["x"]),
     );
     const namedStyleNode = new NamedStyle("s", new Style(new Map()));
-    const namespaceNode = new Namespace("n", [assignmentNode, aliasNode]);
+    const namespaceNode = new Namespace("n", [assignCallNode, assignVarNode]);
     const recipeNode = new Recipe([namespaceNode, namedStyleNode]);
 
     const firstDump = recipeNode.debugDumpTree();

@@ -23,7 +23,7 @@
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.38.1",
     "@floating-ui/dom": "^1.7.2",
-    "@formulavize/lang-fiz": "^0.3.3",
+    "@formulavize/lang-fiz": "^1.0.0",
     "@lezer/common": "^1.2.3",
     "cytoscape": "~3.30.4",
     "cytoscape-dagre": "^2.5.0",
