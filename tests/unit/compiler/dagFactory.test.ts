@@ -3,7 +3,6 @@ import {
   RecipeTreeNode as Recipe,
   CallTreeNode as Call,
   AssignmentTreeNode as Assignment,
-  AliasTreeNode as Alias,
   LocalVarTreeNode as LocalVariable,
   QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
@@ -210,10 +209,10 @@ describe("edge tests", () => {
       ["c", "y"],
     ]);
   });
-  test("aliased variable", async () => {
+  test("transitive reference to assigned variable", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("a")], new Call("c", [])),
-      new Alias(new LocalVariable("b"), new QualifiedVariable(["a"])),
+      new Assignment([new LocalVariable("b")], new QualifiedVariable(["a"])),
       new Call("y", [new QualifiedVariable(["b"])]),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
@@ -764,20 +763,17 @@ describe("error reporting", () => {
     const dagNode = dagNodeList[0];
     expect(dagNode.name).toEqual("f");
   });
-  test("alias reports error when variable not found", async () => {
+  test("assignment reports error when variable not found", async () => {
     const recipe = new Recipe([
-      new Alias(
-        new LocalVariable("b"),
+      new Assignment(
+        [new LocalVariable("b")],
         new QualifiedVariable(["not_found_var"]),
       ),
     ]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);
-    expectReferenceError(
-      errors[0],
-      "Variable 'not_found_var' not found for alias 'b'",
-    );
+    expectReferenceError(errors[0], "Variable 'not_found_var' not found");
 
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
@@ -891,14 +887,16 @@ describe("error reporting", () => {
     const dagNode = dagNodeList[0];
     expect(dagNode.name).toEqual("f");
   });
-  test("alias with styled variable missing style tag reports error", async () => {
+  test("assignment with styled variable missing style tag reports error", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("a")], new Call("f", [])),
-      new Alias(
-        new LocalVariable(
-          "b",
-          new Style(undefined, [new StyleTagNode(["missingStyle"])]),
-        ),
+      new Assignment(
+        [
+          new LocalVariable(
+            "b",
+            new Style(undefined, [new StyleTagNode(["missingStyle"])]),
+          ),
+        ],
         new QualifiedVariable(["a"]),
       ),
     ]);
@@ -994,42 +992,6 @@ describe("error reporting", () => {
   });
   test("assignment with missing both sides reports multiple errors", async () => {
     const recipe = new Recipe([new Assignment([], null)]);
-    const { dag, errors } = await makeDag(recipe, dummyImporter);
-
-    expect(errors).toHaveLength(2);
-    expectSyntaxError(errors[0], "Left hand side is missing");
-    expectSyntaxError(errors[1], "Right hand side is missing");
-
-    expect(dag.getNodeList()).toHaveLength(0);
-    expect(dag.getEdgeList()).toHaveLength(0);
-  });
-  test("alias with missing left hand side reports error", async () => {
-    const recipe = new Recipe([
-      new Assignment([new LocalVariable("a")], new Call("f", [])),
-      new Alias(null, new QualifiedVariable(["a"])),
-    ]);
-    const { dag, errors } = await makeDag(recipe, dummyImporter);
-
-    expect(errors).toHaveLength(1);
-    expectSyntaxError(errors[0], "Left hand side is missing");
-
-    const dagNodeList = dag.getNodeList();
-    expect(dagNodeList).toHaveLength(1);
-    const dagNode = dagNodeList[0];
-    expect(dagNode.name).toEqual("f");
-  });
-  test("alias with missing right hand side reports error", async () => {
-    const recipe = new Recipe([new Alias(new LocalVariable("b"), null)]);
-    const { dag, errors } = await makeDag(recipe, dummyImporter);
-
-    expect(errors).toHaveLength(1);
-    expectSyntaxError(errors[0], "Right hand side is missing");
-
-    expect(dag.getNodeList()).toHaveLength(0);
-    expect(dag.getEdgeList()).toHaveLength(0);
-  });
-  test("alias with missing both sides reports multiple errors", async () => {
-    const recipe = new Recipe([new Alias(null, null)]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(2);

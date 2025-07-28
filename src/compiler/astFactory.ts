@@ -8,7 +8,6 @@ import {
   ValueTreeNode,
   CallTreeNode,
   AssignmentTreeNode,
-  AliasTreeNode,
   QualifiedVarTreeNode,
   LocalVarTreeNode,
   StyleTreeNode,
@@ -188,6 +187,9 @@ function makeAssignment(
     .getChildren("LhsVariable")
     .map((candidateLhsVar) => makeLhsVariable(candidateLhsVar.cursor(), t, e));
 
+  const rhsVar = makeNullableChild("RhsVariable", makeRhsVariable, c, t, e);
+  if (rhsVar) return new AssignmentTreeNode(lhsVars, rhsVar, getPosition(c));
+
   const rhsCall = makeNullableChild("Call", makeCall, c, t, e);
   if (rhsCall) return new AssignmentTreeNode(lhsVars, rhsCall, getPosition(c));
 
@@ -199,12 +201,6 @@ function makeAssignment(
     return new AssignmentTreeNode(lhsVars, rhsImport, getPosition(c));
 
   return new AssignmentTreeNode(lhsVars, null, getPosition(c));
-}
-
-function makeAlias(c: TreeCursor, t: Text, e: Error[]): AliasTreeNode {
-  const lhsVar = makeNullableChild("LhsVariable", makeLhsVariable, c, t, e);
-  const rhsVar = makeNullableChild("RhsVariable", makeRhsVariable, c, t, e);
-  return new AliasTreeNode(lhsVar, rhsVar, getPosition(c));
 }
 
 function makeImport(c: TreeCursor, t: Text): ImportTreeNode {
@@ -251,7 +247,6 @@ function makeStatement(
   return match(c.node.name)
     .with("Call", () => makeCall(c, t, e))
     .with("RhsVariable", () => makeRhsVariable(c, t))
-    .with("Alias", () => makeAlias(c, t, e))
     .with("Assignment", () => makeAssignment(c, t, e))
     .with("StyleTagDeclaration", () => makeNamedStyle(c, t, e))
     .with("StyleBinding", () => makeStyleBinding(c, t, e))

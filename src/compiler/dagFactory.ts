@@ -6,7 +6,6 @@ import {
   RecipeTreeNode,
   CallTreeNode,
   AssignmentTreeNode,
-  AliasTreeNode,
   QualifiedVarTreeNode,
   NodeType,
   StyleTreeNode,
@@ -272,13 +271,30 @@ async function processUnassignedImport(
 }
 
 async function processAssignmentRhs(
-  rhsNode: CallTreeNode | NamespaceTreeNode | ImportTreeNode,
+  rhsNode:
+    | CallTreeNode
+    | QualifiedVarTreeNode
+    | NamespaceTreeNode
+    | ImportTreeNode,
   workingDag: Dag,
   errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string>,
 ): Promise<NodeId> {
   return match(rhsNode.Type)
+    .with(NodeType.QualifiedVariable, () => {
+      const rhsVar = rhsNode as QualifiedVarTreeNode;
+      const varName = rhsVar.QualifiedVarName;
+      const candidateSrcNodeId = workingDag.getVarNode(varName);
+      if (!candidateSrcNodeId) {
+        const errDescription = `Variable '${varName}' not found`;
+        const errMsg = makeRefError(rhsNode, errDescription);
+        errors.push(errMsg);
+        console.debug(errMsg);
+        return Promise.reject(errDescription);
+      }
+      return candidateSrcNodeId;
+    })
     .with(NodeType.Call, () => {
       return processCall(rhsNode as CallTreeNode, workingDag, errors);
     })
@@ -311,35 +327,6 @@ async function processAssignmentRhs(
     });
 }
 
-function checkRHS(
-  stmt: AssignmentTreeNode | AliasTreeNode,
-  errors: Error[],
-): void {
-  if (!stmt.Rhs) {
-    const errMsg = makeSyntaxError(stmt, "Right hand side is missing");
-    errors.push(errMsg);
-    console.debug(errMsg);
-  }
-}
-
-function checkAssignmentSides(stmt: AssignmentTreeNode, errors: Error[]): void {
-  if (stmt.Lhs.length === 0) {
-    const errMsg = makeSyntaxError(stmt, "Left hand side is missing");
-    errors.push(errMsg);
-    console.debug(errMsg);
-  }
-  checkRHS(stmt, errors);
-}
-
-function checkAliasSides(stmt: AliasTreeNode, errors: Error[]): void {
-  if (!stmt.Lhs) {
-    const errMsg = makeSyntaxError(stmt, "Left hand side is missing");
-    errors.push(errMsg);
-    console.debug(errMsg);
-  }
-  checkRHS(stmt, errors);
-}
-
 export async function makeSubDag(
   dagId: DagId,
   dagNamespaceStmt: NamespaceTreeNode,
@@ -369,8 +356,26 @@ export async function makeSubDag(
       })
       .with(NodeType.Assignment, async () => {
         const assignmentStmt = stmt as AssignmentTreeNode;
-        if (assignmentStmt.Lhs.length === 0 || !assignmentStmt.Rhs) {
-          checkAssignmentSides(assignmentStmt, errors);
+        const lhsIsEmpty = assignmentStmt.Lhs.length === 0;
+        if (lhsIsEmpty) {
+          const errMsg = makeSyntaxError(
+            assignmentStmt,
+            "Left hand side is missing",
+          );
+          errors.push(errMsg);
+          console.debug(errMsg);
+        }
+        const rhsIsEmpty = !assignmentStmt.Rhs;
+        if (rhsIsEmpty) {
+          const errMsg = makeSyntaxError(
+            assignmentStmt,
+            "Right hand side is missing",
+          );
+          errors.push(errMsg);
+          console.debug(errMsg);
+        }
+        if (lhsIsEmpty || rhsIsEmpty) {
+          // skip processing if either side is empty
           return;
         }
         const thisNodeId = await processAssignmentRhs(
@@ -390,34 +395,6 @@ export async function makeSubDag(
           const varStyle = lhsVar.Styling ? makeDagStyle(lhsVar.Styling) : null;
           curLevelDag.setVarStyle(lhsVar.VarName, varStyle);
         }
-      })
-      .with(NodeType.Alias, () => {
-        const aliasStmt = stmt as AliasTreeNode;
-        if (!aliasStmt.Lhs || !aliasStmt.Rhs) {
-          checkAliasSides(aliasStmt, errors);
-          return;
-        }
-
-        checkStyleTagsExist(aliasStmt.Lhs.Styling, curLevelDag, errors);
-
-        const lhsName = aliasStmt.Lhs!.VarName;
-        const rhsName = aliasStmt.Rhs!.QualifiedVarName;
-        const RhsReferentNodeId = curLevelDag.getVarNode(rhsName);
-        if (!RhsReferentNodeId) {
-          const errMsg = makeRefError(
-            aliasStmt.Rhs,
-            `Variable '${rhsName}' not found for alias '${lhsName}'`,
-          );
-          errors.push(errMsg);
-          console.debug(errMsg);
-          return;
-        }
-        curLevelDag.setVarNode(lhsName, RhsReferentNodeId);
-
-        const varStyle = aliasStmt.Lhs.Styling
-          ? makeDagStyle(aliasStmt.Lhs.Styling)
-          : null;
-        curLevelDag.setVarStyle(lhsName, varStyle);
       })
       .with(NodeType.NamedStyle, () => {
         const namedStyleStmt = stmt as NamedStyleTreeNode;

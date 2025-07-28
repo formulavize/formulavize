@@ -3,7 +3,6 @@ import { Position } from "./compilationErrors";
 export enum NodeType {
   Call,
   Assignment,
-  Alias,
   LocalVariable,
   QualifiedVariable,
   Recipe,
@@ -63,7 +62,6 @@ export type StatementTreeNode =
   | CallTreeNode
   | QualifiedVarTreeNode
   | AssignmentTreeNode
-  | AliasTreeNode
   | NamedStyleTreeNode
   | StyleBindingTreeNode
   | NamespaceTreeNode
@@ -139,13 +137,19 @@ export class CallTreeNode extends BaseTreeNode {
   }
 }
 
+export type AssignmentRhsNode =
+  | CallTreeNode
+  | QualifiedVarTreeNode
+  | NamespaceTreeNode
+  | ImportTreeNode;
+
 export class AssignmentTreeNode extends BaseTreeNode {
   private lhs: LocalVarTreeNode[];
-  private rhs: CallTreeNode | NamespaceTreeNode | ImportTreeNode | null;
+  private rhs: AssignmentRhsNode | null;
 
   constructor(
     varList: LocalVarTreeNode[],
-    rhs: CallTreeNode | NamespaceTreeNode | ImportTreeNode | null,
+    rhs: AssignmentRhsNode | null,
     position: Position | null = null,
   ) {
     super(NodeType.Assignment, position);
@@ -167,41 +171,7 @@ export class AssignmentTreeNode extends BaseTreeNode {
     return this.lhs;
   }
 
-  get Rhs(): CallTreeNode | NamespaceTreeNode | ImportTreeNode | null {
-    return this.rhs;
-  }
-}
-
-export class AliasTreeNode extends BaseTreeNode {
-  private lhs: LocalVarTreeNode | null;
-  private rhs: QualifiedVarTreeNode | null;
-
-  constructor(
-    lhs: LocalVarTreeNode | null,
-    rhs: QualifiedVarTreeNode | null,
-    position: Position | null = null,
-  ) {
-    super(NodeType.Alias, position);
-    this.lhs = lhs;
-    this.rhs = rhs;
-  }
-
-  getChildren(): BaseTreeNode[] {
-    const childList: BaseTreeNode[] = [];
-    if (this.lhs) childList.push(this.lhs);
-    if (this.rhs) childList.push(this.rhs);
-    return childList;
-  }
-
-  debugDump(): string {
-    return "Alias:";
-  }
-
-  get Lhs(): LocalVarTreeNode | null {
-    return this.lhs;
-  }
-
-  get Rhs(): QualifiedVarTreeNode | null {
+  get Rhs(): AssignmentRhsNode | null {
     return this.rhs;
   }
 }
