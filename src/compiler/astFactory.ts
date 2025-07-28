@@ -187,20 +187,20 @@ function makeAssignment(
     .getChildren("LhsVariable")
     .map((candidateLhsVar) => makeLhsVariable(candidateLhsVar.cursor(), t, e));
 
-  const rhsVar = makeNullableChild("RhsVariable", makeRhsVariable, c, t, e);
-  if (rhsVar) return new AssignmentTreeNode(lhsVars, rhsVar, getPosition(c));
+  const rhsNode =
+    c.node.getChild("RhsVariable") ??
+    c.node.getChild("Call") ??
+    c.node.getChild("Namespace") ??
+    c.node.getChild("Import");
 
-  const rhsCall = makeNullableChild("Call", makeCall, c, t, e);
-  if (rhsCall) return new AssignmentTreeNode(lhsVars, rhsCall, getPosition(c));
+  const rhs = match(rhsNode?.name)
+    .with("RhsVariable", () => makeRhsVariable(rhsNode!.cursor(), t))
+    .with("Call", () => makeCall(rhsNode!.cursor(), t, e))
+    .with("Namespace", () => makeNamespace(rhsNode!.cursor(), t, e))
+    .with("Import", () => makeImport(rhsNode!.cursor(), t))
+    .otherwise(() => null);
 
-  const rhsNs = makeNullableChild("Namespace", makeNamespace, c, t, e);
-  if (rhsNs) return new AssignmentTreeNode(lhsVars, rhsNs, getPosition(c));
-
-  const rhsImport = makeNullableChild("Import", makeImport, c, t, e);
-  if (rhsImport)
-    return new AssignmentTreeNode(lhsVars, rhsImport, getPosition(c));
-
-  return new AssignmentTreeNode(lhsVars, null, getPosition(c));
+  return new AssignmentTreeNode(lhsVars, rhs, getPosition(c));
 }
 
 function makeImport(c: TreeCursor, t: Text): ImportTreeNode {
