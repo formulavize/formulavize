@@ -8,6 +8,7 @@ import {
   AssignmentTreeNode,
   QualifiedVarTreeNode,
   NodeType,
+  StyleTagTreeNode,
   StyleTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
@@ -64,14 +65,12 @@ function makeImportError(node: BaseTreeNode, message: string): Error {
   return makeError(node, message, "Import");
 }
 
-function checkStyleTagsExist(
-  styleNode: StyleTreeNode | null,
+function checkForMissingStyleTags(
+  styleTags: StyleTagTreeNode[],
   workingDag: Dag | undefined,
   errors: Error[],
 ): void {
-  // add error message if styleTags are not declared before usage
-  if (!styleNode) return;
-  styleNode.StyleTagList.forEach((styleTag) => {
+  styleTags.forEach((styleTag) => {
     const styleTagName = styleTag.QualifiedTagName;
     if (!workingDag?.getStyle(styleTagName)) {
       const errMsg = makeRefError(
@@ -82,6 +81,15 @@ function checkStyleTagsExist(
       console.debug(errMsg);
     }
   });
+}
+
+function checkStyleTagsInStyleNode(
+  styleNode: StyleTreeNode | null,
+  workingDag: Dag | undefined,
+  errors: Error[],
+): void {
+  if (!styleNode) return;
+  checkForMissingStyleTags(styleNode.StyleTagList, workingDag, errors);
 }
 
 function argListToEdgeInfo(
@@ -156,7 +164,7 @@ function processCall(
   errors: Error[],
 ): NodeId {
   const thisNodeId = uuidv4();
-  checkStyleTagsExist(callStmt.Styling, workingDag, errors);
+  checkStyleTagsInStyleNode(callStmt.Styling, workingDag, errors);
   const thisNode = {
     id: thisNodeId,
     name: callStmt.Name,
@@ -335,7 +343,7 @@ export async function makeSubDag(
   seenImports: Set<string> = new Set(),
   parentDag?: Dag,
 ): Promise<Dag> {
-  checkStyleTagsExist(dagNamespaceStmt.Styling, parentDag, errors);
+  checkStyleTagsInStyleNode(dagNamespaceStmt.Styling, parentDag, errors);
   const dagStyleTags =
     dagNamespaceStmt.Styling?.StyleTagList.map((tag) => tag.QualifiedTagName) ??
     [];
@@ -391,7 +399,7 @@ export async function makeSubDag(
         if (!thisNodeId) return;
         for (const lhsVar of assignmentStmt.Lhs) {
           curLevelDag.setVarNode(lhsVar.VarName, thisNodeId);
-          checkStyleTagsExist(lhsVar.Styling, curLevelDag, errors);
+          checkStyleTagsInStyleNode(lhsVar.Styling, curLevelDag, errors);
           const varStyle = lhsVar.Styling ? makeDagStyle(lhsVar.Styling) : null;
           curLevelDag.setVarStyle(lhsVar.VarName, varStyle);
         }
@@ -399,7 +407,7 @@ export async function makeSubDag(
       .with(NodeType.NamedStyle, () => {
         const namedStyleStmt = stmt as NamedStyleTreeNode;
         const styleNode = namedStyleStmt.StyleNode;
-        checkStyleTagsExist(styleNode, curLevelDag, errors);
+        checkStyleTagsInStyleNode(styleNode, curLevelDag, errors);
         const workingStyleProperties: StyleProperties =
           styleNode.StyleTagList.map(
             (tag) => curLevelDag.getStyle(tag.QualifiedTagName) ?? new Map(),
@@ -413,6 +421,8 @@ export async function makeSubDag(
       })
       .with(NodeType.StyleBinding, () => {
         const styleBindingStmt = stmt as StyleBindingTreeNode;
+        const styleTags = styleBindingStmt.StyleTagList;
+        checkForMissingStyleTags(styleTags, curLevelDag, errors);
         curLevelDag.addStyleBinding(
           styleBindingStmt.Keyword,
           styleBindingStmt.StyleTagList.map((tag) => tag.QualifiedTagName),
