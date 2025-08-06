@@ -925,6 +925,18 @@ describe("error reporting", () => {
     const styleMap = dag.getFlattenedStyles();
     expect(styleMap.get("t")).toEqual(new Map());
   });
+  test("style binding with missing style tag reports error", async () => {
+    const recipe = new Recipe([
+      new StyleBinding("x", [new StyleTagNode(["missingStyle"])]),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(1);
+    expectReferenceError(errors[0], "Style tag 'missingStyle' not found");
+
+    const keywordToStyleTags = dag.getStyleBindings();
+    expect(keywordToStyleTags.get("x")).toEqual([["missingStyle"]]);
+  });
   test("multiple missing style tags in same statement reports multiple errors", async () => {
     const recipe = new Recipe([
       new Call(
