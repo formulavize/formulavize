@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/formulavize/formulavize/compare/v1.4.0...v1.4.1) (2025-08-06)
+
+
+### Bug Fixes
+
+* **dagFactory:** make undefined style tag errors in StyleBinding ([2289fc1](https://github.com/formulavize/formulavize/commit/2289fc108c016c99566a028c9752c564af74df96))
+
 ## [1.4.0](https://github.com/formulavize/formulavize/compare/v1.3.0...v1.4.0) (2025-07-26)
 
 
