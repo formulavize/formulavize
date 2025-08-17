@@ -13,7 +13,7 @@
       </v-btn>
       <v-btn icon @click="$emit('open-export')">
         <v-icon :icon="mdiExport" />
-        <v-tooltip activator="parent" text="Export" location="bottom" />
+        <v-tooltip activator="parent" text="Export Image" location="bottom" />
       </v-btn>
       <v-btn icon :active="debugMode" @click="$emit('toggle-debug-mode')">
         <v-icon :icon="mdiApplicationParenthesesOutline" />
