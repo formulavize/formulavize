@@ -15,14 +15,6 @@
         <v-icon :icon="mdiExport" />
         <v-tooltip activator="parent" text="Export Image" location="bottom" />
       </v-btn>
-      <v-btn icon :active="debugMode" @click="$emit('toggle-debug-mode')">
-        <v-icon :icon="mdiApplicationParenthesesOutline" />
-        <v-tooltip
-          activator="parent"
-          text="Toggle Debug Mode"
-          location="bottom"
-        />
-      </v-btn>
       <v-btn
         icon
         href="https://github.com/formulavize/formulavize"
@@ -41,27 +33,14 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import {
-  mdiContentCopy,
-  mdiExport,
-  mdiApplicationParenthesesOutline,
-  mdiGithub,
-  mdiCogOutline,
-} from "@mdi/js";
+import { mdiContentCopy, mdiExport, mdiGithub, mdiCogOutline } from "@mdi/js";
 export default defineComponent({
   name: "ToolBar",
-  props: {
-    debugMode: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  emits: ["toggle-debug-mode", "open-export", "open-options", "copy-source"],
+  emits: ["open-export", "open-options", "copy-source"],
   setup() {
     return {
       mdiContentCopy,
       mdiExport,
-      mdiApplicationParenthesesOutline,
       mdiCogOutline,
       mdiGithub,
     };

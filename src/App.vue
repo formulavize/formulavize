@@ -31,8 +31,6 @@
   </splitpanes>
   <ToolBar
     id="toolbar"
-    :debug-mode="debugMode"
-    @toggle-debug-mode="toggleDebugMode"
     @open-export="showExportPopup = true"
     @open-options="showOptionsPopup = true"
     @copy-source="copySourceToClipboard"
@@ -44,6 +42,7 @@
   <OptionsPopup
     v-model:show-options="showOptionsPopup"
     v-model:tab-to-indent="tabToIndent"
+    v-model:debug-mode="debugMode"
   />
 </template>
 
@@ -107,16 +106,15 @@ export default defineComponent({
       this.curDiagnostics = curCompilation.Errors.map(errorToDiagnostic);
       this.curErrorReporter = new ErrorReporter(newEditorState.doc);
     },
+    debugMode() {
+      // repaint the conditionally rendered GraphView
+      const existingEditorState = cloneDeep(this.curEditorState);
+      this.updateEditorState(existingEditorState as EditorState);
+    },
   },
   methods: {
     updateEditorState(editorState: EditorState) {
       this.curEditorState = editorState;
-    },
-    toggleDebugMode() {
-      this.debugMode = !this.debugMode;
-      // repaint the conditionally rendered GraphView
-      const existingEditorState = cloneDeep(this.curEditorState);
-      this.updateEditorState(existingEditorState as EditorState);
     },
     handleExport(exportOptions: {
       fileName: string;
