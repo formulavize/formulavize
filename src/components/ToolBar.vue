@@ -21,7 +21,11 @@
         target="_blank"
       >
         <v-icon :icon="mdiGithub" />
-        <v-tooltip activator="parent" text="View on GitHub" location="bottom" />
+        <v-tooltip
+          activator="parent"
+          text="View Project GitHub"
+          location="bottom"
+        />
       </v-btn>
       <v-btn icon @click="$emit('open-options')">
         <v-icon :icon="mdiCogOutline" />
