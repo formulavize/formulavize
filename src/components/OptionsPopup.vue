@@ -22,6 +22,13 @@
               @update:model-value="$emit('update:tabToIndent', $event)"
             />
           </v-col>
+          <v-col cols="12" class="py-1">
+            <v-checkbox
+              label="Debug Mode"
+              :model-value="debugMode"
+              @update:model-value="$emit('update:debugMode', $event)"
+            />
+          </v-col>
         </v-row>
       </v-card-text>
       <v-card-actions>
@@ -48,8 +55,12 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
+    debugMode: {
+      type: Boolean,
+      required: true,
+    },
   },
-  emits: ["update:showOptions", "update:tabToIndent"],
+  emits: ["update:showOptions", "update:tabToIndent", "update:debugMode"],
   setup() {
     return {
       mdiCloseCircleOutline,
