@@ -35,6 +35,7 @@
     @toggle-debug-mode="toggleDebugMode"
     @open-export="showExportPopup = true"
     @open-options="showOptionsPopup = true"
+    @copy-source="copySourceToClipboard"
   />
   <ExportOptionsPopup
     v-model:show-export="showExportPopup"
@@ -124,6 +125,14 @@ export default defineComponent({
     }) {
       const graphView = this.$refs.graphView as typeof GraphView;
       graphView.exportImage(exportOptions);
+    },
+    async copySourceToClipboard() {
+      try {
+        const sourceText = this.curEditorState.doc.toString();
+        await navigator.clipboard.writeText(sourceText);
+      } catch (err) {
+        console.error("Failed to copy to clipboard:", err);
+      }
     },
   },
 });
