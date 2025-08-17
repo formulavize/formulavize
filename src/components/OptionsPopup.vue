@@ -22,6 +22,8 @@
               @update:model-value="$emit('update:tabToIndent', $event)"
             />
           </v-col>
+        </v-row>
+        <v-row>
           <v-col cols="12" class="py-1">
             <v-checkbox
               label="Debug Mode"
