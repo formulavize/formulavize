@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.5.0](https://github.com/formulavize/formulavize/compare/v1.4.1...v1.5.0) (2025-08-17)
+
+
+### Features
+
+* **ToolBar:** add button to copy code to clipboard ([0e045a4](https://github.com/formulavize/formulavize/commit/0e045a40523f2f3685405b8f313fd6894ed1ac97))
+
+
+### Bug Fixes
+
+* **ToolBar:** move DebugMode toggle from ToolBar to OptionsPopup ([7b7d613](https://github.com/formulavize/formulavize/commit/7b7d61318119ef39bdbe01f63813b73a9465ba36))
+* **ToolBar:** reword export tooltip more precisely ([b1c9c4b](https://github.com/formulavize/formulavize/commit/b1c9c4b0a0928dc7cd60cd8b6e87073b011f6abf))
+* **ToolBar:** reword GitHub tooltip ([06e4aa2](https://github.com/formulavize/formulavize/commit/06e4aa26756f268ae39ada7cb58bae05a2ad05f4))
+
 ## [1.4.1](https://github.com/formulavize/formulavize/compare/v1.4.0...v1.4.1) (2025-08-06)
 
 
