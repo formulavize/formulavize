@@ -3,6 +3,14 @@
     <img id="logo" src="/assets/formulavize_logo.svg" alt="Formulavize logo" />
     <h1>formulavize</h1>
     <v-btn-group density="comfortable">
+      <v-btn icon @click="$emit('copy-source')">
+        <v-icon :icon="mdiContentCopy" />
+        <v-tooltip
+          activator="parent"
+          text="Copy Code to Clipboard"
+          location="bottom"
+        />
+      </v-btn>
       <v-btn icon @click="$emit('open-export')">
         <v-icon :icon="mdiExport" />
         <v-tooltip activator="parent" text="Export" location="bottom" />
@@ -34,6 +42,7 @@
 <script lang="ts">
 import { defineComponent } from "vue";
 import {
+  mdiContentCopy,
   mdiExport,
   mdiApplicationParenthesesOutline,
   mdiGithub,
@@ -47,9 +56,10 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ["toggle-debug-mode", "open-export", "open-options"],
+  emits: ["toggle-debug-mode", "open-export", "open-options", "copy-source"],
   setup() {
     return {
+      mdiContentCopy,
       mdiExport,
       mdiApplicationParenthesesOutline,
       mdiCogOutline,
