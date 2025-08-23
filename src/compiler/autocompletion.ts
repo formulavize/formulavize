@@ -6,24 +6,67 @@ export enum TokenType {
   Keyword = "keyword",
 }
 
-export interface TokenRecord {
+export enum ContextScenarioType {
+  AssignmentRhs,
+  StyleArgList,
+  VarStatement,
+}
+
+export interface ContextScenario {
+  type: ContextScenarioType;
+  from: number;
+  to: number;
+}
+
+export interface TokenInfo {
   type: TokenType;
   value: string;
   endPosition: number;
 }
 
-export class ASTCompletionIndex {
-  readonly tokens: TokenRecord[];
+export const ScenarioToTokenTypes: Record<
+  ContextScenarioType,
+  Set<TokenType>
+> = {
+  [ContextScenarioType.AssignmentRhs]: new Set([
+    TokenType.Variable,
+    TokenType.Keyword,
+  ]),
+  [ContextScenarioType.StyleArgList]: new Set([TokenType.StyleTag]),
+  [ContextScenarioType.VarStatement]: new Set([TokenType.Keyword]),
+};
 
-  constructor(tokenRecords: TokenRecord[]) {
-    this.tokens = tokenRecords;
+export class ASTCompletionIndex {
+  readonly tokens: TokenInfo[];
+  readonly contextScenarios: ContextScenario[];
+
+  constructor(tokenInfo: TokenInfo[], contextScenarios: ContextScenario[]) {
+    this.tokens = tokenInfo;
+    this.contextScenarios = contextScenarios;
   }
 
-  get Tokens(): TokenRecord[] {
+  get Tokens(): TokenInfo[] {
     return this.tokens;
   }
 
-  getTokensUpTo(position: number): TokenRecord[] {
+  get ContextScenarios(): ContextScenario[] {
+    return this.contextScenarios;
+  }
+
+  getTokensUpTo(position: number): TokenInfo[] {
     return this.tokens.filter((token) => token.endPosition < position);
+  }
+
+  getContextScenarioAt(position: number): ContextScenario | null {
+    const scenario = this.contextScenarios.find(
+      (s) => s.from <= position && s.to >= position,
+    );
+    return scenario || null;
+  }
+
+  getApplicableTokenTypesAt(position: number): Set<TokenType> {
+    const scenario = this.getContextScenarioAt(position);
+    if (!scenario) return new Set();
+    return ScenarioToTokenTypes[scenario.type] || new Set();
   }
 }

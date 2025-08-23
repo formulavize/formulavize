@@ -94,7 +94,7 @@ export default defineComponent({
       curErrors: [] as CompilationError[],
       curDiagnostics: [] as Diagnostic[],
       curErrorReporter: new ErrorReporter(Text.empty),
-      curCompletionIndex: new ASTCompletionIndex([]),
+      curCompletionIndex: new ASTCompletionIndex([], []),
       showExportPopup: false,
       showOptionsPopup: false,
       tabToIndent: false,
