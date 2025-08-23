@@ -421,11 +421,11 @@ export async function makeSubDag(
       })
       .with(NodeType.StyleBinding, () => {
         const styleBindingStmt = stmt as StyleBindingTreeNode;
-        const styleTags = styleBindingStmt.StyleTagList;
+        const styleTags = styleBindingStmt.StyleTagList.StyleTags;
         checkForMissingStyleTags(styleTags, curLevelDag, errors);
         curLevelDag.addStyleBinding(
           styleBindingStmt.Keyword,
-          styleBindingStmt.StyleTagList.map((tag) => tag.QualifiedTagName),
+          styleTags.map((tag) => tag.QualifiedTagName),
         );
       })
       .with(NodeType.QualifiedVariable, () => null)

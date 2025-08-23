@@ -7,6 +7,7 @@ import {
   QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
   StyleTagTreeNode as StyleTagNode,
+  StyleTagListTreeNode as StyleTagList,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   NamespaceTreeNode as Namespace,
@@ -612,7 +613,7 @@ describe("style binding tests", () => {
     expect(defaultBindings).toEqual(new Map<Keyword, StyleTag[]>());
   });
   test("empty style binding", async () => {
-    const recipe = new Recipe([new StyleBinding("x", [])]);
+    const recipe = new Recipe([new StyleBinding("x", new StyleTagList([]))]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const styleBindings = dag.getStyleBindings();
     const expectedBinding = new Map<Keyword, StyleTag[]>([["x", []]]);
@@ -620,7 +621,10 @@ describe("style binding tests", () => {
   });
   test("style bind multiple styles", async () => {
     const recipe = new Recipe([
-      new StyleBinding("x", [new StyleTagNode(["a"]), new StyleTagNode(["b"])]),
+      new StyleBinding(
+        "x",
+        new StyleTagList([new StyleTagNode(["a"]), new StyleTagNode(["b"])]),
+      ),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const styleBindings = dag.getStyleBindings();
@@ -927,7 +931,10 @@ describe("error reporting", () => {
   });
   test("style binding with missing style tag reports error", async () => {
     const recipe = new Recipe([
-      new StyleBinding("x", [new StyleTagNode(["missingStyle"])]),
+      new StyleBinding(
+        "x",
+        new StyleTagList([new StyleTagNode(["missingStyle"])]),
+      ),
     ]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 

@@ -9,6 +9,7 @@ import {
   QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
   StyleTagTreeNode as StyleTag,
+  StyleTagListTreeNode as StyleTagList,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   NamespaceTreeNode as Namespace,
@@ -246,17 +247,22 @@ describe("style nodes", () => {
 describe("style bindings", () => {
   test("empty style binding", () => {
     const input = "%x{}";
-    expect(makeTree(input)).toEqual(new Recipe([new StyleBinding("x", [])]));
+    expect(makeTree(input)).toEqual(
+      new Recipe([new StyleBinding("x", new StyleTagList([]))]),
+    );
   });
   test("style bind multiple styles", () => {
     const input = "%x{#a #b #c}";
     expect(makeTree(input)).toEqual(
       new Recipe([
-        new StyleBinding("x", [
-          new StyleTag(["a"]),
-          new StyleTag(["b"]),
-          new StyleTag(["c"]),
-        ]),
+        new StyleBinding(
+          "x",
+          new StyleTagList([
+            new StyleTag(["a"]),
+            new StyleTag(["b"]),
+            new StyleTag(["c"]),
+          ]),
+        ),
       ]),
     );
   });
@@ -353,7 +359,9 @@ describe("incomplete statements", () => {
   });
   test("incomplete style binding", () => {
     const input = "%x";
-    expect(makeTree(input)).toEqual(new Recipe([new StyleBinding("x", [])]));
+    expect(makeTree(input)).toEqual(
+      new Recipe([new StyleBinding("x", new StyleTagList([]))]),
+    );
   });
   test("incomplete namespace", () => {
     const input = "n[";

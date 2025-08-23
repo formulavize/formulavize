@@ -8,6 +8,7 @@ export enum NodeType {
   Recipe,
   Style,
   NamedStyle,
+  StyleTagList,
   StyleBinding,
   StyleTag,
   Namespace,
@@ -328,13 +329,40 @@ export class NamedStyleTreeNode extends BaseTreeNode {
   }
 }
 
+export class StyleTagListTreeNode extends BaseTreeNode {
+  private styleTags: StyleTagTreeNode[];
+
+  constructor(
+    styleTags: StyleTagTreeNode[] = [],
+    position: Position | null = null,
+  ) {
+    super(NodeType.StyleTagList, position);
+    this.styleTags = styleTags;
+  }
+
+  getChildren(): BaseTreeNode[] {
+    return this.styleTags;
+  }
+
+  debugDump(): string {
+    const styleTagListStr = this.styleTags
+      .map((tag) => tag.QualifiedTagName.join("."))
+      .join(", ");
+    return `StyleTagList: [${styleTagListStr}]`;
+  }
+
+  get StyleTags(): StyleTagTreeNode[] {
+    return this.styleTags;
+  }
+}
+
 export class StyleBindingTreeNode extends BaseTreeNode {
   private keyword: string;
-  private styleTagList: StyleTagTreeNode[];
+  private styleTagList: StyleTagListTreeNode;
 
   constructor(
     keyword: string = "",
-    styleTagList: StyleTagTreeNode[] = [],
+    styleTagList: StyleTagListTreeNode = new StyleTagListTreeNode(),
     position: Position | null = null,
   ) {
     super(NodeType.StyleBinding, position);
@@ -343,23 +371,18 @@ export class StyleBindingTreeNode extends BaseTreeNode {
   }
 
   getChildren(): BaseTreeNode[] {
-    return this.styleTagList;
+    return [this.styleTagList];
   }
 
   debugDump(): string {
-    const styleTagListStr = this.styleTagList
-      .map((tag) => tag.QualifiedTagName.join("."))
-      .join(", ");
-    return (
-      `StyleBinding: ${this.keyword} ` + `StyleTagList: [${styleTagListStr}]`
-    );
+    return "StyleBinding: " + this.keyword;
   }
 
   get Keyword(): string {
     return this.keyword;
   }
 
-  get StyleTagList(): StyleTagTreeNode[] {
+  get StyleTagList(): StyleTagListTreeNode {
     return this.styleTagList;
   }
 }

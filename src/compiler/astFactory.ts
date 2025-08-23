@@ -12,6 +12,7 @@ import {
   LocalVarTreeNode,
   StyleTreeNode,
   StyleTagTreeNode,
+  StyleTagListTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
   NamespaceTreeNode,
@@ -129,14 +130,24 @@ function makeNamedStyle(
   return new NamedStyleTreeNode(styleName, styleNode, getPosition(c));
 }
 
+function makeStyleTagList(
+  c: TreeCursor,
+  t: Text,
+  _e: Error[],
+): StyleTagListTreeNode {
+  const styleTags = getStyleTagNames(c, t);
+  return new StyleTagListTreeNode(styleTags, getPosition(c));
+}
+
 function makeStyleBinding(
   c: TreeCursor,
   t: Text,
   e: Error[],
 ): StyleBindingTreeNode {
   const keyword = getTextFromChild("Identifier", c, t);
-  const styleTagList: StyleTagTreeNode[] =
-    makeNullableChild("StyleTagList", getStyleTagNames, c, t, e) ?? [];
+  const styleTagList =
+    makeNullableChild("StyleTagList", makeStyleTagList, c, t, e) ??
+    new StyleTagListTreeNode([], getPosition(c));
   return new StyleBindingTreeNode(keyword, styleTagList, getPosition(c));
 }
 
