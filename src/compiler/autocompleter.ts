@@ -16,7 +16,11 @@ export function createCompletionSource(
     }
 
     const availableTokens = completionIndex.getTokensUpTo(context.pos);
+    const applicableTokenTypes = completionIndex.getApplicableTokenTypesAt(
+      context.pos,
+    );
     const completions = availableTokens
+      .filter((token) => applicableTokenTypes.has(token.type))
       .filter((token) => token.value.startsWith(word.text))
       .map((token) => ({
         label: token.value,
