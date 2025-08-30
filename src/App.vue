@@ -27,6 +27,12 @@
             :content="curErrorReporter.makeErrorReport(curErrors)"
           />
         </tab>
+        <tab name="Autocomplete">
+          <TextDumpView
+            title="Autocomplete Dump"
+            :content="curCompletionIndex.dumpCompletionIndex()"
+          />
+        </tab>
       </tabs>
     </pane>
   </splitpanes>

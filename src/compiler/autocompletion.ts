@@ -69,4 +69,25 @@ export class ASTCompletionIndex {
     if (!scenario) return new Set();
     return ScenarioToTokenTypes[scenario.type] || new Set();
   }
+
+  dumpCompletionIndex(): string {
+    const tokenLines = this.tokens.map(
+      (token, i) =>
+        `  [${i}] ${token.type}: "${token.value}" (ends at ${token.endPosition})`,
+    );
+
+    const scenarioLines = this.contextScenarios.map(
+      (scenario, i) =>
+        `  [${i}] ${ContextScenarioType[scenario.type]}: ${scenario.from}-${scenario.to}`,
+    );
+
+    return [
+      `Tokens (${this.tokens.length}):`,
+      ...tokenLines,
+      "",
+      `Context Scenarios (${this.contextScenarios.length}):`,
+      ...scenarioLines,
+      "",
+    ].join("\n");
+  }
 }
