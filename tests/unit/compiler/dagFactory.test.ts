@@ -12,6 +12,7 @@ import {
   StyleBindingTreeNode as StyleBinding,
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
+  ValueListTreeNode as ValueList,
 } from "src/compiler/ast";
 import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
 import { Dag, StyleTag, StyleProperties, Keyword } from "src/compiler/dag";
@@ -39,22 +40,30 @@ describe("node tests", () => {
     expect(dag).toEqual(new Dag(dag.Id));
   });
   test("one node", async () => {
-    const recipe = new Recipe([new Call("a", [])]);
+    const recipe = new Recipe([new Call("a", new ValueList([]))]);
     const nodeList = await makeDagAndReturnNodeNames(recipe);
     expect(nodeList).toEqual(["a"]);
   });
   test("two nodes", async () => {
-    const recipe = new Recipe([new Call("b", []), new Call("a", [])]);
+    const recipe = new Recipe([
+      new Call("b", new ValueList([])),
+      new Call("a", new ValueList([])),
+    ]);
     const nodeList = await makeDagAndReturnNodeNames(recipe);
     expect(nodeList).toEqual(["a", "b"]);
   });
   test("duplicate name nodes", async () => {
-    const recipe = new Recipe([new Call("a", []), new Call("a", [])]);
+    const recipe = new Recipe([
+      new Call("a", new ValueList([])),
+      new Call("a", new ValueList([])),
+    ]);
     const nodeList = await makeDagAndReturnNodeNames(recipe);
     expect(nodeList).toEqual(["a", "a"]);
   });
   test("nested name nodes", async () => {
-    const recipe = new Recipe([new Call("f", [new Call("v", [])])]);
+    const recipe = new Recipe([
+      new Call("f", new ValueList([new Call("v", new ValueList([]))])),
+    ]);
     const nodeList = await makeDagAndReturnNodeNames(recipe);
     expect(nodeList).toEqual(["f", "v"]);
   });
@@ -105,29 +114,43 @@ describe("edge tests", () => {
   }
 
   test("no edge", async () => {
-    const recipe = new Recipe([new Call("b", []), new Call("a", [])]);
+    const recipe = new Recipe([
+      new Call("b", new ValueList([])),
+      new Call("a", new ValueList([])),
+    ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([]);
   });
   test("one edge through call", async () => {
-    const recipe = new Recipe([new Call("f", [new Call("v", [])])]);
+    const recipe = new Recipe([
+      new Call("f", new ValueList([new Call("v", new ValueList([]))])),
+    ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["v", "f"]]);
   });
   test("one edge through variable", async () => {
     const recipe = new Recipe([
-      new Assignment([new LocalVariable("x")], new Call("y", [])),
-      new Call("z", [new QualifiedVariable(["x"])]),
+      new Assignment(
+        [new LocalVariable("x")],
+        new Call("y", new ValueList([])),
+      ),
+      new Call("z", new ValueList([new QualifiedVariable(["x"])])),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["y", "z"]]);
   });
   test("two separate edges", async () => {
     const recipe = new Recipe([
-      new Assignment([new LocalVariable("a")], new Call("b", [])),
-      new Assignment([new LocalVariable("c")], new Call("d", [])),
-      new Call("e", [new QualifiedVariable(["a"])]),
-      new Call("f", [new QualifiedVariable(["c"])]),
+      new Assignment(
+        [new LocalVariable("a")],
+        new Call("b", new ValueList([])),
+      ),
+      new Assignment(
+        [new LocalVariable("c")],
+        new Call("d", new ValueList([])),
+      ),
+      new Call("e", new ValueList([new QualifiedVariable(["a"])])),
+      new Call("f", new ValueList([new QualifiedVariable(["c"])])),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -137,12 +160,21 @@ describe("edge tests", () => {
   });
   test("two dependency function", async () => {
     const recipe = new Recipe([
-      new Assignment([new LocalVariable("a")], new Call("b", [])),
-      new Assignment([new LocalVariable("c")], new Call("d", [])),
-      new Call("e", [
-        new QualifiedVariable(["a"]),
-        new QualifiedVariable(["c"]),
-      ]),
+      new Assignment(
+        [new LocalVariable("a")],
+        new Call("b", new ValueList([])),
+      ),
+      new Assignment(
+        [new LocalVariable("c")],
+        new Call("d", new ValueList([])),
+      ),
+      new Call(
+        "e",
+        new ValueList([
+          new QualifiedVariable(["a"]),
+          new QualifiedVariable(["c"]),
+        ]),
+      ),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -152,9 +184,12 @@ describe("edge tests", () => {
   });
   test("function with one var multiple consumers", async () => {
     const recipe = new Recipe([
-      new Assignment([new LocalVariable("a")], new Call("b", [])),
-      new Call("y", [new QualifiedVariable(["a"])]),
-      new Call("x", [new QualifiedVariable(["a"])]),
+      new Assignment(
+        [new LocalVariable("a")],
+        new Call("b", new ValueList([])),
+      ),
+      new Call("y", new ValueList([new QualifiedVariable(["a"])])),
+      new Call("x", new ValueList([new QualifiedVariable(["a"])])),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -166,10 +201,10 @@ describe("edge tests", () => {
     const recipe = new Recipe([
       new Assignment(
         [new LocalVariable("a"), new LocalVariable("b")],
-        new Call("c", []),
+        new Call("c", new ValueList([])),
       ),
-      new Call("y", [new QualifiedVariable(["a"])]),
-      new Call("x", [new QualifiedVariable(["b"])]),
+      new Call("y", new ValueList([new QualifiedVariable(["a"])])),
+      new Call("x", new ValueList([new QualifiedVariable(["b"])])),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -181,12 +216,15 @@ describe("edge tests", () => {
     const recipe = new Recipe([
       new Assignment(
         [new LocalVariable("a"), new LocalVariable("b")],
-        new Call("c", []),
+        new Call("c", new ValueList([])),
       ),
-      new Call("y", [
-        new QualifiedVariable(["a"]),
-        new QualifiedVariable(["b"]),
-      ]),
+      new Call(
+        "y",
+        new ValueList([
+          new QualifiedVariable(["a"]),
+          new QualifiedVariable(["b"]),
+        ]),
+      ),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -196,12 +234,18 @@ describe("edge tests", () => {
   });
   test("function with re-used vars", async () => {
     const recipe = new Recipe([
-      new Assignment([new LocalVariable("a")], new Call("c", [])),
-      new Call("y", [
-        new QualifiedVariable(["a"]),
-        new QualifiedVariable(["a"]),
-        new QualifiedVariable(["a"]),
-      ]),
+      new Assignment(
+        [new LocalVariable("a")],
+        new Call("c", new ValueList([])),
+      ),
+      new Call(
+        "y",
+        new ValueList([
+          new QualifiedVariable(["a"]),
+          new QualifiedVariable(["a"]),
+          new QualifiedVariable(["a"]),
+        ]),
+      ),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -212,17 +256,29 @@ describe("edge tests", () => {
   });
   test("transitive reference to assigned variable", async () => {
     const recipe = new Recipe([
-      new Assignment([new LocalVariable("a")], new Call("c", [])),
+      new Assignment(
+        [new LocalVariable("a")],
+        new Call("c", new ValueList([])),
+      ),
       new Assignment([new LocalVariable("b")], new QualifiedVariable(["a"])),
-      new Call("y", [new QualifiedVariable(["b"])]),
+      new Call("y", new ValueList([new QualifiedVariable(["b"])])),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["c", "y"]]);
   });
   test("call with nested call and var", async () => {
     const recipe = new Recipe([
-      new Assignment([new LocalVariable("a")], new Call("c", [])),
-      new Call("y", [new QualifiedVariable(["a"]), new Call("b", [])]),
+      new Assignment(
+        [new LocalVariable("a")],
+        new Call("c", new ValueList([])),
+      ),
+      new Call(
+        "y",
+        new ValueList([
+          new QualifiedVariable(["a"]),
+          new Call("b", new ValueList([])),
+        ]),
+      ),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -232,7 +288,13 @@ describe("edge tests", () => {
   });
   test("duplicate nested calls", async () => {
     const recipe = new Recipe([
-      new Call("y", [new Call("b", []), new Call("b", [])]),
+      new Call(
+        "y",
+        new ValueList([
+          new Call("b", new ValueList([])),
+          new Call("b", new ValueList([])),
+        ]),
+      ),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([
@@ -242,8 +304,11 @@ describe("edge tests", () => {
   });
   test("cannot resolve variable usage before assignment", async () => {
     const recipe = new Recipe([
-      new Call("y", [new QualifiedVariable(["a"])]),
-      new Assignment([new LocalVariable("a")], new Call("b", [])),
+      new Call("y", new ValueList([new QualifiedVariable(["a"])])),
+      new Assignment(
+        [new LocalVariable("a")],
+        new Call("b", new ValueList([])),
+      ),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     // no edge should be created because variable a is used before assignment
@@ -251,8 +316,13 @@ describe("edge tests", () => {
   });
   test("resolve variable in parent namespace", async () => {
     const recipe = new Recipe([
-      new Assignment([new LocalVariable("a")], new Call("b", [])),
-      new Namespace("child", [new Call("y", [new QualifiedVariable(["a"])])]),
+      new Assignment(
+        [new LocalVariable("a")],
+        new Call("b", new ValueList([])),
+      ),
+      new Namespace("child", [
+        new Call("y", new ValueList([new QualifiedVariable(["a"])])),
+      ]),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["b", "y"]]);
@@ -260,9 +330,12 @@ describe("edge tests", () => {
   test("cannot directly resolve variable in child namespace", async () => {
     const recipe = new Recipe([
       new Namespace("child", [
-        new Assignment([new LocalVariable("a")], new Call("b", [])),
+        new Assignment(
+          [new LocalVariable("a")],
+          new Call("b", new ValueList([])),
+        ),
       ]),
-      new Call("y", [new QualifiedVariable(["a"])]),
+      new Call("y", new ValueList([new QualifiedVariable(["a"])])),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([]);
@@ -270,9 +343,12 @@ describe("edge tests", () => {
   test("resolve variable in child namespace", async () => {
     const recipe = new Recipe([
       new Namespace("child", [
-        new Assignment([new LocalVariable("a")], new Call("b", [])),
+        new Assignment(
+          [new LocalVariable("a")],
+          new Call("b", new ValueList([])),
+        ),
       ]),
-      new Call("y", [new QualifiedVariable(["child", "a"])]),
+      new Call("y", new ValueList([new QualifiedVariable(["child", "a"])])),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["b", "y"]]);
@@ -280,10 +356,13 @@ describe("edge tests", () => {
   test("resolve variable in sibling namespace", async () => {
     const recipe = new Recipe([
       new Namespace("child", [
-        new Assignment([new LocalVariable("a")], new Call("b", [])),
+        new Assignment(
+          [new LocalVariable("a")],
+          new Call("b", new ValueList([])),
+        ),
       ]),
       new Namespace("sibling", [
-        new Call("y", [new QualifiedVariable(["child", "a"])]),
+        new Call("y", new ValueList([new QualifiedVariable(["child", "a"])])),
       ]),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
@@ -291,11 +370,17 @@ describe("edge tests", () => {
   });
   test("namespace with args makes incoming edges", async () => {
     const recipe = new Recipe([
-      new Assignment([new LocalVariable("y")], new Call("f", [])),
+      new Assignment(
+        [new LocalVariable("y")],
+        new Call("f", new ValueList([])),
+      ),
       new Namespace(
         "child",
-        [new Call("g", [])],
-        [new QualifiedVariable(["y"]), new Call("h", [])],
+        [new Call("g", new ValueList([]))],
+        new ValueList([
+          new QualifiedVariable(["y"]),
+          new Call("h", new ValueList([])),
+        ]),
       ),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
@@ -320,7 +405,7 @@ describe("edge tests", () => {
   test("edge from anonymous namespace", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("y")], new Namespace()),
-      new Call("g", [new QualifiedVariable(["y"])]),
+      new Call("g", new ValueList([new QualifiedVariable(["y"])])),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
@@ -337,7 +422,7 @@ describe("edge tests", () => {
   test("edge from named namespace", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("y")], new Namespace("child")),
-      new Call("g", [new QualifiedVariable(["y"])]),
+      new Call("g", new ValueList([new QualifiedVariable(["y"])])),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const nodeIdToNameMap = getAllNodeNamesToNodeIds(dag);
@@ -411,7 +496,11 @@ describe("style tests", () => {
   test("call styled", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
-      new Call("f", [], new Style(sampleMap, [new StyleTagNode(["s"])])),
+      new Call(
+        "f",
+        new ValueList([]),
+        new Style(sampleMap, [new StyleTagNode(["s"])]),
+      ),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const dagNodeList = dag.getNodeList();
@@ -430,9 +519,9 @@ describe("style tests", () => {
             new Style(sampleMap, [new StyleTagNode(["s"])]),
           ),
         ],
-        new Call("f", []),
+        new Call("f", new ValueList([])),
       ),
-      new Call("g", [new QualifiedVariable(["x"])]),
+      new Call("g", new ValueList([new QualifiedVariable(["x"])])),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const dagEdgeList = dag.getEdgeList();
@@ -454,12 +543,15 @@ describe("style tests", () => {
           ),
           new LocalVariable("y", new Style(sampleMap2, [])),
         ],
-        new Call("f", []),
+        new Call("f", new ValueList([])),
       ),
-      new Call("g", [
-        new QualifiedVariable(["x"]),
-        new QualifiedVariable(["y"]),
-      ]),
+      new Call(
+        "g",
+        new ValueList([
+          new QualifiedVariable(["x"]),
+          new QualifiedVariable(["y"]),
+        ]),
+      ),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const dagEdgeList = dag.getEdgeList();
@@ -479,9 +571,11 @@ describe("style tests", () => {
     const recipe = new Recipe([
       new Assignment(
         [new LocalVariable("x", new Style(sampleMap, []))],
-        new Call("f", []),
+        new Call("f", new ValueList([])),
       ),
-      new Namespace("child", [new Call("g", [new QualifiedVariable(["x"])])]),
+      new Namespace("child", [
+        new Call("g", new ValueList([new QualifiedVariable(["x"])])),
+      ]),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     expect(dag.getEdgeList()).toHaveLength(0);
@@ -499,11 +593,14 @@ describe("style tests", () => {
     const recipe = new Recipe([
       new Assignment(
         [new LocalVariable("x", new Style(sampleMap, []))],
-        new Call("f", []),
+        new Call("f", new ValueList([])),
       ),
       new Namespace("child", [
-        new Assignment([new LocalVariable("x")], new Call("h", [])),
-        new Call("g", [new QualifiedVariable(["x"])]),
+        new Assignment(
+          [new LocalVariable("x")],
+          new Call("h", new ValueList([])),
+        ),
+        new Call("g", new ValueList([new QualifiedVariable(["x"])])),
       ]),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
@@ -522,7 +619,11 @@ describe("style tests", () => {
     const recipe = new Recipe([
       new NamedStyle("s", new Style(sampleMap)),
       new Namespace("child", [
-        new Call("g", [], new Style(undefined, [new StyleTagNode(["s"])])),
+        new Call(
+          "g",
+          new ValueList([]),
+          new Style(undefined, [new StyleTagNode(["s"])]),
+        ),
       ]),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
@@ -541,7 +642,7 @@ describe("style tests", () => {
       new Namespace("child", [new NamedStyle("s", new Style(sampleMap))]),
       new Call(
         "g",
-        [],
+        new ValueList([]),
         new Style(undefined, [new StyleTagNode(["child", "s"])]),
       ),
     ]);
@@ -556,7 +657,7 @@ describe("style tests", () => {
     const recipe = new Recipe([
       new Call(
         "name",
-        [],
+        new ValueList([]),
         new Style(
           new Map([
             [DESCRIPTION_PROPERTY, "my_desc"],
@@ -589,9 +690,9 @@ describe("style tests", () => {
             ),
           ),
         ],
-        new Call("f", []),
+        new Call("f", new ValueList([])),
       ),
-      new Call("g", [new QualifiedVariable(["x"])]),
+      new Call("g", new ValueList([new QualifiedVariable(["x"])])),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const dagEdgeList = dag.getEdgeList();
@@ -671,7 +772,7 @@ describe("import tests", () => {
   test("imported anonymous namespace in assignment", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("x")], new Import("path")),
-      new Call("y", [new QualifiedVariable(["x"])]),
+      new Call("y", new ValueList([new QualifiedVariable(["x"])])),
     ]);
     const { dag } = await makeDag(recipe, mockImporter);
     expect(dag.getChildDags()).toHaveLength(1);
@@ -688,7 +789,7 @@ describe("import tests", () => {
   test("imported named namespace in assignment", async () => {
     const recipe = new Recipe([
       new Assignment([new LocalVariable("x")], new Import("path", "alias")),
-      new Call("y", [new QualifiedVariable(["x"])]),
+      new Call("y", new ValueList([new QualifiedVariable(["x"])])),
     ]);
     const { dag } = await makeDag(recipe, mockImporter);
     expect(dag.getChildDags()).toHaveLength(1);
@@ -710,7 +811,10 @@ describe("import tests", () => {
   } as unknown as ImportCacher;
 
   test("continue after problematic import", async () => {
-    const recipe = new Recipe([new Import("path"), new Call("f", [])]);
+    const recipe = new Recipe([
+      new Import("path"),
+      new Call("f", new ValueList([])),
+    ]);
     const { dag } = await makeDag(recipe, mockImporterError);
     expect(dag.getChildDags()).toHaveLength(0);
     const dagNodeList = dag.getNodeList();
@@ -755,7 +859,7 @@ describe("error reporting", () => {
   }
   test("argListToEdgeInfo reports error when variable not found", async () => {
     const recipe = new Recipe([
-      new Call("f", [new QualifiedVariable(["not_found_var"])]),
+      new Call("f", new ValueList([new QualifiedVariable(["not_found_var"])])),
     ]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
@@ -805,7 +909,7 @@ describe("error reporting", () => {
   });
   test("error uses default position when node has no position", async () => {
     const recipe = new Recipe([
-      new Call("f", [new QualifiedVariable(["not_found_var"])]),
+      new Call("f", new ValueList([new QualifiedVariable(["not_found_var"])])),
     ]);
     const { errors } = await makeDag(recipe, dummyImporter);
 
@@ -817,7 +921,9 @@ describe("error reporting", () => {
       [
         new Call(
           "f",
-          [new QualifiedVariable(["not_found_var"], { from: 2, to: 16 })],
+          new ValueList([
+            new QualifiedVariable(["not_found_var"], { from: 2, to: 16 }),
+          ]),
           undefined,
           {
             from: 0,
@@ -836,7 +942,7 @@ describe("error reporting", () => {
     const recipe = new Recipe([
       new Call(
         "f",
-        [],
+        new ValueList([]),
         new Style(undefined, [new StyleTagNode(["missingStyle"])]),
       ),
     ]);
@@ -855,8 +961,8 @@ describe("error reporting", () => {
     const recipe = new Recipe([
       new Namespace(
         "ns",
-        [new Call("f", [])],
-        [],
+        [new Call("f", new ValueList([]))],
+        new ValueList([]),
         new Style(undefined, [new StyleTagNode(["missingStyle"])]),
       ),
     ]);
@@ -878,7 +984,7 @@ describe("error reporting", () => {
             new Style(undefined, [new StyleTagNode(["missingStyle"])]),
           ),
         ],
-        new Call("f", []),
+        new Call("f", new ValueList([])),
       ),
     ]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
@@ -893,7 +999,10 @@ describe("error reporting", () => {
   });
   test("assignment with styled variable missing style tag reports error", async () => {
     const recipe = new Recipe([
-      new Assignment([new LocalVariable("a")], new Call("f", [])),
+      new Assignment(
+        [new LocalVariable("a")],
+        new Call("f", new ValueList([])),
+      ),
       new Assignment(
         [
           new LocalVariable(
@@ -948,7 +1057,7 @@ describe("error reporting", () => {
     const recipe = new Recipe([
       new Call(
         "f",
-        [],
+        new ValueList([]),
         new Style(undefined, [
           new StyleTagNode(["missingStyle1"]),
           new StyleTagNode(["missingStyle2"]),
@@ -971,7 +1080,7 @@ describe("error reporting", () => {
       new NamedStyle("validStyle", new Style(new Map([["color", "red"]]))),
       new Call(
         "f",
-        [],
+        new ValueList([]),
         new Style(undefined, [
           new StyleTagNode(["validStyle"]),
           new StyleTagNode(["missingStyle"]),
@@ -990,7 +1099,9 @@ describe("error reporting", () => {
     expect(dagNode.styleTags).toEqual([["validStyle"], ["missingStyle"]]);
   });
   test("assignment with missing left hand side reports error", async () => {
-    const recipe = new Recipe([new Assignment([], new Call("f", []))]);
+    const recipe = new Recipe([
+      new Assignment([], new Call("f", new ValueList([]))),
+    ]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
 
     expect(errors).toHaveLength(1);

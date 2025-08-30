@@ -15,6 +15,7 @@ import {
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
   BaseTreeNode,
+  ValueListTreeNode as ValueList,
 } from "src/compiler/ast";
 import { CompilationError as Error } from "src/compiler/compilationErrors";
 
@@ -61,7 +62,9 @@ describe("single statements", () => {
   test("call statement", () => {
     const input = "f(v)";
     expect(makeTree(input)).toEqual(
-      new Recipe([new Call("f", [new QualifiedVariable(["v"])])]),
+      new Recipe([
+        new Call("f", new ValueList([new QualifiedVariable(["v"])])),
+      ]),
     );
   });
   test("variable statement", () => {
@@ -74,7 +77,7 @@ describe("single statements", () => {
       new Recipe([
         new Assignment(
           [new LocalVariable("a"), new LocalVariable("b")],
-          new Call("c", []),
+          new Call("c", new ValueList([])),
         ),
       ]),
     );
@@ -148,7 +151,9 @@ describe("style nodes", () => {
   test("styled call", () => {
     const input = "f(){x:1}";
     expect(makeTree(input)).toEqual(
-      new Recipe([new Call("f", [], new Style(new Map([["x", "1"]])))]),
+      new Recipe([
+        new Call("f", new ValueList([]), new Style(new Map([["x", "1"]]))),
+      ]),
     );
   });
   test("styled assignment with call", () => {
@@ -163,7 +168,7 @@ describe("style nodes", () => {
               new Style(undefined, [new StyleTag(["d"]), new StyleTag(["e"])]),
             ),
           ],
-          new Call("f", []),
+          new Call("f", new ValueList([])),
         ),
       ]),
     );
@@ -183,7 +188,12 @@ describe("style nodes", () => {
     const input = "n[]{#s}";
     expect(makeTree(input)).toEqual(
       new Recipe([
-        new Namespace("n", [], [], new Style(undefined, [new StyleTag(["s"])])),
+        new Namespace(
+          "n",
+          [],
+          null,
+          new Style(undefined, [new StyleTag(["s"])]),
+        ),
       ]),
     );
   });
@@ -209,7 +219,11 @@ describe("style nodes", () => {
     const input = "f(){'test'}";
     expect(makeTree(input)).toEqual(
       new Recipe([
-        new Call("f", [], new Style(new Map([[DESCRIPTION_PROPERTY, "test"]]))),
+        new Call(
+          "f",
+          new ValueList([]),
+          new Style(new Map([[DESCRIPTION_PROPERTY, "test"]])),
+        ),
       ]),
     );
   });
@@ -219,7 +233,7 @@ describe("style nodes", () => {
       new Recipe([
         new Call(
           "f",
-          [],
+          new ValueList([]),
           new Style(new Map([[DESCRIPTION_PROPERTY, "one\ntwo"]])),
         ),
       ]),
@@ -231,7 +245,7 @@ describe("style nodes", () => {
       new Recipe([
         new Call(
           "f",
-          [],
+          new ValueList([]),
           new Style(
             new Map([
               [DESCRIPTION_PROPERTY, "test"],
@@ -273,9 +287,12 @@ describe("multiple statements", () => {
     const input = "y = f()\n x = y\n z(x)";
     expect(makeTree(input)).toEqual(
       new Recipe([
-        new Assignment([new LocalVariable("y")], new Call("f", [])),
+        new Assignment(
+          [new LocalVariable("y")],
+          new Call("f", new ValueList([])),
+        ),
         new Assignment([new LocalVariable("x")], new QualifiedVariable(["y"])),
-        new Call("z", [new QualifiedVariable(["x"])]),
+        new Call("z", new ValueList([new QualifiedVariable(["x"])])),
       ]),
     );
   });
@@ -283,9 +300,12 @@ describe("multiple statements", () => {
     const input = "y=f();x=y;z(x)";
     expect(makeTree(input)).toEqual(
       new Recipe([
-        new Assignment([new LocalVariable("y")], new Call("f", [])),
+        new Assignment(
+          [new LocalVariable("y")],
+          new Call("f", new ValueList([])),
+        ),
         new Assignment([new LocalVariable("x")], new QualifiedVariable(["y"])),
-        new Call("z", [new QualifiedVariable(["x"])]),
+        new Call("z", new ValueList([new QualifiedVariable(["x"])])),
       ]),
     );
   });
@@ -296,13 +316,19 @@ describe("multiple statements", () => {
         new Namespace(
           "n",
           [
-            new Assignment([new LocalVariable("y")], new Call("f", [])),
+            new Assignment(
+              [new LocalVariable("y")],
+              new Call("f", new ValueList([])),
+            ),
             new Assignment(
               [new LocalVariable("z")],
               new QualifiedVariable(["x"]),
             ),
           ],
-          [new QualifiedVariable(["a"]), new Call("b", [])],
+          new ValueList([
+            new QualifiedVariable(["a"]),
+            new Call("b", new ValueList([])),
+          ]),
           new Style(undefined, [new StyleTag(["s"])]),
         ),
       ]),
@@ -336,7 +362,12 @@ describe("incomplete statements", () => {
   test("incomplete assignment", () => {
     const input = "y=f(";
     expect(makeTree(input)).toEqual(
-      new Recipe([new Assignment([new LocalVariable("y")], new Call("f", []))]),
+      new Recipe([
+        new Assignment(
+          [new LocalVariable("y")],
+          new Call("f", new ValueList([])),
+        ),
+      ]),
     );
   });
   test("incomplete nested call", () => {
@@ -346,7 +377,7 @@ describe("incomplete statements", () => {
         new Assignment([new LocalVariable("x")], new QualifiedVariable(["y"])),
         new Assignment(
           [new LocalVariable("y")],
-          new Call("f", [new Call("z", [])]),
+          new Call("f", new ValueList([new Call("z", new ValueList([]))])),
         ),
       ]),
     );
@@ -354,7 +385,9 @@ describe("incomplete statements", () => {
   test("incomplete style", () => {
     const input = "f(){x:1";
     expect(makeTree(input)).toEqual(
-      new Recipe([new Call("f", [], new Style(new Map([["x", "1"]])))]),
+      new Recipe([
+        new Call("f", new ValueList([]), new Style(new Map([["x", "1"]]))),
+      ]),
     );
   });
   test("incomplete style binding", () => {
@@ -415,7 +448,10 @@ describe("node positions", () => {
         [
           new Call(
             "foo",
-            [new QualifiedVariable(["bar"], { from: 4, to: 7 })],
+            new ValueList(
+              [new QualifiedVariable(["bar"], { from: 4, to: 7 })],
+              { from: 3, to: 8 },
+            ),
             null,
             { from: 0, to: 8 },
           ),
@@ -431,10 +467,13 @@ describe("node positions", () => {
         [
           new Call(
             "foo",
-            [
-              new QualifiedVariable(["bar"], { from: 4, to: 7 }),
-              new QualifiedVariable(["baz"], { from: 9, to: 12 }),
-            ],
+            new ValueList(
+              [
+                new QualifiedVariable(["bar"], { from: 4, to: 7 }),
+                new QualifiedVariable(["baz"], { from: 9, to: 12 }),
+              ],
+              { from: 3, to: 13 },
+            ),
             null,
             { from: 0, to: 13 },
           ),
@@ -452,7 +491,7 @@ describe("node positions", () => {
           new Namespace(
             "n",
             [],
-            [],
+            null,
             new Style(undefined, [new StyleTag(["s"], { from: 4, to: 6 })], {
               from: 3,
               to: 7,

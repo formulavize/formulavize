@@ -175,7 +175,7 @@ function processCall(
   workingDag.addNode(thisNode);
 
   const incomingEdgeInfoList = argListToEdgeInfo(
-    callStmt.ArgList,
+    callStmt.ArgList?.Values ?? [],
     workingDag,
     errors,
   );
@@ -203,7 +203,7 @@ async function processNamespace(
   workingDag.addChildDag(await childDag);
 
   const dagIncomingEdges = argListToEdgeInfo(
-    namespaceStmt.ArgList,
+    namespaceStmt.ArgList?.Values ?? [],
     workingDag,
     errors,
   );
