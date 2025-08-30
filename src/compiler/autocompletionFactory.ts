@@ -23,7 +23,7 @@ function makeTokenRecords(statement: StatementTreeNode): TokenInfo[] {
       return assignmentNode.Lhs.map((variable) => ({
         type: TokenType.Variable,
         value: variable.VarName,
-        endPosition: variable.Position?.to ?? 0,
+        endPosition: assignmentNode.Position?.to ?? 0,
       }));
     })
     .with(NodeType.NamedStyle, () => {
