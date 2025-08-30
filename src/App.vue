@@ -162,5 +162,11 @@ body,
   position: absolute;
   top: 0;
   right: 0;
+  z-index: 1;
+  pointer-events: none;
+}
+
+#toolbar * {
+  pointer-events: auto;
 }
 </style>
