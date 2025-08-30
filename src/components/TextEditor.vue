@@ -96,7 +96,7 @@ export default defineComponent({
         .map((range) => {
           const line = state.doc.lineAt(range.head);
           const col = range.head - line.from;
-          const text = `${line.number}:${col}`;
+          const text = `${line.number}:${col} [${range.head}]`;
           return {
             pos: range.head,
             above: true,
