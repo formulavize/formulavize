@@ -6,6 +6,7 @@
         :tab-to-indent="tabToIndent"
         :code-diagnostics="curDiagnostics"
         :completion-index="curCompletionIndex"
+        :debug-mode="debugMode"
         @update-editorstate="updateEditorState"
       />
     </pane>

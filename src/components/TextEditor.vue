@@ -26,7 +26,12 @@ import {
 } from "@codemirror/language";
 import { linter, Diagnostic } from "@codemirror/lint";
 import { highlightSelectionMatches, searchKeymap } from "@codemirror/search";
-import { EditorState, Compartment, Extension } from "@codemirror/state";
+import {
+  EditorState,
+  Compartment,
+  Extension,
+  StateField,
+} from "@codemirror/state";
 import {
   EditorView,
   ViewUpdate,
@@ -37,6 +42,8 @@ import {
   keymap,
   lineNumbers,
   rectangularSelection,
+  Tooltip,
+  showTooltip,
 } from "@codemirror/view";
 
 import { fizLanguage } from "@formulavize/lang-fiz";
@@ -63,6 +70,10 @@ export default defineComponent({
       required: false,
       default: undefined,
     },
+    debugMode: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ["update-editorstate"],
   mounted() {
@@ -79,6 +90,59 @@ export default defineComponent({
       });
     };
 
+    const getCursorTooltips = (state: EditorState): readonly Tooltip[] => {
+      return state.selection.ranges
+        .filter((range) => range.empty)
+        .map((range) => {
+          const line = state.doc.lineAt(range.head);
+          const col = range.head - line.from;
+          const text = `${line.number}:${col}`;
+          return {
+            pos: range.head,
+            above: true,
+            arrow: true,
+            create: () => {
+              const dom = document.createElement("div");
+              dom.className = "cm-tooltip-cursor";
+              dom.textContent = text;
+              return { dom };
+            },
+          };
+        });
+    };
+
+    const cursorTooltipField = StateField.define<readonly Tooltip[]>({
+      create: getCursorTooltips,
+      update(tooltips, transaction) {
+        if (!transaction.docChanged && !transaction.selection) return tooltips;
+        return getCursorTooltips(transaction.state);
+      },
+      provide: (f) => showTooltip.computeN([f], (state) => state.field(f)),
+    });
+
+    const cursorTooltipBaseTheme = EditorView.baseTheme({
+      ".cm-tooltip.cm-tooltip-cursor": {
+        backgroundColor: "#33acff",
+        color: "white",
+        border: "none",
+        padding: "2px 7px",
+        borderRadius: "4px",
+        fontSize: "12px",
+        "& .cm-tooltip-arrow:before": {
+          borderTopColor: "#33acff",
+          borderBottomColor: "#33acff",
+        },
+        "& .cm-tooltip-arrow:after": {
+          borderTopColor: "transparent",
+          borderBottomColor: "transparent",
+        },
+      },
+    });
+
+    const createCursorTooltip = (isDebugMode: boolean): Extension[] => {
+      return isDebugMode ? [cursorTooltipField, cursorTooltipBaseTheme] : [];
+    };
+
     const getKeymap = (isTabbingOn: boolean): Extension => {
       return keymap.of([
         ...defaultKeymap,
@@ -92,6 +156,7 @@ export default defineComponent({
 
     const keymapCompartment = new Compartment();
     const autocompletionCompartment = new Compartment();
+    const cursorTooltipCompartment = new Compartment();
 
     const editorState = EditorState.create({
       extensions: [
@@ -119,6 +184,7 @@ export default defineComponent({
         autocompletionCompartment.of(
           createAutocompletion(this.completionIndex),
         ),
+        cursorTooltipCompartment.of(createCursorTooltip(this.debugMode)),
         fizLanguage,
       ],
     });
@@ -148,6 +214,17 @@ export default defineComponent({
         });
       },
       { deep: true },
+    );
+
+    watch(
+      () => this.debugMode,
+      (isDebugMode) => {
+        view.dispatch({
+          effects: cursorTooltipCompartment.reconfigure(
+            createCursorTooltip(isDebugMode),
+          ),
+        });
+      },
     );
   },
 });
