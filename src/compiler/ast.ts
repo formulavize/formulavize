@@ -5,6 +5,7 @@ export enum NodeType {
   Assignment,
   LocalVariable,
   QualifiedVariable,
+  ValueList,
   Recipe,
   Style,
   NamedStyle,
@@ -98,14 +99,35 @@ export class RecipeTreeNode extends BaseTreeNode {
 
 export type ValueTreeNode = CallTreeNode | QualifiedVarTreeNode;
 
+export class ValueListTreeNode extends BaseTreeNode {
+  private values: ValueTreeNode[];
+
+  constructor(values: ValueTreeNode[] = [], position: Position | null = null) {
+    super(NodeType.ValueList, position);
+    this.values = values;
+  }
+
+  getChildren(): BaseTreeNode[] {
+    return this.values;
+  }
+
+  debugDump(): string {
+    return "ValueList:";
+  }
+
+  get Values(): ValueTreeNode[] {
+    return this.values;
+  }
+}
+
 export class CallTreeNode extends BaseTreeNode {
   private name: string;
-  private argList: ValueTreeNode[];
+  private argList: ValueListTreeNode | null;
   private styling: StyleTreeNode | null;
 
   constructor(
     name: string,
-    argList: ValueTreeNode[],
+    argList: ValueListTreeNode | null = null,
     styling: StyleTreeNode | null = null,
     position: Position | null = null,
   ) {
@@ -116,7 +138,8 @@ export class CallTreeNode extends BaseTreeNode {
   }
 
   getChildren(): BaseTreeNode[] {
-    const childList: BaseTreeNode[] = [...this.argList];
+    const childList: BaseTreeNode[] = [];
+    if (this.argList) childList.push(this.argList);
     if (this.styling) childList.push(this.styling);
     return childList;
   }
@@ -129,7 +152,7 @@ export class CallTreeNode extends BaseTreeNode {
     return this.name;
   }
 
-  get ArgList(): ValueTreeNode[] {
+  get ArgList(): ValueListTreeNode | null {
     return this.argList;
   }
 
@@ -390,13 +413,13 @@ export class StyleBindingTreeNode extends BaseTreeNode {
 export class NamespaceTreeNode extends BaseTreeNode {
   private name: string;
   private statements: StatementTreeNode[];
-  private argList: ValueTreeNode[];
+  private argList: ValueListTreeNode | null;
   private styling: StyleTreeNode | null;
 
   constructor(
     name: string = "",
     statements: StatementTreeNode[] = [],
-    argList: ValueTreeNode[] = [],
+    argList: ValueListTreeNode | null = null,
     styling: StyleTreeNode | null = null,
     position: Position | null = null,
   ) {
@@ -408,7 +431,8 @@ export class NamespaceTreeNode extends BaseTreeNode {
   }
 
   getChildren(): BaseTreeNode[] {
-    const childList: BaseTreeNode[] = this.statements.concat(this.argList);
+    const childList: BaseTreeNode[] = [...this.statements];
+    if (this.argList) childList.push(this.argList);
     if (this.styling) childList.push(this.styling);
     return childList;
   }
@@ -425,7 +449,7 @@ export class NamespaceTreeNode extends BaseTreeNode {
     return this.statements;
   }
 
-  get ArgList(): ValueTreeNode[] {
+  get ArgList(): ValueListTreeNode | null {
     return this.argList;
   }
 

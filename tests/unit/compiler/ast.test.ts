@@ -8,11 +8,12 @@ import {
   StyleTreeNode as Style,
   NamedStyleTreeNode as NamedStyle,
   NamespaceTreeNode as Namespace,
+  ValueListTreeNode as ValueList,
 } from "src/compiler/ast";
 
 describe("debugDumpTree consistency", () => {
   test("dumping nodes with children has no side effects", () => {
-    const callNode = new Call("f", []);
+    const callNode = new Call("f", new ValueList([]));
     const assignCallNode = new Assignment([new LocalVariable("x")], callNode);
     const assignVarNode = new Assignment(
       [new LocalVariable("y")],

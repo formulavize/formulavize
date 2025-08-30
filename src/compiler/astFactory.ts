@@ -6,6 +6,7 @@ import {
   RecipeTreeNode,
   StatementTreeNode,
   ValueTreeNode,
+  ValueListTreeNode,
   CallTreeNode,
   AssignmentTreeNode,
   QualifiedVarTreeNode,
@@ -156,8 +157,8 @@ function makeRhsVariable(c: TreeCursor, t: Text): QualifiedVarTreeNode {
   return new QualifiedVarTreeNode(varQualifiedIdent, getPosition(c));
 }
 
-function getArgList(c: TreeCursor, t: Text, e: Error[]): ValueTreeNode[] {
-  return c.node
+function getArgList(c: TreeCursor, t: Text, e: Error[]): ValueListTreeNode {
+  const values = c.node
     .getChildren("Value")
     .map((candidateValue) =>
       match(candidateValue.name)
@@ -174,11 +175,12 @@ function getArgList(c: TreeCursor, t: Text, e: Error[]): ValueTreeNode[] {
         }),
     )
     .filter(Boolean) as ValueTreeNode[];
+  return new ValueListTreeNode(values, getPosition(c));
 }
 
 function makeCall(c: TreeCursor, t: Text, e: Error[]): CallTreeNode {
   const functionName = getTextFromChild("Identifier", c, t);
-  const argList = makeNullableChild("ArgList", getArgList, c, t, e) ?? [];
+  const argList = makeNullableChild("ArgList", getArgList, c, t, e);
   const styleNode = makeNullableChild("StyleArgList", makeStyle, c, t, e);
   return new CallTreeNode(functionName, argList, styleNode, getPosition(c));
 }
@@ -237,7 +239,7 @@ function makeNamespace(c: TreeCursor, t: Text, e: Error[]): NamespaceTreeNode {
   const namespaceStatements =
     makeNullableChild("StatementList", getStatements, c, t, e) ?? [];
 
-  const argList = makeNullableChild("ArgList", getArgList, c, t, e) ?? [];
+  const argList = makeNullableChild("ArgList", getArgList, c, t, e);
 
   const styleNode = makeNullableChild("StyleArgList", makeStyle, c, t, e);
 

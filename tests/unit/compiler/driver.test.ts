@@ -2,9 +2,10 @@ import { describe, test, expect } from "vitest";
 import { EditorState } from "@codemirror/state";
 import { fizLanguage } from "@formulavize/lang-fiz";
 import {
-  CallTreeNode,
-  QualifiedVarTreeNode,
-  RecipeTreeNode,
+  CallTreeNode as Call,
+  QualifiedVarTreeNode as QualifiedVariable,
+  ValueListTreeNode as ValueList,
+  RecipeTreeNode as Recipe,
 } from "src/compiler/ast";
 import { Compiler } from "src/compiler/driver";
 
@@ -22,8 +23,15 @@ describe("basic compiler driver", () => {
     expect(compilation.Source).toEqual(sourceRecipe);
 
     const expectedPosition = { from: 0, to: 3 };
-    const expectedAst = new RecipeTreeNode(
-      [new CallTreeNode("f", [], null, expectedPosition)],
+    const expectedAst = new Recipe(
+      [
+        new Call(
+          "f",
+          new ValueList([], { from: 1, to: 3 }),
+          null,
+          expectedPosition,
+        ),
+      ],
       expectedPosition,
     );
     expect(compilation.AST).toEqual(expectedAst);
@@ -44,8 +52,15 @@ describe("basic compiler driver", () => {
     expect(compilation.Source).toEqual(sourceRecipe);
 
     const expectedPosition = { from: 0, to: 3 };
-    const expectedAst = new RecipeTreeNode(
-      [new CallTreeNode("f", [], null, expectedPosition)],
+    const expectedAst = new Recipe(
+      [
+        new Call(
+          "f",
+          new ValueList([], { from: 1, to: 3 }),
+          null,
+          expectedPosition,
+        ),
+      ],
       expectedPosition,
     );
     expect(compilation.AST).toEqual(expectedAst);
@@ -65,11 +80,14 @@ describe("basic compiler driver", () => {
 
     expect(compilation.Source).toEqual(sourceRecipe);
 
-    const expectedAst = new RecipeTreeNode(
+    const expectedAst = new Recipe(
       [
-        new CallTreeNode(
+        new Call(
           "f",
-          [new QualifiedVarTreeNode(["x"], { from: 2, to: 3 })],
+          new ValueList([new QualifiedVariable(["x"], { from: 2, to: 3 })], {
+            from: 1,
+            to: 4,
+          }),
           null,
           { from: 0, to: 4 },
         ),
