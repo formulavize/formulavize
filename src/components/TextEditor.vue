@@ -31,6 +31,7 @@ import {
   Compartment,
   Extension,
   StateField,
+  SelectionRange,
 } from "@codemirror/state";
 import {
   EditorView,
@@ -90,25 +91,37 @@ export default defineComponent({
       });
     };
 
+    const createTooltipText = (
+      state: EditorState,
+      range: SelectionRange,
+    ): string => {
+      if (range.empty) {
+        const line = state.doc.lineAt(range.head);
+        const col = range.head - line.from;
+        return `${line.number}:${col} [${range.head}]`;
+      } else {
+        const fromLine = state.doc.lineAt(range.from);
+        const fromCol = range.from - fromLine.from;
+        const toLine = state.doc.lineAt(range.to);
+        const toCol = range.to - toLine.from;
+        return `${fromLine.number}:${fromCol}-${toLine.number}:${toCol} [${range.from}-${range.to}]`;
+      }
+    };
+
     const getCursorTooltips = (state: EditorState): readonly Tooltip[] => {
-      return state.selection.ranges
-        .filter((range) => range.empty)
-        .map((range) => {
-          const line = state.doc.lineAt(range.head);
-          const col = range.head - line.from;
-          const text = `${line.number}:${col} [${range.head}]`;
-          return {
-            pos: range.head,
-            above: true,
-            arrow: true,
-            create: () => {
-              const dom = document.createElement("div");
-              dom.className = "cm-tooltip-cursor";
-              dom.textContent = text;
-              return { dom };
-            },
-          };
-        });
+      return state.selection.ranges.map((range) => {
+        return {
+          pos: range.head,
+          above: true,
+          arrow: true,
+          create: () => {
+            const dom = document.createElement("div");
+            dom.className = "cm-tooltip-cursor";
+            dom.textContent = createTooltipText(state, range);
+            return { dom };
+          },
+        };
+      });
     };
 
     const cursorTooltipField = StateField.define<readonly Tooltip[]>({
