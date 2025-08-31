@@ -112,3 +112,41 @@ export function createCallCompletionSource(
     };
   };
 }
+
+export function createStyleCompletionSource(
+  completionIndex: ASTCompletionIndex,
+): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
+    // Match content within curly brackets that contains a hashtag followed by word characters
+    const match = context.matchBefore(/\{[^{}]*#\w*/);
+    if (!match || (match.from === match.to && !context.explicit)) {
+      return null;
+    }
+
+    // Find the hashtag and extract the word after it
+    const hashtagMatch = /#(\w*)$/.exec(match.text);
+    if (!hashtagMatch) {
+      return null;
+    }
+
+    const word = hashtagMatch[1];
+    const from = match.to - word.length;
+
+    const availableTokens = completionIndex.getTokensUpTo(context.pos);
+    const applicableTokenTypes =
+      ScenarioToTokenTypes[ContextScenarioType.StyleArgList];
+
+    const completions = availableTokens
+      .filter((token) => applicableTokenTypes.has(token.type))
+      .filter((token) => token.value.startsWith(word))
+      .map((token) => ({
+        label: token.value,
+        type: token.type,
+      }));
+
+    return {
+      from,
+      options: completions,
+    };
+  };
+}
