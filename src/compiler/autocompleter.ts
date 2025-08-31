@@ -67,6 +67,36 @@ export function createStatementCompletionSource(
   };
 }
 
+export function createOpeningNamespaceCompletionSource(
+  completionIndex: ASTCompletionIndex,
+): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
+    // This source triggers when the user types an opening square bracket '['.
+
+    // Match word at the beginning of a square bracket or after semicolon within brackets
+    const match = context.matchBefore(/\[(?:[^[\]]*;)?\s*\w*/);
+    if (!match || (match.from === match.to && !context.explicit)) {
+      return null;
+    }
+
+    // Extract the matched word (after the start of bracket or last semicolon)
+    const wordMatch = match.text.match(/(?:\[|;)\s*(\w*)$/);
+    const word = wordMatch ? wordMatch[1] : "";
+    const from = match.to - word.length;
+
+    const applicableTokenTypes =
+      ScenarioToTokenTypes[ContextScenarioType.Statement];
+
+    return createCompletions(
+      completionIndex,
+      context.pos,
+      applicableTokenTypes,
+      word,
+      from,
+    );
+  };
+}
+
 export function createAssignmentRhsCompletionSource(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource {
@@ -251,6 +281,7 @@ export function getAllDynamicCompletionSources(
     createCallCompletionSource,
     createOpeningStyleCompletionSource,
     createStyleCompletionSource,
+    createOpeningNamespaceCompletionSource,
     createStatementCompletionSource,
   ];
   return sources.map((sourceFn) => sourceFn(completionIndex));
