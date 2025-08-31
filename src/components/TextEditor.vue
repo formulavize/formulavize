@@ -52,6 +52,7 @@ import { ASTCompletionIndex } from "../compiler/autocompletion";
 import {
   createAssignmentRhsCompletionSource,
   createCallCompletionSource,
+  createOpeningStyleCompletionSource,
   createStyleCompletionSource,
 } from "../compiler/autocompleter";
 
@@ -94,6 +95,7 @@ export default defineComponent({
         override: [
           createAssignmentRhsCompletionSource(completionIndex),
           createCallCompletionSource(completionIndex),
+          createOpeningStyleCompletionSource(completionIndex),
           createStyleCompletionSource(completionIndex),
         ],
       });

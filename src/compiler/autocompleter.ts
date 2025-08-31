@@ -119,12 +119,55 @@ export function createCallCompletionSource(
   };
 }
 
+export function createOpeningStyleCompletionSource(
+  completionIndex: ASTCompletionIndex,
+): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
+    // This source triggers when the user types an opening curly bracket '{'.
+    // This is needed because autocompletion looks at ASTCompletionIndex
+    // immediately while the parser awaits debouncing logic so the new
+    // context scenario has not yet been registered in ASTCompletionIndex.
+
+    // Match content within curly brackets that contains a hashtag followed by word characters
+    const match = context.matchBefore(/\{[^{}]*#\w*/);
+    if (!match || (match.from === match.to && !context.explicit)) {
+      return null;
+    }
+
+    // Find the hashtag and extract the word after it
+    const hashtagMatch = /#(\w*)$/.exec(match.text);
+    if (!hashtagMatch) {
+      return null;
+    }
+
+    const word = hashtagMatch[1];
+    const from = match.to - word.length;
+
+    const applicableTokenTypes =
+      ScenarioToTokenTypes[ContextScenarioType.StyleArgList];
+
+    return createCompletions(
+      completionIndex,
+      context.pos,
+      applicableTokenTypes,
+      word,
+      from,
+    );
+  };
+}
+
 export function createStyleCompletionSource(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
-    // Match content within curly brackets that contains a hashtag followed by word characters
-    const match = context.matchBefore(/\{[^{}]*#\w*/);
+    // Check if we're in a StyleArgList context scenario
+    const contextScenario = completionIndex.getContextScenarioAt(context.pos);
+    if (contextScenario?.type !== ContextScenarioType.StyleArgList) {
+      return null;
+    }
+
+    // Match hashtag followed by word characters
+    const match = context.matchBefore(/#\w*/);
     if (!match || (match.from === match.to && !context.explicit)) {
       return null;
     }
