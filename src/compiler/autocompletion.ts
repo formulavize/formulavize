@@ -4,6 +4,7 @@ export enum TokenType {
   Variable = "variable",
   StyleTag = "interface",
   Keyword = "keyword",
+  Namespace = "namespace",
 }
 
 export enum ContextScenarioType {
@@ -31,8 +32,12 @@ export const ScenarioToTokenTypes: Record<
   [ContextScenarioType.ValueName]: new Set([
     TokenType.Variable,
     TokenType.Keyword,
+    TokenType.Namespace,
   ]),
-  [ContextScenarioType.StyleArgList]: new Set([TokenType.StyleTag]),
+  [ContextScenarioType.StyleArgList]: new Set([
+    TokenType.StyleTag,
+    TokenType.Namespace,
+  ]),
   [ContextScenarioType.Statement]: new Set([TokenType.Keyword]),
 };
 
