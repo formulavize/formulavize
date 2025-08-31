@@ -76,16 +76,23 @@ export function createCallCompletionSource(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
-    // Match a word after an open bracket
-    const match = context.matchBefore(/\(\s*\w*/);
+    // Match a word after an open bracket or after a comma
+    const match = context.matchBefore(/\((?:[^,()]*,\s*)*\w*|,\s*\w*/);
     if (!match || (match.from === match.to && !context.explicit)) {
       return null;
     }
 
-    // Adjust the start position to just after the open bracket and spaces
-    const matchStart = /\(\s*/.exec(match.text);
-    const from = matchStart ? match.from + matchStart[0].length : match.from;
-    const word = match.text.slice(from - match.from);
+    // Find the last separator (either '(' or ',') and extract the word after it
+    const separatorMatch = match.text.includes(",")
+      ? /,\s*(\w*)$/.exec(match.text)
+      : /\(\s*(\w*)$/.exec(match.text);
+
+    if (!separatorMatch) {
+      return null;
+    }
+
+    const word = separatorMatch[1];
+    const from = match.to - word.length;
 
     const availableTokens = completionIndex.getTokensUpTo(context.pos);
     const applicableTokenTypes =
