@@ -24,11 +24,7 @@ function getImportsFromStatments(statements: StatementTreeNode[]): Set<string> {
       })
       .with(NodeType.Namespace, () => {
         const namespaceNode = statement as NamespaceTreeNode;
-        return Array.from(
-          getImportsFromStatments(
-            namespaceNode.StatementList?.Statements || [],
-          ),
-        );
+        return Array.from(getImportsFromStatments(namespaceNode.Statements));
       })
       .otherwise(() => []);
   });

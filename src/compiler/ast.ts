@@ -475,6 +475,10 @@ export class NamespaceTreeNode extends BaseTreeNode {
     return this.statementList;
   }
 
+  get Statements(): StatementTreeNode[] {
+    return this.statementList ? this.statementList.Statements : [];
+  }
+
   get ArgList(): ValueListTreeNode | null {
     return this.argList;
   }
