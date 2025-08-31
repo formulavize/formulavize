@@ -7,6 +7,7 @@ import {
   CallTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
+  NamespaceTreeNode,
 } from "./ast";
 import {
   ASTCompletionIndex,
@@ -43,6 +44,16 @@ function makeTokenRecords(statement: StatementTreeNode): TokenInfo[] {
           type: TokenType.Keyword,
           value: styleBindingNode.Keyword,
           endPosition: styleBindingNode.Position?.to ?? 0,
+        },
+      ];
+    })
+    .with(NodeType.Namespace, () => {
+      const namespaceNode = statement as NamespaceTreeNode;
+      return [
+        {
+          type: TokenType.Namespace,
+          value: namespaceNode.Name,
+          endPosition: namespaceNode.Position?.to ?? 0,
         },
       ];
     })
