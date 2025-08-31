@@ -64,12 +64,6 @@ export class ASTCompletionIndex {
     return scenario || null;
   }
 
-  getApplicableTokenTypesAt(position: number): Set<TokenType> {
-    const scenario = this.getContextScenarioAt(position);
-    if (!scenario) return new Set();
-    return ScenarioToTokenTypes[scenario.type] || new Set();
-  }
-
   dumpCompletionIndex(): string {
     const tokenLines = this.tokens.map(
       (token, i) =>
