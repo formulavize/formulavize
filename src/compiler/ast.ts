@@ -321,7 +321,7 @@ export class StyleTreeNode extends BaseTreeNode {
     return this.keyValueMap;
   }
 
-  get StyleTagList(): StyleTagTreeNode[] {
+  get StyleTags(): StyleTagTreeNode[] {
     return this.styleTagList;
   }
 }
@@ -386,11 +386,11 @@ export class StyleTagListTreeNode extends BaseTreeNode {
 
 export class StyleBindingTreeNode extends BaseTreeNode {
   private keyword: string;
-  private styleTagList: StyleTagListTreeNode;
+  private styleTagList: StyleTagListTreeNode | null;
 
   constructor(
     keyword: string = "",
-    styleTagList: StyleTagListTreeNode = new StyleTagListTreeNode(),
+    styleTagList: StyleTagListTreeNode | null = null,
     position: Position | null = null,
   ) {
     super(NodeType.StyleBinding, position);
@@ -399,7 +399,7 @@ export class StyleBindingTreeNode extends BaseTreeNode {
   }
 
   getChildren(): BaseTreeNode[] {
-    return [this.styleTagList];
+    return this.styleTagList ? [this.styleTagList] : [];
   }
 
   debugDump(): string {
@@ -410,8 +410,12 @@ export class StyleBindingTreeNode extends BaseTreeNode {
     return this.keyword;
   }
 
-  get StyleTagList(): StyleTagListTreeNode {
+  get StyleTagList(): StyleTagListTreeNode | null {
     return this.styleTagList;
+  }
+
+  get StyleTags(): StyleTagTreeNode[] {
+    return this.styleTagList ? this.styleTagList.StyleTags : [];
   }
 }
 

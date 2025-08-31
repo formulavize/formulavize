@@ -26,7 +26,7 @@ import {
 
 function makeDagStyle(styleNode: StyleTreeNode): DagStyle {
   return {
-    styleTags: styleNode.StyleTagList.map((tag) => tag.QualifiedTagName),
+    styleTags: styleNode.StyleTags.map((tag) => tag.QualifiedTagName),
     styleProperties: styleNode.KeyValueMap,
   };
 }
@@ -90,7 +90,7 @@ function checkStyleTagsInStyleNode(
   errors: Error[],
 ): void {
   if (!styleNode) return;
-  checkForMissingStyleTags(styleNode.StyleTagList, workingDag, errors);
+  checkForMissingStyleTags(styleNode.StyleTags, workingDag, errors);
 }
 
 function argListToEdgeInfo(
@@ -170,7 +170,7 @@ function processCall(
     id: thisNodeId,
     name: callStmt.Name,
     styleTags:
-      callStmt.Styling?.StyleTagList.map((tag) => tag.QualifiedTagName) ?? [],
+      callStmt.Styling?.StyleTags.map((tag) => tag.QualifiedTagName) ?? [],
     styleProperties: callStmt.Styling?.KeyValueMap ?? new Map<string, string>(),
   };
   workingDag.addNode(thisNode);
@@ -346,7 +346,7 @@ export async function makeSubDag(
 ): Promise<Dag> {
   checkStyleTagsInStyleNode(dagNamespaceStmt.Styling, parentDag, errors);
   const dagStyleTags =
-    dagNamespaceStmt.Styling?.StyleTagList.map((tag) => tag.QualifiedTagName) ??
+    dagNamespaceStmt.Styling?.StyleTags.map((tag) => tag.QualifiedTagName) ??
     [];
   const dagStyleProperties = dagNamespaceStmt.Styling?.KeyValueMap ?? new Map();
   const curLevelDag = new Dag(
@@ -409,10 +409,9 @@ export async function makeSubDag(
         const namedStyleStmt = stmt as NamedStyleTreeNode;
         const styleNode = namedStyleStmt.StyleNode;
         checkStyleTagsInStyleNode(styleNode, curLevelDag, errors);
-        const workingStyleProperties: StyleProperties =
-          styleNode.StyleTagList.map(
-            (tag) => curLevelDag.getStyle(tag.QualifiedTagName) ?? new Map(),
-          ).reduce((acc, props) => new Map([...acc, ...props]), new Map());
+        const workingStyleProperties: StyleProperties = styleNode.StyleTags.map(
+          (tag) => curLevelDag.getStyle(tag.QualifiedTagName) ?? new Map(),
+        ).reduce((acc, props) => new Map([...acc, ...props]), new Map());
         // any locally defined properties will overwrite referenced styles
         styleNode.KeyValueMap.forEach((value, key) => {
           workingStyleProperties.set(key, value);
@@ -422,7 +421,7 @@ export async function makeSubDag(
       })
       .with(NodeType.StyleBinding, () => {
         const styleBindingStmt = stmt as StyleBindingTreeNode;
-        const styleTags = styleBindingStmt.StyleTagList.StyleTags;
+        const styleTags = styleBindingStmt.StyleTags;
         checkForMissingStyleTags(styleTags, curLevelDag, errors);
         curLevelDag.addStyleBinding(
           styleBindingStmt.Keyword,
