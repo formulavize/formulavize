@@ -230,3 +230,16 @@ export function createStyleCompletionSource(
     );
   };
 }
+
+export function getAllDynamicCompletionSources(
+  completionIndex: ASTCompletionIndex,
+): CompletionSource[] {
+  const sources = [
+    createAssignmentRhsCompletionSource,
+    createOpeningCallCompletionSource,
+    createCallCompletionSource,
+    createOpeningStyleCompletionSource,
+    createStyleCompletionSource,
+  ];
+  return sources.map((sourceFn) => sourceFn(completionIndex));
+}
