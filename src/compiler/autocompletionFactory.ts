@@ -92,8 +92,8 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
       return [
         {
           type: ContextScenarioType.StyleArgList,
-          from: namedStyleNode.StyleNode.Position.from,
-          to: namedStyleNode.StyleNode.Position.to,
+          from: namedStyleNode.StyleNode.Position.from + 1,
+          to: namedStyleNode.StyleNode.Position.to - 1,
         },
       ];
     })
@@ -103,8 +103,8 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
       return [
         {
           type: ContextScenarioType.StyleArgList,
-          from: styleBindingNode.StyleTagList.Position.from,
-          to: styleBindingNode.StyleTagList.Position.to,
+          from: styleBindingNode.StyleTagList.Position.from + 1,
+          to: styleBindingNode.StyleTagList.Position.to - 1,
         },
       ];
     })
