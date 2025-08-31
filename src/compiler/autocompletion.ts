@@ -9,7 +9,7 @@ export enum TokenType {
 export enum ContextScenarioType {
   ValueName,
   StyleArgList,
-  VarStatement,
+  Statement,
 }
 
 export interface ContextScenario {
@@ -33,7 +33,7 @@ export const ScenarioToTokenTypes: Record<
     TokenType.Keyword,
   ]),
   [ContextScenarioType.StyleArgList]: new Set([TokenType.StyleTag]),
-  [ContextScenarioType.VarStatement]: new Set([TokenType.Keyword]),
+  [ContextScenarioType.Statement]: new Set([TokenType.Keyword]),
 };
 
 export class ASTCompletionIndex {
