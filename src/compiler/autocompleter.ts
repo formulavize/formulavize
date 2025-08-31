@@ -33,25 +33,36 @@ export function createCompletions(
   };
 }
 
-export function createCompletionSource(
+export function createStatementCompletionSource(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
-    const match = context.matchBefore(/\w*/);
+    // Check if we're already in a specific context scenario
+    const contextScenario = completionIndex.getContextScenarioAt(context.pos);
+    if (contextScenario) {
+      return null; // Let other completion sources handle specific contexts
+    }
+
+    // Match word at the beginning of the current line or after semicolon
+    const match = context.matchBefore(/(?:^|;)\s*\w*$/);
     if (!match || (match.from === match.to && !context.explicit)) {
       return null;
     }
 
-    const applicableTokenTypes = completionIndex.getApplicableTokenTypesAt(
-      context.pos,
-    );
+    // Extract the matched word (after the start of line or last semicolon)
+    const wordMatch = match.text.match(/(?:^|;)\s*(\w*)$/);
+    const word = wordMatch ? wordMatch[1] : "";
+    const from = match.to - word.length;
+
+    const applicableTokenTypes =
+      ScenarioToTokenTypes[ContextScenarioType.Statement];
 
     return createCompletions(
       completionIndex,
       context.pos,
       applicableTokenTypes,
-      match.text,
-      match.from,
+      word,
+      from,
     );
   };
 }
@@ -240,6 +251,7 @@ export function getAllDynamicCompletionSources(
     createCallCompletionSource,
     createOpeningStyleCompletionSource,
     createStyleCompletionSource,
+    createStatementCompletionSource,
   ];
   return sources.map((sourceFn) => sourceFn(completionIndex));
 }

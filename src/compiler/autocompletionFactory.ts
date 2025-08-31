@@ -3,7 +3,6 @@ import {
   RecipeTreeNode,
   StatementTreeNode,
   NodeType,
-  QualifiedVarTreeNode,
   AssignmentTreeNode,
   CallTreeNode,
   NamedStyleTreeNode,
@@ -52,17 +51,6 @@ function makeTokenRecords(statement: StatementTreeNode): TokenInfo[] {
 
 function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
   return match(statement.Type)
-    .with(NodeType.QualifiedVariable, () => {
-      const varNode = statement as QualifiedVarTreeNode;
-      if (!varNode.Position) return [];
-      return [
-        {
-          type: ContextScenarioType.VarStatement,
-          from: varNode.Position.from,
-          to: varNode.Position.to,
-        },
-      ];
-    })
     .with(NodeType.Assignment, () => {
       const assignmentNode = statement as AssignmentTreeNode;
       if (!assignmentNode.Rhs?.Position) return [];
