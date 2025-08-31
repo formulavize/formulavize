@@ -14,6 +14,7 @@ export enum NodeType {
   StyleTag,
   Namespace,
   Import,
+  StatementList,
 }
 
 export abstract class BaseTreeNode {
@@ -410,28 +411,53 @@ export class StyleBindingTreeNode extends BaseTreeNode {
   }
 }
 
+export class StatementListTreeNode extends BaseTreeNode {
+  private statements: StatementTreeNode[];
+
+  constructor(
+    statements: StatementTreeNode[] = [],
+    position: Position | null = null,
+  ) {
+    super(NodeType.StatementList, position);
+    this.statements = statements;
+  }
+
+  getChildren(): BaseTreeNode[] {
+    return this.statements;
+  }
+
+  debugDump(): string {
+    return "StatementList:";
+  }
+
+  get Statements(): StatementTreeNode[] {
+    return this.statements;
+  }
+}
+
 export class NamespaceTreeNode extends BaseTreeNode {
   private name: string;
-  private statements: StatementTreeNode[];
+  private statementList: StatementListTreeNode | null;
   private argList: ValueListTreeNode | null;
   private styling: StyleTreeNode | null;
 
   constructor(
     name: string = "",
-    statements: StatementTreeNode[] = [],
+    statementList: StatementListTreeNode | null = null,
     argList: ValueListTreeNode | null = null,
     styling: StyleTreeNode | null = null,
     position: Position | null = null,
   ) {
     super(NodeType.Namespace, position);
     this.name = name;
-    this.statements = statements;
+    this.statementList = statementList;
     this.argList = argList;
     this.styling = styling;
   }
 
   getChildren(): BaseTreeNode[] {
-    const childList: BaseTreeNode[] = [...this.statements];
+    const childList: BaseTreeNode[] = [];
+    if (this.statementList) childList.push(this.statementList);
     if (this.argList) childList.push(this.argList);
     if (this.styling) childList.push(this.styling);
     return childList;
@@ -445,8 +471,8 @@ export class NamespaceTreeNode extends BaseTreeNode {
     return this.name;
   }
 
-  get Statements(): StatementTreeNode[] {
-    return this.statements;
+  get StatementList(): StatementListTreeNode | null {
+    return this.statementList;
   }
 
   get ArgList(): ValueListTreeNode | null {

@@ -6,6 +6,7 @@ import {
   AssignmentTreeNode as Assignment,
   LocalVarTreeNode as LocalVariable,
   NamespaceTreeNode as Namespace,
+  StatementListTreeNode as StatementList,
 } from "src/compiler/ast";
 
 describe("getImportsFromRecipe", () => {
@@ -40,10 +41,13 @@ describe("getImportsFromRecipe", () => {
   test("import in nested namespace", () => {
     const recipe = new Recipe([
       new Import("moduleA"),
-      new Namespace("n", [
-        new Import("moduleB"),
-        new Assignment([new LocalVariable("x")], new Import("moduleC")),
-      ]),
+      new Namespace(
+        "n",
+        new StatementList([
+          new Import("moduleB"),
+          new Assignment([new LocalVariable("x")], new Import("moduleC")),
+        ]),
+      ),
     ]);
     const imports = getImportsFromRecipe(recipe);
     const expectedImports = new Set(["moduleA", "moduleB", "moduleC"]);

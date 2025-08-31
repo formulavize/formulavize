@@ -9,6 +9,7 @@ import {
   NamedStyleTreeNode as NamedStyle,
   NamespaceTreeNode as Namespace,
   ValueListTreeNode as ValueList,
+  StatementListTreeNode as StatementList,
 } from "src/compiler/ast";
 
 describe("debugDumpTree consistency", () => {
@@ -20,7 +21,10 @@ describe("debugDumpTree consistency", () => {
       new QualifiedVariable(["x"]),
     );
     const namedStyleNode = new NamedStyle("s", new Style(new Map()));
-    const namespaceNode = new Namespace("n", [assignCallNode, assignVarNode]);
+    const namespaceNode = new Namespace(
+      "n",
+      new StatementList([assignCallNode, assignVarNode]),
+    );
     const recipeNode = new Recipe([namespaceNode, namedStyleNode]);
 
     const firstDump = recipeNode.debugDumpTree();

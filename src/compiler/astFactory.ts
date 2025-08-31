@@ -18,6 +18,7 @@ import {
   StyleBindingTreeNode,
   NamespaceTreeNode,
   ImportTreeNode,
+  StatementListTreeNode,
 } from "./ast";
 import {
   CompilationError as Error,
@@ -233,11 +234,19 @@ function getStatements(
     .filter(Boolean) as StatementTreeNode[];
 }
 
+function makeStmtList(
+  c: TreeCursor,
+  t: Text,
+  e: Error[],
+): StatementListTreeNode {
+  const statements = getStatements(c, t, e);
+  return new StatementListTreeNode(statements, getPosition(c));
+}
+
 function makeNamespace(c: TreeCursor, t: Text, e: Error[]): NamespaceTreeNode {
   const namespaceName = getTextFromChild("Identifier", c, t);
 
-  const namespaceStatements =
-    makeNullableChild("StatementList", getStatements, c, t, e) ?? [];
+  const stmtList = makeNullableChild("StatementList", makeStmtList, c, t, e);
 
   const argList = makeNullableChild("ArgList", getArgList, c, t, e);
 
@@ -245,7 +254,7 @@ function makeNamespace(c: TreeCursor, t: Text, e: Error[]): NamespaceTreeNode {
 
   return new NamespaceTreeNode(
     namespaceName,
-    namespaceStatements,
+    stmtList,
     argList,
     styleNode,
     getPosition(c),

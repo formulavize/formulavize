@@ -15,6 +15,7 @@ import {
   NamespaceTreeNode,
   ValueTreeNode,
   ImportTreeNode,
+  StatementListTreeNode,
 } from "./ast";
 import { Dag, NodeId, StyleProperties, DagId, DagStyle } from "./dag";
 import { ImportCacher } from "./importCacher";
@@ -356,7 +357,7 @@ export async function makeSubDag(
     dagStyleProperties,
   );
 
-  for (const stmt of dagNamespaceStmt.Statements) {
+  for (const stmt of dagNamespaceStmt.StatementList?.Statements ?? []) {
     await match(stmt.Type)
       .with(NodeType.Call, () => {
         const callStmt = stmt as CallTreeNode;
@@ -469,9 +470,13 @@ export async function makeDag(
   seenImports: Set<string> = new Set(),
 ): Promise<{ dag: Dag; errors: Error[] }> {
   const errors: Error[] = [];
+  const statementList = new StatementListTreeNode(
+    recipe.Statements,
+    recipe.Position,
+  );
   const dag = await makeSubDag(
     uuidv4(),
-    new NamespaceTreeNode("", recipe.Statements),
+    new NamespaceTreeNode("", statementList),
     errors,
     importer,
     seenImports,
