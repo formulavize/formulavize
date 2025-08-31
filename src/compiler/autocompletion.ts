@@ -7,7 +7,7 @@ export enum TokenType {
 }
 
 export enum ContextScenarioType {
-  AssignmentRhs,
+  ValueName,
   StyleArgList,
   VarStatement,
 }
@@ -28,7 +28,7 @@ export const ScenarioToTokenTypes: Record<
   ContextScenarioType,
   Set<TokenType>
 > = {
-  [ContextScenarioType.AssignmentRhs]: new Set([
+  [ContextScenarioType.ValueName]: new Set([
     TokenType.Variable,
     TokenType.Keyword,
   ]),

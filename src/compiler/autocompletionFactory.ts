@@ -5,6 +5,7 @@ import {
   NodeType,
   QualifiedVarTreeNode,
   AssignmentTreeNode,
+  CallTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
 } from "./ast";
@@ -67,9 +68,21 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
       if (!assignmentNode.Rhs?.Position) return [];
       return [
         {
-          type: ContextScenarioType.AssignmentRhs,
+          type: ContextScenarioType.ValueName,
           from: assignmentNode.Rhs.Position.from,
           to: assignmentNode.Rhs.Position.to,
+        },
+      ];
+    })
+    .with(NodeType.Call, () => {
+      const callNode = statement as CallTreeNode;
+      const argsPosition = callNode.ArgList?.Position;
+      if (!argsPosition) return [];
+      return [
+        {
+          type: ContextScenarioType.ValueName,
+          from: argsPosition.from + 1,
+          to: argsPosition.to - 1,
         },
       ];
     })
