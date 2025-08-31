@@ -49,13 +49,7 @@ import {
 
 import { fizLanguage } from "@formulavize/lang-fiz";
 import { ASTCompletionIndex } from "../compiler/autocompletion";
-import {
-  createAssignmentRhsCompletionSource,
-  createOpeningCallCompletionSource,
-  createCallCompletionSource,
-  createOpeningStyleCompletionSource,
-  createStyleCompletionSource,
-} from "../compiler/autocompleter";
+import { getAllDynamicCompletionSources } from "../compiler/autocompleter";
 
 export default defineComponent({
   name: "TextEditor",
@@ -93,13 +87,7 @@ export default defineComponent({
         return autocompletion();
       }
       return autocompletion({
-        override: [
-          createAssignmentRhsCompletionSource(completionIndex),
-          createOpeningCallCompletionSource(completionIndex),
-          createCallCompletionSource(completionIndex),
-          createOpeningStyleCompletionSource(completionIndex),
-          createStyleCompletionSource(completionIndex),
-        ],
+        override: getAllDynamicCompletionSources(completionIndex),
       });
     };
 
