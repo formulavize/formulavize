@@ -357,7 +357,7 @@ export async function makeSubDag(
     dagStyleProperties,
   );
 
-  for (const stmt of dagNamespaceStmt.StatementList?.Statements ?? []) {
+  for (const stmt of dagNamespaceStmt.Statements) {
     await match(stmt.Type)
       .with(NodeType.Call, () => {
         const callStmt = stmt as CallTreeNode;
