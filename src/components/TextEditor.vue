@@ -51,6 +51,7 @@ import { fizLanguage } from "@formulavize/lang-fiz";
 import { ASTCompletionIndex } from "../compiler/autocompletion";
 import {
   createAssignmentRhsCompletionSource,
+  createOpeningCallCompletionSource,
   createCallCompletionSource,
   createOpeningStyleCompletionSource,
   createStyleCompletionSource,
@@ -94,6 +95,7 @@ export default defineComponent({
       return autocompletion({
         override: [
           createAssignmentRhsCompletionSource(completionIndex),
+          createOpeningCallCompletionSource(completionIndex),
           createCallCompletionSource(completionIndex),
           createOpeningStyleCompletionSource(completionIndex),
           createStyleCompletionSource(completionIndex),
