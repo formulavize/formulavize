@@ -4,7 +4,11 @@ import {
   CompletionSource,
 } from "@codemirror/autocomplete";
 
-import { ASTCompletionIndex } from "./autocompletion";
+import {
+  ASTCompletionIndex,
+  ContextScenarioType,
+  ScenarioToTokenTypes,
+} from "./autocompletion";
 
 export function createCompletionSource(
   completionIndex: ASTCompletionIndex,
@@ -29,6 +33,40 @@ export function createCompletionSource(
 
     return {
       from: word.from,
+      options: completions,
+    };
+  };
+}
+
+export function createAssignmentRhsCompletionSource(
+  completionIndex: ASTCompletionIndex,
+): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
+    // Match a word after an equal sign
+    const match = context.matchBefore(/=\s*\w*/);
+    if (!match || (match.from === match.to && !context.explicit)) {
+      return null;
+    }
+
+    // Adjust the start position to just after the equal sign and spaces
+    const matchStart = /=\s*/.exec(match.text);
+    const from = matchStart ? match.from + matchStart[0].length : match.from;
+    const word = match.text.slice(from - match.from);
+
+    const availableTokens = completionIndex.getTokensUpTo(context.pos);
+    const applicableTokenTypes =
+      ScenarioToTokenTypes[ContextScenarioType.ValueName];
+
+    const completions = availableTokens
+      .filter((token) => applicableTokenTypes.has(token.type))
+      .filter((token) => token.value.startsWith(word))
+      .map((token) => ({
+        label: token.value,
+        type: token.type,
+      }));
+
+    return {
+      from,
       options: completions,
     };
   };
