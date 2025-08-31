@@ -157,6 +157,10 @@ export class CallTreeNode extends BaseTreeNode {
     return this.argList;
   }
 
+  get Args(): ValueTreeNode[] {
+    return this.argList ? this.argList.Values : [];
+  }
+
   get Styling(): StyleTreeNode | null {
     return this.styling;
   }
@@ -481,6 +485,10 @@ export class NamespaceTreeNode extends BaseTreeNode {
 
   get ArgList(): ValueListTreeNode | null {
     return this.argList;
+  }
+
+  get Args(): ValueTreeNode[] {
+    return this.argList ? this.argList.Values : [];
   }
 
   get Styling(): StyleTreeNode | null {
