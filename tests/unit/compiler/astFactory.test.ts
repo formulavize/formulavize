@@ -16,6 +16,7 @@ import {
   ImportTreeNode as Import,
   BaseTreeNode,
   ValueListTreeNode as ValueList,
+  StatementListTreeNode as StatementList,
 } from "src/compiler/ast";
 import { CompilationError as Error } from "src/compiler/compilationErrors";
 
@@ -93,14 +94,22 @@ describe("single statements", () => {
   test("assignment with anonymous namespace", () => {
     const input = "x = []";
     expect(makeTree(input)).toEqual(
-      new Recipe([new Assignment([new LocalVariable("x")], new Namespace(""))]),
+      new Recipe([
+        new Assignment(
+          [new LocalVariable("x")],
+          new Namespace("", new StatementList([])),
+        ),
+      ]),
     );
   });
   test("assignment with namespace", () => {
     const input = "x = n[]";
     expect(makeTree(input)).toEqual(
       new Recipe([
-        new Assignment([new LocalVariable("x")], new Namespace("n", [])),
+        new Assignment(
+          [new LocalVariable("x")],
+          new Namespace("n", new StatementList([])),
+        ),
       ]),
     );
   });
@@ -126,7 +135,9 @@ describe("single statements", () => {
   });
   test("namespace declaration", () => {
     const input = "n[]";
-    expect(makeTree(input)).toEqual(new Recipe([new Namespace("n")]));
+    expect(makeTree(input)).toEqual(
+      new Recipe([new Namespace("n", new StatementList([]))]),
+    );
   });
 });
 
@@ -190,7 +201,7 @@ describe("style nodes", () => {
       new Recipe([
         new Namespace(
           "n",
-          [],
+          new StatementList([]),
           null,
           new Style(undefined, [new StyleTag(["s"])]),
         ),
@@ -315,7 +326,7 @@ describe("multiple statements", () => {
       new Recipe([
         new Namespace(
           "n",
-          [
+          new StatementList([
             new Assignment(
               [new LocalVariable("y")],
               new Call("f", new ValueList([])),
@@ -324,7 +335,7 @@ describe("multiple statements", () => {
               [new LocalVariable("z")],
               new QualifiedVariable(["x"]),
             ),
-          ],
+          ]),
           new ValueList([
             new QualifiedVariable(["a"]),
             new Call("b", new ValueList([])),
@@ -353,7 +364,7 @@ describe("import statements", () => {
   test("import statement in namespace", () => {
     const input = 'n[@"test"]';
     expect(makeTree(input)).toEqual(
-      new Recipe([new Namespace("n", [new Import("test")])]),
+      new Recipe([new Namespace("n", new StatementList([new Import("test")]))]),
     );
   });
 });
@@ -398,7 +409,9 @@ describe("incomplete statements", () => {
   });
   test("incomplete namespace", () => {
     const input = "n[";
-    expect(makeTree(input)).toEqual(new Recipe([new Namespace("n")]));
+    expect(makeTree(input)).toEqual(
+      new Recipe([new Namespace("n", new StatementList([]))]),
+    );
   });
   test("incomplete import", () => {
     const input = "@";
@@ -490,7 +503,7 @@ describe("node positions", () => {
         [
           new Namespace(
             "n",
-            [],
+            new StatementList([], { from: 1, to: 3 }),
             null,
             new Style(undefined, [new StyleTag(["s"], { from: 4, to: 6 })], {
               from: 3,

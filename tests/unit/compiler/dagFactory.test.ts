@@ -13,6 +13,7 @@ import {
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
   ValueListTreeNode as ValueList,
+  StatementListTreeNode as StatementList,
 } from "src/compiler/ast";
 import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
 import { Dag, StyleTag, StyleProperties, Keyword } from "src/compiler/dag";
@@ -320,21 +321,27 @@ describe("edge tests", () => {
         [new LocalVariable("a")],
         new Call("b", new ValueList([])),
       ),
-      new Namespace("child", [
-        new Call("y", new ValueList([new QualifiedVariable(["a"])])),
-      ]),
+      new Namespace(
+        "child",
+        new StatementList([
+          new Call("y", new ValueList([new QualifiedVariable(["a"])])),
+        ]),
+      ),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["b", "y"]]);
   });
   test("cannot directly resolve variable in child namespace", async () => {
     const recipe = new Recipe([
-      new Namespace("child", [
-        new Assignment(
-          [new LocalVariable("a")],
-          new Call("b", new ValueList([])),
-        ),
-      ]),
+      new Namespace(
+        "child",
+        new StatementList([
+          new Assignment(
+            [new LocalVariable("a")],
+            new Call("b", new ValueList([])),
+          ),
+        ]),
+      ),
       new Call("y", new ValueList([new QualifiedVariable(["a"])])),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
@@ -342,12 +349,15 @@ describe("edge tests", () => {
   });
   test("resolve variable in child namespace", async () => {
     const recipe = new Recipe([
-      new Namespace("child", [
-        new Assignment(
-          [new LocalVariable("a")],
-          new Call("b", new ValueList([])),
-        ),
-      ]),
+      new Namespace(
+        "child",
+        new StatementList([
+          new Assignment(
+            [new LocalVariable("a")],
+            new Call("b", new ValueList([])),
+          ),
+        ]),
+      ),
       new Call("y", new ValueList([new QualifiedVariable(["child", "a"])])),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
@@ -355,15 +365,21 @@ describe("edge tests", () => {
   });
   test("resolve variable in sibling namespace", async () => {
     const recipe = new Recipe([
-      new Namespace("child", [
-        new Assignment(
-          [new LocalVariable("a")],
-          new Call("b", new ValueList([])),
-        ),
-      ]),
-      new Namespace("sibling", [
-        new Call("y", new ValueList([new QualifiedVariable(["child", "a"])])),
-      ]),
+      new Namespace(
+        "child",
+        new StatementList([
+          new Assignment(
+            [new LocalVariable("a")],
+            new Call("b", new ValueList([])),
+          ),
+        ]),
+      ),
+      new Namespace(
+        "sibling",
+        new StatementList([
+          new Call("y", new ValueList([new QualifiedVariable(["child", "a"])])),
+        ]),
+      ),
     ]);
     const edgeList = await makeDagAndReturnEdgeNames(recipe);
     expect(edgeList).toEqual([["b", "y"]]);
@@ -376,7 +392,7 @@ describe("edge tests", () => {
       ),
       new Namespace(
         "child",
-        [new Call("g", new ValueList([]))],
+        new StatementList([new Call("g", new ValueList([]))]),
         new ValueList([
           new QualifiedVariable(["y"]),
           new Call("h", new ValueList([])),
@@ -573,9 +589,12 @@ describe("style tests", () => {
         [new LocalVariable("x", new Style(sampleMap, []))],
         new Call("f", new ValueList([])),
       ),
-      new Namespace("child", [
-        new Call("g", new ValueList([new QualifiedVariable(["x"])])),
-      ]),
+      new Namespace(
+        "child",
+        new StatementList([
+          new Call("g", new ValueList([new QualifiedVariable(["x"])])),
+        ]),
+      ),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     expect(dag.getEdgeList()).toHaveLength(0);
@@ -595,13 +614,16 @@ describe("style tests", () => {
         [new LocalVariable("x", new Style(sampleMap, []))],
         new Call("f", new ValueList([])),
       ),
-      new Namespace("child", [
-        new Assignment(
-          [new LocalVariable("x")],
-          new Call("h", new ValueList([])),
-        ),
-        new Call("g", new ValueList([new QualifiedVariable(["x"])])),
-      ]),
+      new Namespace(
+        "child",
+        new StatementList([
+          new Assignment(
+            [new LocalVariable("x")],
+            new Call("h", new ValueList([])),
+          ),
+          new Call("g", new ValueList([new QualifiedVariable(["x"])])),
+        ]),
+      ),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     expect(dag.getEdgeList()).toHaveLength(0);
@@ -618,13 +640,16 @@ describe("style tests", () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
       new NamedStyle("s", new Style(sampleMap)),
-      new Namespace("child", [
-        new Call(
-          "g",
-          new ValueList([]),
-          new Style(undefined, [new StyleTagNode(["s"])]),
-        ),
-      ]),
+      new Namespace(
+        "child",
+        new StatementList([
+          new Call(
+            "g",
+            new ValueList([]),
+            new Style(undefined, [new StyleTagNode(["s"])]),
+          ),
+        ]),
+      ),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const childDags = dag.getChildDags();
@@ -639,7 +664,10 @@ describe("style tests", () => {
   test("named style in child namespace", async () => {
     const sampleMap: StyleProperties = new Map([["a", "1"]]);
     const recipe = new Recipe([
-      new Namespace("child", [new NamedStyle("s", new Style(sampleMap))]),
+      new Namespace(
+        "child",
+        new StatementList([new NamedStyle("s", new Style(sampleMap))]),
+      ),
       new Call(
         "g",
         new ValueList([]),
@@ -961,7 +989,7 @@ describe("error reporting", () => {
     const recipe = new Recipe([
       new Namespace(
         "ns",
-        [new Call("f", new ValueList([]))],
+        new StatementList([new Call("f", new ValueList([]))]),
         new ValueList([]),
         new Style(undefined, [new StyleTagNode(["missingStyle"])]),
       ),
