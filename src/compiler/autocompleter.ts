@@ -8,33 +8,51 @@ import {
   ASTCompletionIndex,
   ContextScenarioType,
   ScenarioToTokenTypes,
+  TokenType,
 } from "./autocompletion";
+
+export function createCompletions(
+  completionIndex: ASTCompletionIndex,
+  position: number,
+  applicableTokenTypes: Set<TokenType>,
+  word: string,
+  from: number,
+): CompletionResult {
+  const availableTokens = completionIndex.getTokensUpTo(position);
+  const completions = availableTokens
+    .filter((token) => applicableTokenTypes.has(token.type))
+    .filter((token) => token.value.startsWith(word))
+    .map((token) => ({
+      label: token.value,
+      type: token.type,
+    }));
+
+  return {
+    from,
+    options: completions,
+  };
+}
 
 export function createCompletionSource(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
-    const word = context.matchBefore(/\w*/);
-    if (!word || (word.from === word.to && !context.explicit)) {
+    const match = context.matchBefore(/\w*/);
+    if (!match || (match.from === match.to && !context.explicit)) {
       return null;
     }
 
-    const availableTokens = completionIndex.getTokensUpTo(context.pos);
     const applicableTokenTypes = completionIndex.getApplicableTokenTypesAt(
       context.pos,
     );
-    const completions = availableTokens
-      .filter((token) => applicableTokenTypes.has(token.type))
-      .filter((token) => token.value.startsWith(word.text))
-      .map((token) => ({
-        label: token.value,
-        type: token.type,
-      }));
 
-    return {
-      from: word.from,
-      options: completions,
-    };
+    return createCompletions(
+      completionIndex,
+      context.pos,
+      applicableTokenTypes,
+      match.text,
+      match.from,
+    );
   };
 }
 
@@ -53,22 +71,16 @@ export function createAssignmentRhsCompletionSource(
     const from = matchStart ? match.from + matchStart[0].length : match.from;
     const word = match.text.slice(from - match.from);
 
-    const availableTokens = completionIndex.getTokensUpTo(context.pos);
     const applicableTokenTypes =
       ScenarioToTokenTypes[ContextScenarioType.ValueName];
 
-    const completions = availableTokens
-      .filter((token) => applicableTokenTypes.has(token.type))
-      .filter((token) => token.value.startsWith(word))
-      .map((token) => ({
-        label: token.value,
-        type: token.type,
-      }));
-
-    return {
+    return createCompletions(
+      completionIndex,
+      context.pos,
+      applicableTokenTypes,
+      word,
       from,
-      options: completions,
-    };
+    );
   };
 }
 
@@ -94,22 +106,16 @@ export function createCallCompletionSource(
     const word = separatorMatch[1];
     const from = match.to - word.length;
 
-    const availableTokens = completionIndex.getTokensUpTo(context.pos);
     const applicableTokenTypes =
       ScenarioToTokenTypes[ContextScenarioType.ValueName];
 
-    const completions = availableTokens
-      .filter((token) => applicableTokenTypes.has(token.type))
-      .filter((token) => token.value.startsWith(word))
-      .map((token) => ({
-        label: token.value,
-        type: token.type,
-      }));
-
-    return {
+    return createCompletions(
+      completionIndex,
+      context.pos,
+      applicableTokenTypes,
+      word,
       from,
-      options: completions,
-    };
+    );
   };
 }
 
@@ -132,21 +138,15 @@ export function createStyleCompletionSource(
     const word = hashtagMatch[1];
     const from = match.to - word.length;
 
-    const availableTokens = completionIndex.getTokensUpTo(context.pos);
     const applicableTokenTypes =
       ScenarioToTokenTypes[ContextScenarioType.StyleArgList];
 
-    const completions = availableTokens
-      .filter((token) => applicableTokenTypes.has(token.type))
-      .filter((token) => token.value.startsWith(word))
-      .map((token) => ({
-        label: token.value,
-        type: token.type,
-      }));
-
-    return {
+    return createCompletions(
+      completionIndex,
+      context.pos,
+      applicableTokenTypes,
+      word,
       from,
-      options: completions,
-    };
+    );
   };
 }
