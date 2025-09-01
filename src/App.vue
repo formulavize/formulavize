@@ -72,7 +72,7 @@ import { Compiler } from "./compiler/driver";
 import { CompilationError } from "./compiler/compilationErrors";
 import { errorToDiagnostic, ErrorReporter } from "./compiler/errorReporter";
 import { ASTCompletionIndex } from "./compiler/autocompletion";
-import { makeASTCompletionIndex } from "./compiler/autocompletionFactory";
+import { createASTCompletionIndex } from "./compiler/autocompletionFactory";
 // @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -101,7 +101,7 @@ export default defineComponent({
       curErrors: [] as CompilationError[],
       curDiagnostics: [] as Diagnostic[],
       curErrorReporter: new ErrorReporter(Text.empty),
-      curCompletionIndex: new ASTCompletionIndex([], []),
+      curCompletionIndex: new ASTCompletionIndex(),
       showExportPopup: false,
       showOptionsPopup: false,
       tabToIndent: false,
@@ -116,7 +116,7 @@ export default defineComponent({
       this.curErrors = curCompilation.Errors;
       this.curDiagnostics = curCompilation.Errors.map(errorToDiagnostic);
       this.curErrorReporter = new ErrorReporter(newEditorState.doc);
-      this.curCompletionIndex = makeASTCompletionIndex(curCompilation.AST);
+      this.curCompletionIndex = createASTCompletionIndex(curCompilation.AST);
     },
     debugMode() {
       // repaint the conditionally rendered GraphView

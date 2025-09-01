@@ -25,6 +25,13 @@ export interface TokenInfo {
   endPosition: number;
 }
 
+export interface NamespaceInfo {
+  name: string;
+  completionIndex: ASTCompletionIndex;
+  startPosition: number;
+  endPosition: number;
+}
+
 export const ScenarioToTokenTypes: Record<
   ContextScenarioType,
   Set<TokenType>
@@ -44,10 +51,16 @@ export const ScenarioToTokenTypes: Record<
 export class ASTCompletionIndex {
   readonly tokens: TokenInfo[];
   readonly contextScenarios: ContextScenario[];
+  readonly namespaces: NamespaceInfo[];
 
-  constructor(tokenInfo: TokenInfo[], contextScenarios: ContextScenario[]) {
+  constructor(
+    tokenInfo: TokenInfo[] = [],
+    contextScenarios: ContextScenario[] = [],
+    namespaces: NamespaceInfo[] = [],
+  ) {
     this.tokens = tokenInfo;
     this.contextScenarios = contextScenarios;
+    this.namespaces = namespaces;
   }
 
   get Tokens(): TokenInfo[] {
@@ -56,6 +69,10 @@ export class ASTCompletionIndex {
 
   get ContextScenarios(): ContextScenario[] {
     return this.contextScenarios;
+  }
+
+  get Namespaces(): NamespaceInfo[] {
+    return this.namespaces;
   }
 
   getTokensUpTo(position: number): TokenInfo[] {
@@ -69,24 +86,72 @@ export class ASTCompletionIndex {
     return scenario || null;
   }
 
+  getNamespaceAt(position: number): NamespaceInfo | null {
+    const isNamespaceInRange = (nsInfo: NamespaceInfo) =>
+      nsInfo.startPosition <= position && nsInfo.endPosition >= position;
+    return this.namespaces.find(isNamespaceInRange) || null;
+  }
+
   dumpCompletionIndex(): string {
-    const tokenLines = this.tokens.map(
-      (token, i) =>
-        `  [${i}] ${token.type}: "${token.value}" (ends at ${token.endPosition})`,
-    );
+    function formatTokenLine(
+      token: TokenInfo,
+      index: number,
+      indent: number,
+    ): string {
+      const indentStr = "\t".repeat(indent);
+      return `${indentStr}[${index}] ${token.type}: "${token.value}" (ends at ${token.endPosition})`;
+    }
 
-    const scenarioLines = this.contextScenarios.map(
-      (scenario, i) =>
-        `  [${i}] ${ContextScenarioType[scenario.type]}: ${scenario.from}-${scenario.to}`,
-    );
+    function formatScenarioLine(
+      scenario: ContextScenario,
+      index: number,
+      indent: number,
+    ): string {
+      const indentStr = "\t".repeat(indent);
+      return `${indentStr}[${index}] ${ContextScenarioType[scenario.type]}: ${scenario.from}-${scenario.to}`;
+    }
 
-    return [
-      `Tokens (${this.tokens.length}):`,
-      ...tokenLines,
-      "",
-      `Context Scenarios (${this.contextScenarios.length}):`,
-      ...scenarioLines,
-      "",
-    ].join("\n");
+    function dumpCompletionIndexRecursive(
+      tokens: TokenInfo[],
+      scenarios: ContextScenario[],
+      namespaces: NamespaceInfo[],
+      indent: number,
+    ): string[] {
+      const tokenLines = tokens.map((token, i) =>
+        formatTokenLine(token, i, indent + 1),
+      );
+      const scenarioLines = scenarios.map((scenario, i) =>
+        formatScenarioLine(scenario, i, indent + 1),
+      );
+
+      const namespaceLines = namespaces.flatMap((namespaceInfo) => {
+        const namespaceIndentStr = "\t".repeat(indent + 1);
+        const header = `${namespaceIndentStr}"${namespaceInfo.name}": start=${namespaceInfo.startPosition}, end=${namespaceInfo.endPosition}`;
+        const nestedSections = dumpCompletionIndexRecursive(
+          namespaceInfo.completionIndex.tokens,
+          namespaceInfo.completionIndex.contextScenarios,
+          namespaceInfo.completionIndex.namespaces,
+          indent + 1,
+        );
+        return [header, ...nestedSections];
+      });
+
+      const indentStr = "\t".repeat(indent);
+      return [
+        `${indentStr}Tokens (${tokens.length}):`,
+        ...tokenLines,
+        `${indentStr}Context Scenarios (${scenarios.length}):`,
+        ...scenarioLines,
+        `${indentStr}Namespaces (${namespaces.length}):`,
+        ...namespaceLines,
+      ];
+    }
+
+    return dumpCompletionIndexRecursive(
+      this.tokens,
+      this.contextScenarios,
+      this.namespaces,
+      0,
+    ).join("\n");
   }
 }
