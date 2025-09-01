@@ -18,7 +18,7 @@ export function createCompletions(
   word: string,
   from: number,
 ): CompletionResult {
-  const availableTokens = completionIndex.getTokensUpTo(position);
+  const availableTokens = completionIndex.getTokensAvailableAt(position);
   const completions = availableTokens
     .filter((token) => applicableTokenTypes.has(token.type))
     .filter((token) => token.value.startsWith(word))

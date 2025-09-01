@@ -92,6 +92,14 @@ export class ASTCompletionIndex {
     return this.namespaces.find(isNamespaceInRange) || null;
   }
 
+  getTokensAvailableAt(position: number): TokenInfo[] {
+    const tokensInCurrent = this.getTokensUpTo(position);
+    const curNamespace = this.getNamespaceAt(position);
+    const availableTokensInNamespace =
+      curNamespace?.completionIndex.getTokensAvailableAt(position) ?? [];
+    return [...tokensInCurrent, ...availableTokensInNamespace];
+  }
+
   dumpCompletionIndex(): string {
     function formatTokenLine(
       token: TokenInfo,
