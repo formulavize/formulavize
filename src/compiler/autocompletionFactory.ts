@@ -15,6 +15,7 @@ import {
   TokenType,
   ContextScenarioType,
   ContextScenario,
+  NamespaceInfo,
 } from "./autocompletion";
 
 function makeTokenRecords(statement: StatementTreeNode): TokenInfo[] {
@@ -107,15 +108,59 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
         },
       ];
     })
+    .with(NodeType.Namespace, () => {
+      const namespaceNode = statement as NamespaceTreeNode;
+      const scenarios: ContextScenario[] = [];
+      if (namespaceNode.ArgList?.Position) {
+        scenarios.push({
+          type: ContextScenarioType.ValueName,
+          from: namespaceNode.ArgList.Position.from + 1,
+          to: namespaceNode.ArgList.Position.to - 1,
+        });
+      }
+      if (namespaceNode.Styling?.Position) {
+        scenarios.push({
+          type: ContextScenarioType.StyleArgList,
+          from: namespaceNode.Styling.Position.from + 1,
+          to: namespaceNode.Styling.Position.to - 1,
+        });
+      }
+      return scenarios;
+    })
     .otherwise(() => []);
 }
 
+export function makeNamespaceInfo(
+  namespaceNode: NamespaceTreeNode,
+): NamespaceInfo | null {
+  const stmtListPosition = namespaceNode.StatementList?.Position;
+  if (!stmtListPosition) return null;
+
+  const statements = namespaceNode.Statements;
+  const nestedCompletionIndex = makeASTCompletionIndex(statements);
+  return {
+    name: namespaceNode.Name,
+    completionIndex: nestedCompletionIndex,
+    startPosition: stmtListPosition.from + 1,
+    endPosition: stmtListPosition.to - 1,
+  };
+}
+
 export function makeASTCompletionIndex(
+  statements: StatementTreeNode[],
+): ASTCompletionIndex {
+  const tokenRecords = statements.flatMap(makeTokenRecords);
+  const contextScenarios = statements.flatMap(makeContextScenarios);
+  const namespaceInfos = statements
+    .filter((stmt) => stmt.Type === NodeType.Namespace)
+    .map((stmt) => makeNamespaceInfo(stmt as NamespaceTreeNode))
+    .filter(Boolean) as NamespaceInfo[];
+
+  return new ASTCompletionIndex(tokenRecords, contextScenarios, namespaceInfos);
+}
+
+export function createASTCompletionIndex(
   recipeNode: RecipeTreeNode,
 ): ASTCompletionIndex {
-  const tokenRecords = recipeNode.Statements.flatMap(makeTokenRecords);
-  const contextScenarios: ContextScenario[] =
-    recipeNode.Statements.flatMap(makeContextScenarios);
-
-  return new ASTCompletionIndex(tokenRecords, contextScenarios);
+  return makeASTCompletionIndex(recipeNode.Statements);
 }
