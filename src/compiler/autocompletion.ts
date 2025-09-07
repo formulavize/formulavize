@@ -9,6 +9,7 @@ export enum TokenType {
 
 export enum ContextScenarioType {
   ValueName,
+  QualifiedName,
   StyleArgList,
   Statement,
 }
@@ -39,6 +40,10 @@ export const ScenarioToTokenTypes: Record<
   [ContextScenarioType.ValueName]: new Set([
     TokenType.Variable,
     TokenType.Keyword,
+    TokenType.Namespace,
+  ]),
+  [ContextScenarioType.QualifiedName]: new Set([
+    TokenType.Variable,
     TokenType.Namespace,
   ]),
   [ContextScenarioType.StyleArgList]: new Set([
