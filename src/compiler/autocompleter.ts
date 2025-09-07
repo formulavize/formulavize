@@ -322,6 +322,66 @@ export function getEndNamespace(
   return searchIndex;
 }
 
+export function createOpeningQualifiedVariableCompletionSource(
+  completionIndex: ASTCompletionIndex,
+): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
+    // This source triggers when the user types an opening parenthesis '(' with qualified names.
+
+    // Match qualified variable names after an open bracket or after a comma
+    const match = context.matchBefore(
+      /\((?:[^,()]*,\s*)*\w+(?:\.\w*)*|,\s*\w+(?:\.\w*)*/,
+    );
+    if (!match || (match.from === match.to && !context.explicit)) {
+      return null;
+    }
+
+    // Find the last separator (either '(' or ',') and extract the qualified name after it
+    const separatorMatch = match.text.includes(",")
+      ? /,\s*(\w+(?:\.\w*)*)$/.exec(match.text)
+      : /\(\s*(\w+(?:\.\w*)*)$/.exec(match.text);
+
+    if (!separatorMatch) {
+      return null;
+    }
+
+    const qualifiedName = separatorMatch[1];
+    const parts = qualifiedName.split(".");
+
+    // If there's no dot, this isn't a qualified name - let other completion sources handle it
+    if (parts.length < 2) {
+      return null;
+    }
+
+    const namespacePath = parts.slice(0, -1);
+    const partialVariable = parts[parts.length - 1];
+
+    const endNamespace = getEndNamespace(
+      completionIndex,
+      namespacePath,
+      context.pos,
+    );
+    if (!endNamespace) {
+      return null;
+    }
+
+    // Filter for variables and namespaces that match the partial name
+    const applicableTokenTypes =
+      ScenarioToTokenTypes[ContextScenarioType.QualifiedName];
+
+    const from = match.to - partialVariable.length;
+
+    return createNamespacedCompletions(
+      endNamespace,
+      context.pos,
+      applicableTokenTypes,
+      namespacePath.join(".") + ".",
+      partialVariable,
+      from,
+    );
+  };
+}
+
 export function createQualifiedVariableCompletionSource(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource {
@@ -381,6 +441,7 @@ export function getAllDynamicCompletionSources(
 ): CompletionSource[] {
   const sources = [
     createQualifiedVariableCompletionSource,
+    createOpeningQualifiedVariableCompletionSource,
     createAssignmentRhsCompletionSource,
     createOpeningCallCompletionSource,
     createCallCompletionSource,
