@@ -97,6 +97,17 @@ export class ASTCompletionIndex {
     return this.namespaces.find(isNamespaceInRange) || null;
   }
 
+  getNestedCompletionIndexChainAt(position: number): ASTCompletionIndex[] {
+    const chain: ASTCompletionIndex[] = [];
+    chain.push(this);
+    let nsInfo = this.getNamespaceAt(position);
+    while (nsInfo) {
+      chain.push(nsInfo.completionIndex);
+      nsInfo = nsInfo.completionIndex.getNamespaceAt(position);
+    }
+    return chain;
+  }
+
   getTokensAvailableAt(position: number): TokenInfo[] {
     const tokensInCurrent = this.getTokensUpTo(position);
     const curNamespace = this.getNamespaceAt(position);

@@ -322,6 +322,31 @@ export function getEndNamespace(
   return searchIndex;
 }
 
+export function resolveEndNamespace(
+  completionIndex: ASTCompletionIndex,
+  namespacePath: string[],
+  position: number,
+): ASTCompletionIndex | null {
+  const nestedCompletionIndexChain =
+    completionIndex.getNestedCompletionIndexChainAt(position);
+
+  let targetCompletionIndex: ASTCompletionIndex | null = null;
+  for (let i = nestedCompletionIndexChain.length - 1; i >= 0; i--) {
+    const result = getEndNamespace(
+      nestedCompletionIndexChain[i],
+      namespacePath,
+      position,
+    );
+    if (result !== null) {
+      targetCompletionIndex = result;
+      break;
+    }
+  }
+
+  // Return the innermost namespace's completion index
+  return targetCompletionIndex;
+}
+
 export function createOpeningQualifiedVariableCompletionSource(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource {
@@ -356,7 +381,7 @@ export function createOpeningQualifiedVariableCompletionSource(
     const namespacePath = parts.slice(0, -1);
     const partialVariable = parts[parts.length - 1];
 
-    const endNamespace = getEndNamespace(
+    const endNamespace = resolveEndNamespace(
       completionIndex,
       namespacePath,
       context.pos,
@@ -412,7 +437,7 @@ export function createQualifiedVariableCompletionSource(
     const namespacePath = parts.slice(0, -1);
     const partialVariable = parts[parts.length - 1];
 
-    const endNamespace = getEndNamespace(
+    const endNamespace = resolveEndNamespace(
       completionIndex,
       namespacePath,
       context.pos,
