@@ -461,12 +461,121 @@ export function createQualifiedVariableCompletionSource(
   };
 }
 
+export function createOpeningQualifiedStyleCompletionSource(
+  completionIndex: ASTCompletionIndex,
+): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
+    // This source triggers when the user types an opening curly bracket '{' with qualified names.
+
+    // Match qualified style names within curly brackets
+    const match = context.matchBefore(/\{[^{}]*#\w+(?:\.\w*)*/);
+    if (!match || (match.from === match.to && !context.explicit)) {
+      return null;
+    }
+
+    // Find the hashtag and extract the qualified name after it
+    const hashtagMatch = /#(\w+(?:\.\w*)*)$/.exec(match.text);
+    if (!hashtagMatch) {
+      return null;
+    }
+
+    const qualifiedName = hashtagMatch[1];
+    const parts = qualifiedName.split(".");
+
+    // If there's no dot, this isn't a qualified name - let other completion sources handle it
+    if (parts.length < 2) {
+      return null;
+    }
+
+    const namespacePath = parts.slice(0, -1);
+    const partialStyle = parts[parts.length - 1];
+
+    const endNamespace = resolveEndNamespace(
+      completionIndex,
+      namespacePath,
+      context.pos,
+    );
+    if (!endNamespace) {
+      return null;
+    }
+
+    // Filter for styles and namespaces that match the partial name
+    const applicableTokenTypes =
+      ScenarioToTokenTypes[ContextScenarioType.StyleArgList];
+
+    return createNamespacedCompletions(
+      endNamespace,
+      context.pos,
+      applicableTokenTypes,
+      namespacePath.join(".") + ".",
+      partialStyle,
+      match.to - partialStyle.length,
+    );
+  };
+}
+
+export function createQualifiedStyleCompletionSource(
+  completionIndex: ASTCompletionIndex,
+): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
+    // Allow completions in StyleArgList contexts only
+    const contextScenario = completionIndex.getContextScenarioAt(context.pos);
+    if (
+      !contextScenario ||
+      contextScenario.type !== ContextScenarioType.StyleArgList
+    ) {
+      return null;
+    }
+
+    // Match qualified style names: word characters separated by dots, starting with a hashtag
+    const match = context.matchBefore(/#\w+(?:\.\w*)*/);
+    if (!match || (match.from === match.to && !context.explicit)) {
+      return null;
+    }
+
+    const qualifiedName = match.text.slice(1); // Remove the leading '#'
+    const parts = qualifiedName.split(".");
+
+    // If there's no dot, this isn't a qualified name
+    if (parts.length < 2) {
+      return null;
+    }
+
+    const namespacePath = parts.slice(0, -1);
+    const partialStyle = parts[parts.length - 1];
+
+    const endNamespace = resolveEndNamespace(
+      completionIndex,
+      namespacePath,
+      context.pos,
+    );
+    if (!endNamespace) {
+      return null;
+    }
+
+    // Filter for styles and namespaces that match the partial name
+    const applicableTokenTypes =
+      ScenarioToTokenTypes[ContextScenarioType.StyleArgList];
+
+    return createNamespacedCompletions(
+      endNamespace,
+      context.pos,
+      applicableTokenTypes,
+      namespacePath.join(".") + ".",
+      partialStyle,
+      match.to - partialStyle.length,
+    );
+  };
+}
+
 export function getAllDynamicCompletionSources(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource[] {
   const sources = [
     createQualifiedVariableCompletionSource,
     createOpeningQualifiedVariableCompletionSource,
+    createOpeningQualifiedStyleCompletionSource,
+    createQualifiedStyleCompletionSource,
     createAssignmentRhsCompletionSource,
     createOpeningCallCompletionSource,
     createCallCompletionSource,
