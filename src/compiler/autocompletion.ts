@@ -14,18 +14,21 @@ export enum ContextScenarioType {
   Statement,
 }
 
+// A autocompletable range where specific token types are expected
 export interface ContextScenario {
   type: ContextScenarioType;
   from: number;
   to: number;
 }
 
+// An autocompletion token definition
 export interface TokenInfo {
   type: TokenType;
   value: string;
   endPosition: number;
 }
 
+// A nestible namespace with its own completion index
 export interface NamespaceInfo {
   name: string;
   completionIndex: ASTCompletionIndex;
@@ -53,6 +56,9 @@ export const ScenarioToTokenTypes: Record<
   [ContextScenarioType.Statement]: new Set([TokenType.Keyword]),
 };
 
+// This is a simple implementation. There is room for optimization here using
+// binary search (since tokens are processed in order - enforce via test cases)
+// and tries for prefix matching.
 export class ASTCompletionIndex {
   readonly tokens: TokenInfo[];
   readonly contextScenarios: ContextScenario[];
