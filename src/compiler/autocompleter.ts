@@ -135,7 +135,7 @@ export function createOpeningCallCompletionSource(
     // context scenario has not yet been registered in ASTCompletionIndex.
 
     // Match a word after an open bracket or after a comma
-    const match = context.matchBefore(/\((?:[^,()]*,\s*)*\w*|,\s*\w*/);
+    const match = context.matchBefore(/\((?:[^,()]*,\s*)*\s*\w*|,\s*\w*/);
     if (!match || (match.from === match.to && !context.explicit)) {
       return null;
     }
