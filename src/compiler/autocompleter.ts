@@ -197,55 +197,20 @@ export function createCallCompletionSource(
   };
 }
 
-export function createOpeningStyleCompletionSource(
-  completionIndex: ASTCompletionIndex,
-): CompletionSource {
-  return (context: CompletionContext): CompletionResult | null => {
-    // This source triggers when the user types an opening curly bracket '{'.
-    // This is needed because autocompletion looks at ASTCompletionIndex
-    // immediately while the parser awaits debouncing logic so the new
-    // context scenario has not yet been registered in ASTCompletionIndex.
-
-    // Match content within curly brackets that contains a hashtag followed by word characters
-    const match = context.matchBefore(/\{[^{}]*#\w*/);
-    if (!match || (match.from === match.to && !context.explicit)) {
-      return null;
-    }
-
-    // Find the hashtag and extract the word after it
-    const hashtagMatch = /#(\w*)$/.exec(match.text);
-    if (!hashtagMatch) {
-      return null;
-    }
-
-    const word = hashtagMatch[1];
-    const from = match.to - word.length;
-
-    const applicableTokenTypes =
-      ScenarioToTokenTypes[ContextScenarioType.StyleArgList];
-
-    return createCompletions(
-      completionIndex,
-      context.pos,
-      applicableTokenTypes,
-      word,
-      from,
-    );
-  };
-}
-
 export function createStyleCompletionSource(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
     // Check if we're in a StyleArgList context scenario
+    // If not (e.g. new context not yet registered because of debouncing),
+    // check for other valid scenario with an opening brace pattern.
     const contextScenario = completionIndex.getContextScenarioAt(context.pos);
-    if (contextScenario?.type !== ContextScenarioType.StyleArgList) {
-      return null;
-    }
+    const isStyleContext =
+      contextScenario?.type === ContextScenarioType.StyleArgList;
+    const match = isStyleContext
+      ? context.matchBefore(/#\w*/)
+      : context.matchBefore(/\{[^{}]*#\w*/);
 
-    // Match hashtag followed by word characters
-    const match = context.matchBefore(/#\w*/);
     if (!match || (match.from === match.to && !context.explicit)) {
       return null;
     }
@@ -580,7 +545,6 @@ export function getAllDynamicCompletionSources(
     createAssignmentRhsCompletionSource,
     createOpeningCallCompletionSource,
     createCallCompletionSource,
-    createOpeningStyleCompletionSource,
     createStyleCompletionSource,
     createOpeningNamespaceCompletionSource,
     createStatementCompletionSource,

@@ -7,7 +7,6 @@ import {
   createAssignmentRhsCompletionSource,
   createOpeningCallCompletionSource,
   createCallCompletionSource,
-  createOpeningStyleCompletionSource,
   createStyleCompletionSource,
   createNamespacedCompletions,
   getEndNamespace,
@@ -452,44 +451,6 @@ describe("autocompleter", () => {
       expect(result).toBeNull();
     });
   });
-  describe("createOpeningStyleCompletionSource", () => {
-    let source: CompletionSource;
-
-    beforeEach(() => {
-      source = createOpeningStyleCompletionSource(completionIndex);
-    });
-
-    test("completes style tags after hashtag in curly braces", async () => {
-      const context = createMockContext(60, "{#bold");
-      const result = await runSource(source, context);
-
-      expect(result).toBeTruthy();
-      expect(result!.from).toBe(56); // 60 - 4 ("bold")
-      expect(result!.options).toContainEqual({
-        label: "bold",
-        type: TokenType.StyleTag,
-      });
-    });
-
-    test("handles partial style names", async () => {
-      const context = createMockContext(60, "{#ital");
-      const result = await runSource(source, context);
-
-      expect(result).toBeTruthy();
-      expect(result!.from).toBe(56); // 60 - 4 ("ital")
-      expect(result!.options).toContainEqual({
-        label: "italic",
-        type: TokenType.StyleTag,
-      });
-    });
-
-    test("returns null when no hashtag found", async () => {
-      const context = createMockContext(5, "{bold");
-      const result = await runSource(source, context);
-
-      expect(result).toBeNull();
-    });
-  });
   describe("createStyleCompletionSource", () => {
     let source: CompletionSource;
 
@@ -516,7 +477,31 @@ describe("autocompleter", () => {
       });
     });
 
-    test("returns null when not in StyleArgList context", async () => {
+    test("completes style tags via fallback (curly braces) when not in StyleArgList context", async () => {
+      const context = createMockContext(60, "{#bold");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.from).toBe(56); // 60 - 4 ("bold")
+      expect(result!.options).toContainEqual({
+        label: "bold",
+        type: TokenType.StyleTag,
+      });
+    });
+
+    test("handles partial style names with opening curly brace", async () => {
+      const context = createMockContext(60, "{#ital");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.from).toBe(56); // 60 - 4 ("ital")
+      expect(result!.options).toContainEqual({
+        label: "italic",
+        type: TokenType.StyleTag,
+      });
+    });
+
+    test("returns null when not in StyleArgList context and no curly braces", async () => {
       const context = createMockContext(30, "#bold");
       const result = await runSource(source, context);
 
@@ -1125,13 +1110,13 @@ describe("autocompleter", () => {
       });
 
       const styleSource = createStyleCompletionSource(mockIndex);
-      const openingSource = createOpeningStyleCompletionSource(completionIndex);
+      const fallbackSource = createStyleCompletionSource(completionIndex);
 
       const styleContext = createMockContext(95, "#bold");
       const openingContext = createMockContext(60, "{#bold");
 
       const styleResult = await runSource(styleSource, styleContext);
-      const openingResult = await runSource(openingSource, openingContext);
+      const openingResult = await runSource(fallbackSource, openingContext);
 
       expect(styleResult).toBeTruthy();
       expect(styleResult!.options).toContainEqual({
