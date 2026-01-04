@@ -125,16 +125,32 @@ export function createAssignmentRhsCompletionSource(
   };
 }
 
-export function createOpeningCallCompletionSource(
+export function createCallCompletionSource(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
-    // This source triggers when the user types an opening parenthesis '('.
+    // Check if we're in a ValueName context scenario
+    const contextScenario = completionIndex.getContextScenarioAt(context.pos);
+    if (contextScenario?.type === ContextScenarioType.ValueName) {
+      // Match any word characters handling multi-line call arguments
+      const match = context.matchBefore(/\w*/);
+      if (!match || (match.from === match.to && !context.explicit)) {
+        return null;
+      }
+
+      return createCompletions(
+        completionIndex,
+        context.pos,
+        ScenarioToTokenTypes[ContextScenarioType.ValueName],
+        match.text,
+        match.from,
+      );
+    }
+
+    // Fallback: Match a word after an open bracket or after a comma
     // This is needed because autocompletion looks at ASTCompletionIndex
     // immediately while the parser awaits debouncing logic so the new
     // context scenario has not yet been registered in ASTCompletionIndex.
-
-    // Match a word after an open bracket or after a comma
     const match = context.matchBefore(/\((?:[^,()]*,\s*)*\s*\w*|,\s*\w*/);
     if (!match || (match.from === match.to && !context.explicit)) {
       return null;
@@ -152,45 +168,10 @@ export function createOpeningCallCompletionSource(
     const word = separatorMatch[1];
     const from = match.to - word.length;
 
-    const applicableTokenTypes =
-      ScenarioToTokenTypes[ContextScenarioType.ValueName];
-
     return createCompletions(
       completionIndex,
       context.pos,
-      applicableTokenTypes,
-      word,
-      from,
-    );
-  };
-}
-
-export function createCallCompletionSource(
-  completionIndex: ASTCompletionIndex,
-): CompletionSource {
-  return (context: CompletionContext): CompletionResult | null => {
-    // Check if we're in a ValueName context scenario
-    const contextScenario = completionIndex.getContextScenarioAt(context.pos);
-    if (contextScenario?.type !== ContextScenarioType.ValueName) {
-      return null;
-    }
-
-    // Match any word characters handling multi-line call arguments
-    const match = context.matchBefore(/\w*/);
-    if (!match || (match.from === match.to && !context.explicit)) {
-      return null;
-    }
-
-    const word = match.text;
-    const from = match.from;
-
-    const applicableTokenTypes =
-      ScenarioToTokenTypes[ContextScenarioType.ValueName];
-
-    return createCompletions(
-      completionIndex,
-      context.pos,
-      applicableTokenTypes,
+      ScenarioToTokenTypes[ContextScenarioType.ValueName],
       word,
       from,
     );
@@ -543,7 +524,6 @@ export function getAllDynamicCompletionSources(
     createOpeningQualifiedStyleCompletionSource,
     createQualifiedStyleCompletionSource,
     createAssignmentRhsCompletionSource,
-    createOpeningCallCompletionSource,
     createCallCompletionSource,
     createStyleCompletionSource,
     createOpeningNamespaceCompletionSource,

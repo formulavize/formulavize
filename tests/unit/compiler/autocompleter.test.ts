@@ -5,7 +5,6 @@ import {
   createStatementCompletionSource,
   createOpeningNamespaceCompletionSource,
   createAssignmentRhsCompletionSource,
-  createOpeningCallCompletionSource,
   createCallCompletionSource,
   createStyleCompletionSource,
   createNamespacedCompletions,
@@ -365,53 +364,6 @@ describe("autocompleter", () => {
       expect(result).toBeNull();
     });
   });
-  describe("createOpeningCallCompletionSource", () => {
-    let source: CompletionSource;
-
-    beforeEach(() => {
-      source = createOpeningCallCompletionSource(completionIndex);
-    });
-
-    test("completes variables after opening parenthesis", async () => {
-      const context = createMockContext(40, "func(x");
-      const result = await runSource(source, context);
-
-      expect(result).toBeTruthy();
-      expect(result!.from).toBe(39); // 40 - 1 ("x")
-      expect(result!.options).toContainEqual({
-        label: "x",
-        type: TokenType.Variable,
-      });
-    });
-
-    test("completes variables after comma", async () => {
-      const context = createMockContext(40, "func(a, xy");
-      const result = await runSource(source, context);
-
-      expect(result).toBeTruthy();
-      expect(result!.from).toBe(38); // 40 - 2 ("xy")
-      expect(result!.options).toContainEqual({
-        label: "xyz",
-        type: TokenType.Variable,
-      });
-    });
-
-    test("handles spaces correctly", async () => {
-      const context = createMockContext(40, "func( x");
-      const result = await runSource(source, context);
-
-      expect(result).toBeTruthy();
-      expect(result!.from).toBe(39); // 40 - 1 ("x")
-    });
-
-    test("returns null when no match found", async () => {
-      const context = createMockContext(5, "xyz");
-      const result = await runSource(source, context);
-
-      expect(result).toBeNull();
-    });
-  });
-
   describe("createCallCompletionSource", () => {
     let source: CompletionSource;
 
@@ -444,11 +396,44 @@ describe("autocompleter", () => {
       expect(result).toBeNull();
     });
 
-    test("returns null when no word match", async () => {
-      const context = createMockContext(65, "=");
+    test("returns no options when no word match", async () => {
+      const context = createMockContext(65, "L");
       const result = await runSource(source, context);
 
-      expect(result).toBeNull();
+      expect(result).toBeTruthy();
+      expect(result!.from).toBe(64); // 65 - 1
+      expect(result!.options).toHaveLength(0);
+    });
+    test("completes variables after opening parenthesis", async () => {
+      const context = createMockContext(40, "func(x");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.from).toBe(39); // 40 - 1 ("x")
+      expect(result!.options).toContainEqual({
+        label: "x",
+        type: TokenType.Variable,
+      });
+    });
+
+    test("completes variables after comma", async () => {
+      const context = createMockContext(40, "func(a, xy");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.from).toBe(38); // 40 - 2 ("xy")
+      expect(result!.options).toContainEqual({
+        label: "xyz",
+        type: TokenType.Variable,
+      });
+    });
+
+    test("handles spaces correctly", async () => {
+      const context = createMockContext(40, "func( x");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.from).toBe(39); // 40 - 1 ("x")
     });
   });
   describe("createStyleCompletionSource", () => {
@@ -1080,13 +1065,13 @@ describe("autocompleter", () => {
       });
 
       const callSource = createCallCompletionSource(mockIndex);
-      const openingSource = createOpeningCallCompletionSource(completionIndex);
+      const fallbackSource = createCallCompletionSource(completionIndex);
 
       const callContext = createMockContext(65, "x");
       const openingContext = createMockContext(40, "func(x");
 
       const callResult = await runSource(callSource, callContext);
-      const openingResult = await runSource(openingSource, openingContext);
+      const openingResult = await runSource(fallbackSource, openingContext);
 
       expect(callResult).toBeTruthy();
       expect(callResult!.options).toContainEqual({
