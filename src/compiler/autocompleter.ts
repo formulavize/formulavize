@@ -286,6 +286,7 @@ export function createNamespacedCompletions(
     .filter((token) => token.value.startsWith(word))
     .map((token) => ({
       label: namespacePrefix + token.value,
+      apply: token.value,
       type: token.type,
     }));
 
@@ -456,7 +457,7 @@ export function createQualifiedVariableCompletionSource(
       applicableTokenTypes,
       namespacePath.join(".") + ".",
       partialVariable,
-      match.from,
+      match.to - partialVariable.length,
     );
   };
 }
