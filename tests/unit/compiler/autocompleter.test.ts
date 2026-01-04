@@ -3,7 +3,6 @@ import { CompletionContext, CompletionSource } from "@codemirror/autocomplete";
 import {
   createCompletions,
   createStatementCompletionSource,
-  createOpeningNamespaceCompletionSource,
   createAssignmentRhsCompletionSource,
   createCallCompletionSource,
   createStyleCompletionSource,
@@ -287,13 +286,6 @@ describe("autocompleter", () => {
 
       expect(result).toBeNull();
     });
-  });
-  describe("createOpeningNamespaceCompletionSource", () => {
-    let source: CompletionSource;
-
-    beforeEach(() => {
-      source = createOpeningNamespaceCompletionSource(completionIndex);
-    });
 
     test("completes keywords at beginning of namespace", async () => {
       const context = createMockContext(40, "[mix");
@@ -318,14 +310,8 @@ describe("autocompleter", () => {
         type: TokenType.Keyword,
       });
     });
-
-    test("returns null when no match found", async () => {
-      const context = createMockContext(5, "x = 1");
-      const result = await runSource(source, context);
-
-      expect(result).toBeNull();
-    });
   });
+
   describe("createAssignmentRhsCompletionSource", () => {
     let source: CompletionSource;
 

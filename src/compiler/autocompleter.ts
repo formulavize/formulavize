@@ -43,44 +43,14 @@ export function createStatementCompletionSource(
       return null; // Let other completion sources handle specific contexts
     }
 
-    // Match word at the beginning of the current line or after semicolon
-    const match = context.matchBefore(/(?:^|;)\s*\w*$/);
+    // Match word at the beginning of the current line, after semicolon, or after opening bracket
+    const match = context.matchBefore(/(?:^|;|\[)\s*\w*$/);
     if (!match || (match.from === match.to && !context.explicit)) {
       return null;
     }
 
-    // Extract the matched word (after the start of line or last semicolon)
-    const wordMatch = match.text.match(/(?:^|;)\s*(\w*)$/);
-    const word = wordMatch ? wordMatch[1] : "";
-    const from = match.to - word.length;
-
-    const applicableTokenTypes =
-      ScenarioToTokenTypes[ContextScenarioType.Statement];
-
-    return createCompletions(
-      completionIndex,
-      context.pos,
-      applicableTokenTypes,
-      word,
-      from,
-    );
-  };
-}
-
-export function createOpeningNamespaceCompletionSource(
-  completionIndex: ASTCompletionIndex,
-): CompletionSource {
-  return (context: CompletionContext): CompletionResult | null => {
-    // This source triggers when the user types an opening square bracket '['.
-
-    // Match word at the beginning of a square bracket or after semicolon within brackets
-    const match = context.matchBefore(/\[(?:[^[\]]*;)?\s*\w*/);
-    if (!match || (match.from === match.to && !context.explicit)) {
-      return null;
-    }
-
-    // Extract the matched word (after the start of bracket or last semicolon)
-    const wordMatch = match.text.match(/(?:\[|;)\s*(\w*)$/);
+    // Extract the matched word (after the start of line, last semicolon, or opening bracket)
+    const wordMatch = match.text.match(/(?:^|;|\[)\s*(\w*)$/);
     const word = wordMatch ? wordMatch[1] : "";
     const from = match.to - word.length;
 
@@ -526,7 +496,6 @@ export function getAllDynamicCompletionSources(
     createAssignmentRhsCompletionSource,
     createCallCompletionSource,
     createStyleCompletionSource,
-    createOpeningNamespaceCompletionSource,
     createStatementCompletionSource,
   ];
   return sources.map((sourceFn) => sourceFn(completionIndex));
