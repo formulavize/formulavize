@@ -546,8 +546,8 @@ describe("autocompleter", () => {
       expect(result.from).toBe(0);
       expect(result.options).toHaveLength(2);
       expect(result.options).toEqual([
-        { label: "ns.x", type: TokenType.Variable },
-        { label: "ns.xyz", type: TokenType.Variable },
+        { label: "ns.x", apply: "x", type: TokenType.Variable },
+        { label: "ns.xyz", apply: "xyz", type: TokenType.Variable },
       ]);
     });
 
@@ -565,6 +565,7 @@ describe("autocompleter", () => {
       expect(result.options).toHaveLength(1);
       expect(result.options[0]).toEqual({
         label: "ns.xyz",
+        apply: "xyz",
         type: TokenType.Variable,
       });
     });
@@ -766,6 +767,7 @@ describe("autocompleter", () => {
       expect(result!.from).toBe(119); // 120 - 1 ("s")
       expect(result!.options).toContainEqual({
         label: "math.sin",
+        apply: "sin",
         type: TokenType.Variable,
       });
     });
@@ -777,6 +779,7 @@ describe("autocompleter", () => {
       expect(result).toBeTruthy();
       expect(result!.options).toContainEqual({
         label: "math.cos",
+        apply: "cos",
         type: TokenType.Variable,
       });
     });
@@ -790,14 +793,17 @@ describe("autocompleter", () => {
       expect(result!.options).toHaveLength(3);
       expect(result!.options).toContainEqual({
         label: "math.sin",
+        apply: "sin",
         type: TokenType.Variable,
       });
       expect(result!.options).toContainEqual({
         label: "math.cos",
+        apply: "cos",
         type: TokenType.Variable,
       });
       expect(result!.options).toContainEqual({
         label: "math.trig",
+        apply: "trig",
         type: TokenType.Namespace,
       });
     });
@@ -837,6 +843,7 @@ describe("autocompleter", () => {
       expect(result).toBeTruthy();
       expect(result!.options).toContainEqual({
         label: "math.sin",
+        apply: "sin",
         type: TokenType.Variable,
       });
     });
@@ -846,10 +853,11 @@ describe("autocompleter", () => {
       const result = await runSource(source, context);
 
       expect(result).toBeTruthy();
-      // createQualifiedVariableCompletionSource uses match.from as-is.
-      expect(result!.from).toBe(125); // 130 - 5 ("math.")
+      // createQualifiedVariableCompletionSource uses match.to - partialVariable.length
+      expect(result!.from).toBe(130); // 130 - 0 ("")
       expect(result!.options).toContainEqual({
         label: "math.cos",
+        apply: "cos",
         type: TokenType.Variable,
       });
     });
@@ -902,6 +910,7 @@ describe("autocompleter", () => {
       expect(result!.options).toHaveLength(1);
       expect(result!.options[0]).toEqual({
         label: "colors.red",
+        apply: "red",
         type: TokenType.StyleTag,
       });
     });
@@ -920,10 +929,12 @@ describe("autocompleter", () => {
       expect(result!.options).toHaveLength(2);
       expect(result!.options).toContainEqual({
         label: "colors.red",
+        apply: "red",
         type: TokenType.StyleTag,
       });
       expect(result!.options).toContainEqual({
         label: "colors.blue",
+        apply: "blue",
         type: TokenType.StyleTag,
       });
     });
@@ -974,6 +985,7 @@ describe("autocompleter", () => {
       expect(result!.options).toHaveLength(1);
       expect(result!.options[0]).toEqual({
         label: "colors.red",
+        apply: "red",
         type: TokenType.StyleTag,
       });
     });
@@ -998,10 +1010,12 @@ describe("autocompleter", () => {
       expect(result!.options).toHaveLength(2);
       expect(result!.options).toContainEqual({
         label: "colors.red",
+        apply: "red",
         type: TokenType.StyleTag,
       });
       expect(result!.options).toContainEqual({
         label: "colors.blue",
+        apply: "blue",
         type: TokenType.StyleTag,
       });
     });
