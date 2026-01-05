@@ -105,6 +105,15 @@ describe("ASTCompletionIndex", () => {
       const scenario = completionIndex.getContextScenarioAt(100);
       expect(scenario).toBeNull();
     });
+
+    test("returns scenario from nested namespace", () => {
+      const scenario = completionIndex.getContextScenarioAt(50);
+      expect(scenario).toEqual({
+        type: ContextScenarioType.QualifiedName,
+        from: 45,
+        to: 55,
+      });
+    });
   });
 
   describe("getNamespaceAt", () => {

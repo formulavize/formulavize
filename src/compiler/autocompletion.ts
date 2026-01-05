@@ -94,7 +94,14 @@ export class ASTCompletionIndex {
     const scenario = this.contextScenarios.find(
       (s) => s.from <= position && s.to >= position,
     );
-    return scenario || null;
+    if (scenario) return scenario;
+
+    const nsInfo = this.getNamespaceAt(position);
+    if (nsInfo) {
+      return nsInfo.completionIndex.getContextScenarioAt(position);
+    }
+
+    return null;
   }
 
   getNamespaceAt(position: number): NamespaceInfo | null {

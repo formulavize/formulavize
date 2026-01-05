@@ -198,10 +198,23 @@ export function makeASTCompletionIndex(
 ): ASTCompletionIndex {
   const tokenRecords = statements.flatMap(makeTokenRecords);
   const contextScenarios = statements.flatMap(makeContextScenarios);
-  const namespaceInfos = statements
-    .filter((stmt) => stmt.Type === NodeType.Namespace)
-    .map((stmt) => makeNamespaceInfo(stmt as NamespaceTreeNode))
-    .filter(Boolean) as NamespaceInfo[];
+
+  const namespaceInfos = statements.flatMap((stmt) =>
+    match(stmt.Type)
+      .with(NodeType.Namespace, () => {
+        const nsInfo = makeNamespaceInfo(stmt as NamespaceTreeNode);
+        return nsInfo ? [nsInfo] : [];
+      })
+      .with(NodeType.Assignment, () => {
+        const assignment = stmt as AssignmentTreeNode;
+        if (assignment.Rhs?.Type === NodeType.Namespace) {
+          const nsInfo = makeNamespaceInfo(assignment.Rhs as NamespaceTreeNode);
+          return nsInfo ? [nsInfo] : [];
+        }
+        return [];
+      })
+      .otherwise(() => []),
+  );
 
   return new ASTCompletionIndex(tokenRecords, contextScenarios, namespaceInfos);
 }
