@@ -66,25 +66,72 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
     .with(NodeType.Assignment, () => {
       const assignmentNode = statement as AssignmentTreeNode;
       if (!assignmentNode.Rhs?.Position) return [];
-      return [
-        {
-          type: ContextScenarioType.ValueName,
-          from: assignmentNode.Rhs.Position.from,
-          to: assignmentNode.Rhs.Position.to,
-        },
-      ];
+
+      const scenarios: ContextScenario[] = [];
+
+      // Add specific scenarios from RHS if available (e.g. Call args/styling)
+      if (
+        assignmentNode.Rhs.Type === NodeType.Call ||
+        assignmentNode.Rhs.Type === NodeType.Namespace
+      ) {
+        scenarios.push(
+          ...makeContextScenarios(assignmentNode.Rhs as StatementTreeNode),
+        );
+      }
+
+      // Determine the end of the "ValueName" context for the RHS itself.
+      // If it's a Call or Namespace, we only want to complete the name,
+      // so we stop at the args or styling to avoid shadowing inner scenarios.
+      let valueNameEnd = assignmentNode.Rhs.Position.to;
+
+      if (assignmentNode.Rhs.Type === NodeType.Call) {
+        const callNode = assignmentNode.Rhs as CallTreeNode;
+        if (callNode.ArgList?.Position) {
+          valueNameEnd = callNode.ArgList.Position.from;
+        } else if (callNode.Styling?.Position) {
+          valueNameEnd = callNode.Styling.Position.from;
+        }
+      } else if (assignmentNode.Rhs.Type === NodeType.Namespace) {
+        const nsNode = assignmentNode.Rhs as NamespaceTreeNode;
+        if (nsNode.StatementList?.Position) {
+          valueNameEnd = nsNode.StatementList.Position.from;
+        } else if (nsNode.ArgList?.Position) {
+          valueNameEnd = nsNode.ArgList.Position.from;
+        } else if (nsNode.Styling?.Position) {
+          valueNameEnd = nsNode.Styling.Position.from;
+        }
+      }
+
+      // Add blanket ValueName scenario for the whole RHS
+      scenarios.push({
+        type: ContextScenarioType.ValueName,
+        from: assignmentNode.Rhs.Position.from,
+        to: valueNameEnd,
+      });
+
+      return scenarios;
     })
     .with(NodeType.Call, () => {
       const callNode = statement as CallTreeNode;
-      const argsPosition = callNode.ArgList?.Position;
-      if (!argsPosition) return [];
-      return [
-        {
+      const scenarios: ContextScenario[] = [];
+
+      if (callNode.ArgList?.Position) {
+        scenarios.push({
           type: ContextScenarioType.ValueName,
-          from: argsPosition.from + 1,
-          to: argsPosition.to - 1,
-        },
-      ];
+          from: callNode.ArgList.Position.from + 1,
+          to: callNode.ArgList.Position.to - 1,
+        });
+      }
+
+      if (callNode.Styling?.Position) {
+        scenarios.push({
+          type: ContextScenarioType.StyleArgList,
+          from: callNode.Styling.Position.from + 1,
+          to: callNode.Styling.Position.to - 1,
+        });
+      }
+
+      return scenarios;
     })
     .with(NodeType.NamedStyle, () => {
       const namedStyleNode = statement as NamedStyleTreeNode;
