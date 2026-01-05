@@ -241,6 +241,46 @@ describe("makeASTCompletionIndex captures context scenarios", () => {
 
     expect(index.contextScenarios).toEqual([]);
   });
+
+  test("creates context scenario for call styling", () => {
+    const styling = new Style(new Map(), [], pos(15, 25));
+    const callNode = new Call("testFunc", null, styling, pos(0, 30));
+    const statements = [callNode];
+
+    const index = makeASTCompletionIndex(statements);
+
+    expect(index.contextScenarios).toHaveLength(1);
+    expect(index.contextScenarios[0]).toEqual({
+      type: ContextScenarioType.StyleArgList,
+      from: 16, // styling.from + 1
+      to: 24, // styling.to - 1
+    });
+  });
+
+  test("creates nested context scenarios for assignment with call RHS", () => {
+    const styling = new Style(new Map(), [], pos(20, 30));
+    const callNode = new Call("testFunc", null, styling, pos(10, 35));
+    const varNode = new LocalVariable("myVar");
+    const assignmentNode = new Assignment([varNode], callNode, pos(0, 40));
+    const statements = [assignmentNode];
+
+    const index = makeASTCompletionIndex(statements);
+
+    // Should have both ValueName (blanket for RHS) and StyleArgList (from Call)
+    expect(index.contextScenarios).toHaveLength(2);
+
+    expect(index.contextScenarios).toContainEqual({
+      type: ContextScenarioType.ValueName,
+      from: 10, // callNode.from
+      to: 20, // styling.from (clamped)
+    });
+
+    expect(index.contextScenarios).toContainEqual({
+      type: ContextScenarioType.StyleArgList,
+      from: 21, // styling.from + 1
+      to: 29, // styling.to - 1
+    });
+  });
 });
 
 describe("makeASTCompletionIndex captures namespaces", () => {
