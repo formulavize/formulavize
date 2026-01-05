@@ -9,9 +9,7 @@ import {
   createNamespacedCompletions,
   getEndNamespace,
   resolveEndNamespace,
-  createOpeningQualifiedVariableCompletionSource,
   createQualifiedVariableCompletionSource,
-  createOpeningQualifiedStyleCompletionSource,
   createQualifiedStyleCompletionSource,
   getAllDynamicCompletionSources,
 } from "src/compiler/autocompleter";
@@ -35,7 +33,7 @@ function createMockContext(
     explicit,
     matchBefore: (pattern: RegExp) => {
       // In CodeMirror, `pos` is an absolute document position.
-      // These tests often pass only a short snippet that ends at the cursor,
+      // These tests often pass a short snippet that ends at the cursor,
       // so we left-pad the snippet to make `textBeforeCursor.length === pos`.
       const textBeforeCursor =
         text.length >= pos
@@ -708,75 +706,6 @@ describe("autocompleter", () => {
     });
   });
 
-  describe("createOpeningQualifiedVariableCompletionSource", () => {
-    let source: CompletionSource;
-
-    beforeEach(() => {
-      source = createOpeningQualifiedVariableCompletionSource(completionIndex);
-    });
-
-    test("completes qualified variables after opening parenthesis", async () => {
-      const context = createMockContext(120, "func(math.s");
-      const result = await runSource(source, context);
-
-      expect(result).toBeTruthy();
-      expect(result!.from).toBe(119); // 120 - 1 ("s")
-      expect(result!.options).toContainEqual({
-        label: "math.sin",
-        apply: "sin",
-        type: TokenType.Variable,
-      });
-    });
-
-    test("handles qualified names after comma", async () => {
-      const context = createMockContext(120, "func(a, math.co");
-      const result = await runSource(source, context);
-
-      expect(result).toBeTruthy();
-      expect(result!.options).toContainEqual({
-        label: "math.cos",
-        apply: "cos",
-        type: TokenType.Variable,
-      });
-    });
-
-    test("returns completions when qualified name ends with a dot", async () => {
-      const context = createMockContext(120, "func(math.");
-      const result = await runSource(source, context);
-
-      expect(result).toBeTruthy();
-      expect(result!.from).toBe(120);
-      expect(result!.options).toHaveLength(3);
-      expect(result!.options).toContainEqual({
-        label: "math.sin",
-        apply: "sin",
-        type: TokenType.Variable,
-      });
-      expect(result!.options).toContainEqual({
-        label: "math.cos",
-        apply: "cos",
-        type: TokenType.Variable,
-      });
-      expect(result!.options).toContainEqual({
-        label: "math.trig",
-        apply: "trig",
-        type: TokenType.Namespace,
-      });
-    });
-
-    test("returns null for unqualified names", async () => {
-      const context = createMockContext(10, "func(x");
-      const result = await runSource(source, context);
-      expect(result).toBeNull();
-    });
-
-    test("returns null when namespace cannot be resolved", async () => {
-      const context = createMockContext(120, "func(unknown.s");
-      const result = await runSource(source, context);
-      expect(result).toBeNull();
-    });
-  });
-
   describe("createQualifiedVariableCompletionSource", () => {
     let source: CompletionSource;
 
@@ -835,68 +764,64 @@ describe("autocompleter", () => {
       const result = await runSource(source, context);
       expect(result).toBeNull();
     });
-  });
 
-  describe("createOpeningQualifiedStyleCompletionSource", () => {
-    let source: CompletionSource;
-    let indexWithStyles: ASTCompletionIndex;
-
-    beforeEach(() => {
-      // Create a namespace with style tags
-      const styleNamespace = new ASTCompletionIndex([
-        { type: TokenType.StyleTag, value: "red", endPosition: 70 },
-        { type: TokenType.StyleTag, value: "blue", endPosition: 75 },
-      ]);
-
-      indexWithStyles = new ASTCompletionIndex(tokenInfo, contextScenarios, [
-        {
-          name: "colors",
-          completionIndex: styleNamespace,
-          startPosition: 50,
-          endPosition: 100,
-        },
-      ]);
-      source = createOpeningQualifiedStyleCompletionSource(indexWithStyles);
-    });
-
-    test("completes qualified style tags in curly braces", async () => {
-      const context = createMockContext(120, "{#colors.re");
-      const result = await runSource(source, context);
-      expect(result).toBeTruthy();
-      expect(result!.options).toHaveLength(1);
-      expect(result!.options[0]).toEqual({
-        label: "colors.red",
-        apply: "red",
-        type: TokenType.StyleTag,
-      });
-    });
-
-    test("returns null for unqualified style names", async () => {
-      const context = createMockContext(10, "{#red");
-      const result = await runSource(source, context);
-      expect(result).toBeNull(); // No dot, so not qualified
-    });
-
-    test("returns completions when qualified style ends with a dot", async () => {
-      const context = createMockContext(120, "{#colors.");
+    test("completes qualified variables after opening parenthesis (fallback)", async () => {
+      const context = createMockContext(120, "func(math.s");
       const result = await runSource(source, context);
 
       expect(result).toBeTruthy();
-      expect(result!.options).toHaveLength(2);
+      expect(result!.from).toBe(119); // 120 - 1 ("s")
       expect(result!.options).toContainEqual({
-        label: "colors.red",
-        apply: "red",
-        type: TokenType.StyleTag,
-      });
-      expect(result!.options).toContainEqual({
-        label: "colors.blue",
-        apply: "blue",
-        type: TokenType.StyleTag,
+        label: "math.sin",
+        apply: "sin",
+        type: TokenType.Variable,
       });
     });
 
-    test("returns null when style namespace cannot be resolved", async () => {
-      const context = createMockContext(120, "{#unknown.re");
+    test("handles qualified names after comma (fallback)", async () => {
+      const context = createMockContext(120, "func(a, math.co");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.options).toContainEqual({
+        label: "math.cos",
+        apply: "cos",
+        type: TokenType.Variable,
+      });
+    });
+
+    test("returns completions when qualified name ends with a dot (fallback)", async () => {
+      const context = createMockContext(120, "func(math.");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.from).toBe(120);
+      expect(result!.options).toHaveLength(3);
+      expect(result!.options).toContainEqual({
+        label: "math.sin",
+        apply: "sin",
+        type: TokenType.Variable,
+      });
+      expect(result!.options).toContainEqual({
+        label: "math.cos",
+        apply: "cos",
+        type: TokenType.Variable,
+      });
+      expect(result!.options).toContainEqual({
+        label: "math.trig",
+        apply: "trig",
+        type: TokenType.Namespace,
+      });
+    });
+
+    test("returns null for unqualified names (fallback)", async () => {
+      const context = createMockContext(10, "func(x");
+      const result = await runSource(source, context);
+      expect(result).toBeNull();
+    });
+
+    test("returns null when namespace cannot be resolved (fallback)", async () => {
+      const context = createMockContext(120, "func(unknown.s");
       const result = await runSource(source, context);
       expect(result).toBeNull();
     });
@@ -991,6 +916,48 @@ describe("autocompleter", () => {
     test("returns null for unqualified style names", () => {
       const context = createMockContext(160, "#red");
       const result = source(context);
+      expect(result).toBeNull();
+    });
+
+    test("completes qualified style tags in curly braces (fallback)", async () => {
+      const context = createMockContext(120, "{#colors.re");
+      const result = await runSource(source, context);
+      expect(result).toBeTruthy();
+      expect(result!.options).toHaveLength(1);
+      expect(result!.options[0]).toEqual({
+        label: "colors.red",
+        apply: "red",
+        type: TokenType.StyleTag,
+      });
+    });
+
+    test("returns null for unqualified style names (fallback)", async () => {
+      const context = createMockContext(10, "{#red");
+      const result = await runSource(source, context);
+      expect(result).toBeNull(); // No dot, so not qualified
+    });
+
+    test("returns completions when qualified style ends with a dot (fallback)", async () => {
+      const context = createMockContext(120, "{#colors.");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.options).toHaveLength(2);
+      expect(result!.options).toContainEqual({
+        label: "colors.red",
+        apply: "red",
+        type: TokenType.StyleTag,
+      });
+      expect(result!.options).toContainEqual({
+        label: "colors.blue",
+        apply: "blue",
+        type: TokenType.StyleTag,
+      });
+    });
+
+    test("returns null when style namespace cannot be resolved (fallback)", async () => {
+      const context = createMockContext(120, "{#unknown.re");
+      const result = await runSource(source, context);
       expect(result).toBeNull();
     });
   });
