@@ -264,86 +264,47 @@ export function resolveEndNamespace(
   return targetCompletionIndex;
 }
 
-export function createOpeningQualifiedVariableCompletionSource(
-  completionIndex: ASTCompletionIndex,
-): CompletionSource {
-  return (context: CompletionContext): CompletionResult | null => {
-    // This source triggers when the user types an opening parenthesis '(' with qualified names.
-
-    // Match qualified variable names after an open bracket or after a comma
-    const match = context.matchBefore(
-      /\((?:[^,()]*,\s*)*\w+(?:\.\w*)*|,\s*\w+(?:\.\w*)*/,
-    );
-    if (!match || (match.from === match.to && !context.explicit)) {
-      return null;
-    }
-
-    // Find the last separator (either '(' or ',') and extract the qualified name after it
-    const separatorMatch = match.text.includes(",")
-      ? /,\s*(\w+(?:\.\w*)*)$/.exec(match.text)
-      : /\(\s*(\w+(?:\.\w*)*)$/.exec(match.text);
-
-    if (!separatorMatch) {
-      return null;
-    }
-
-    const qualifiedName = separatorMatch[1];
-    const parts = qualifiedName.split(".");
-
-    // If there's no dot, this isn't a qualified name - let other completion sources handle it
-    if (parts.length < 2) {
-      return null;
-    }
-
-    const namespacePath = parts.slice(0, -1);
-    const partialVariable = parts[parts.length - 1];
-
-    const endNamespace = resolveEndNamespace(
-      completionIndex,
-      namespacePath,
-      context.pos,
-    );
-    if (!endNamespace) {
-      return null;
-    }
-
-    // Filter for variables and namespaces that match the partial name
-    const applicableTokenTypes =
-      ScenarioToTokenTypes[ContextScenarioType.QualifiedName];
-
-    const from = match.to - partialVariable.length;
-
-    return createNamespacedCompletions(
-      endNamespace,
-      context.pos,
-      applicableTokenTypes,
-      namespacePath.join(".") + ".",
-      partialVariable,
-      from,
-    );
-  };
-}
-
 export function createQualifiedVariableCompletionSource(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
-    // Allow completions in ValueName contexts only
     const contextScenario = completionIndex.getContextScenarioAt(context.pos);
+
+    let qualifiedName = "";
+    let matchTo = context.pos;
+
     if (
-      !contextScenario ||
-      contextScenario.type !== ContextScenarioType.ValueName
+      contextScenario &&
+      contextScenario.type === ContextScenarioType.ValueName
     ) {
+      // Match qualified variable names: word characters separated by dots
+      const match = context.matchBefore(/\w+(?:\.\w*)*/);
+      if (match && (match.from !== match.to || context.explicit)) {
+        qualifiedName = match.text;
+        matchTo = match.to;
+      }
+    } else if (!contextScenario) {
+      // Fallback: Match qualified variable names after an open bracket or after a comma
+      const match = context.matchBefore(
+        /\((?:[^,()]*,\s*)*\w+(?:\.\w*)*|,\s*\w+(?:\.\w*)*/,
+      );
+      if (match && (match.from !== match.to || context.explicit)) {
+        // Find the last separator (either '(' or ',') and extract the qualified name after it
+        const separatorMatch = match.text.includes(",")
+          ? /,\s*(\w+(?:\.\w*)*)$/.exec(match.text)
+          : /\(\s*(\w+(?:\.\w*)*)$/.exec(match.text);
+
+        if (separatorMatch) {
+          qualifiedName = separatorMatch[1];
+          matchTo = match.to;
+        }
+      }
+    }
+
+    if (!qualifiedName) {
       return null;
     }
 
-    // Match qualified variable names: word characters separated by dots
-    const match = context.matchBefore(/\w+(?:\.\w*)*/);
-    if (!match || (match.from === match.to && !context.explicit)) {
-      return null;
-    }
-
-    const qualifiedName = match.text;
     const parts = qualifiedName.split(".");
 
     // If there's no dot, this isn't a qualified name
@@ -373,60 +334,7 @@ export function createQualifiedVariableCompletionSource(
       applicableTokenTypes,
       namespacePath.join(".") + ".",
       partialVariable,
-      match.to - partialVariable.length,
-    );
-  };
-}
-
-export function createOpeningQualifiedStyleCompletionSource(
-  completionIndex: ASTCompletionIndex,
-): CompletionSource {
-  return (context: CompletionContext): CompletionResult | null => {
-    // This source triggers when the user types an opening curly bracket '{' with qualified names.
-
-    // Match qualified style names within curly brackets
-    const match = context.matchBefore(/\{[^{}]*#\w+(?:\.\w*)*/);
-    if (!match || (match.from === match.to && !context.explicit)) {
-      return null;
-    }
-
-    // Find the hashtag and extract the qualified name after it
-    const hashtagMatch = /#(\w+(?:\.\w*)*)$/.exec(match.text);
-    if (!hashtagMatch) {
-      return null;
-    }
-
-    const qualifiedName = hashtagMatch[1];
-    const parts = qualifiedName.split(".");
-
-    // If there's no dot, this isn't a qualified name - let other completion sources handle it
-    if (parts.length < 2) {
-      return null;
-    }
-
-    const namespacePath = parts.slice(0, -1);
-    const partialStyle = parts[parts.length - 1];
-
-    const endNamespace = resolveEndNamespace(
-      completionIndex,
-      namespacePath,
-      context.pos,
-    );
-    if (!endNamespace) {
-      return null;
-    }
-
-    // Filter for styles and namespaces that match the partial name
-    const applicableTokenTypes =
-      ScenarioToTokenTypes[ContextScenarioType.StyleArgList];
-
-    return createNamespacedCompletions(
-      endNamespace,
-      context.pos,
-      applicableTokenTypes,
-      namespacePath.join(".") + ".",
-      partialStyle,
-      match.to - partialStyle.length,
+      matchTo - partialVariable.length,
     );
   };
 }
@@ -435,22 +343,38 @@ export function createQualifiedStyleCompletionSource(
   completionIndex: ASTCompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
-    // Allow completions in StyleArgList contexts only
     const contextScenario = completionIndex.getContextScenarioAt(context.pos);
+
+    let qualifiedName = "";
+    let matchTo = context.pos;
+
     if (
-      !contextScenario ||
-      contextScenario.type !== ContextScenarioType.StyleArgList
+      contextScenario &&
+      contextScenario.type === ContextScenarioType.StyleArgList
     ) {
+      // Match qualified style names: word characters separated by dots, starting with a hashtag
+      const match = context.matchBefore(/#\w+(?:\.\w*)*/);
+      if (match && (match.from !== match.to || context.explicit)) {
+        qualifiedName = match.text.slice(1); // Remove the leading '#'
+        matchTo = match.to;
+      }
+    } else if (!contextScenario) {
+      // Fallback: Match qualified style names within curly brackets
+      const match = context.matchBefore(/\{[^{}]*#\w+(?:\.\w*)*/);
+      if (match && (match.from !== match.to || context.explicit)) {
+        // Find the hashtag and extract the qualified name after it
+        const hashtagMatch = /#(\w+(?:\.\w*)*)$/.exec(match.text);
+        if (hashtagMatch) {
+          qualifiedName = hashtagMatch[1];
+          matchTo = match.to;
+        }
+      }
+    }
+
+    if (!qualifiedName) {
       return null;
     }
 
-    // Match qualified style names: word characters separated by dots, starting with a hashtag
-    const match = context.matchBefore(/#\w+(?:\.\w*)*/);
-    if (!match || (match.from === match.to && !context.explicit)) {
-      return null;
-    }
-
-    const qualifiedName = match.text.slice(1); // Remove the leading '#'
     const parts = qualifiedName.split(".");
 
     // If there's no dot, this isn't a qualified name
@@ -480,7 +404,7 @@ export function createQualifiedStyleCompletionSource(
       applicableTokenTypes,
       namespacePath.join(".") + ".",
       partialStyle,
-      match.to - partialStyle.length,
+      matchTo - partialStyle.length,
     );
   };
 }
@@ -490,8 +414,6 @@ export function getAllDynamicCompletionSources(
 ): CompletionSource[] {
   const sources = [
     createQualifiedVariableCompletionSource,
-    createOpeningQualifiedVariableCompletionSource,
-    createOpeningQualifiedStyleCompletionSource,
     createQualifiedStyleCompletionSource,
     createAssignmentRhsCompletionSource,
     createCallCompletionSource,
