@@ -54,13 +54,10 @@ export function createStatementCompletionSource(
     const word = wordMatch ? wordMatch[1] : "";
     const from = match.to - word.length;
 
-    const applicableTokenTypes =
-      ScenarioToTokenTypes[ContextScenarioType.Statement];
-
     return createCompletions(
       completionIndex,
       context.pos,
-      applicableTokenTypes,
+      ScenarioToTokenTypes[ContextScenarioType.Statement],
       word,
       from,
     );
@@ -82,13 +79,10 @@ export function createAssignmentRhsCompletionSource(
     const from = matchStart ? match.from + matchStart[0].length : match.from;
     const word = match.text.slice(from - match.from);
 
-    const applicableTokenTypes =
-      ScenarioToTokenTypes[ContextScenarioType.ValueName];
-
     return createCompletions(
       completionIndex,
       context.pos,
-      applicableTokenTypes,
+      ScenarioToTokenTypes[ContextScenarioType.ValueName],
       word,
       from,
     );
@@ -175,13 +169,10 @@ export function createStyleCompletionSource(
     const word = hashtagMatch[1];
     const from = match.to - word.length;
 
-    const applicableTokenTypes =
-      ScenarioToTokenTypes[ContextScenarioType.StyleArgList];
-
     return createCompletions(
       completionIndex,
       context.pos,
-      applicableTokenTypes,
+      ScenarioToTokenTypes[ContextScenarioType.StyleArgList],
       word,
       from,
     );
@@ -325,13 +316,10 @@ export function createQualifiedVariableCompletionSource(
     }
 
     // Filter for variables and namespaces that match the partial name
-    const applicableTokenTypes =
-      ScenarioToTokenTypes[ContextScenarioType.QualifiedName];
-
     return createNamespacedCompletions(
       endNamespace,
       context.pos,
-      applicableTokenTypes,
+      ScenarioToTokenTypes[ContextScenarioType.QualifiedName],
       namespacePath.join(".") + ".",
       partialVariable,
       matchTo - partialVariable.length,
@@ -395,13 +383,10 @@ export function createQualifiedStyleCompletionSource(
     }
 
     // Filter for styles and namespaces that match the partial name
-    const applicableTokenTypes =
-      ScenarioToTokenTypes[ContextScenarioType.StyleArgList];
-
     return createNamespacedCompletions(
       endNamespace,
       context.pos,
-      applicableTokenTypes,
+      ScenarioToTokenTypes[ContextScenarioType.StyleArgList],
       namespacePath.join(".") + ".",
       partialStyle,
       matchTo - partialStyle.length,
