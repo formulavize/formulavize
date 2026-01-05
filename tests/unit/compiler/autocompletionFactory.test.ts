@@ -365,6 +365,25 @@ describe("makeASTCompletionIndex captures namespaces", () => {
     expect(deepNamespaceInfo.completionIndex.tokens).toHaveLength(1);
     expect(deepNamespaceInfo.completionIndex.tokens[0].value).toBe("deepVar");
   });
+
+  test("captures namespaces from assignment RHS", () => {
+    const innerVar = new LocalVariable("innerVar");
+    const innerAssignment = new Assignment([innerVar], null, pos(30, 40));
+    const statementList = new StatementList([innerAssignment], pos(25, 45));
+    const namespaceNode = new Namespace("rhsNamespace", statementList);
+
+    const varNode = new LocalVariable("nsVar");
+    const assignmentNode = new Assignment([varNode], namespaceNode, pos(0, 50));
+
+    const statements = [assignmentNode];
+    const index = makeASTCompletionIndex(statements);
+
+    expect(index.namespaces).toHaveLength(1);
+    const nsInfo = index.namespaces[0];
+    expect(nsInfo.name).toBe("rhsNamespace");
+    expect(nsInfo.completionIndex.tokens).toHaveLength(1);
+    expect(nsInfo.completionIndex.tokens[0].value).toBe("innerVar");
+  });
 });
 
 describe("makeNamespaceInfo", () => {
