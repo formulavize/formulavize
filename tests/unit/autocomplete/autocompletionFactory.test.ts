@@ -3,7 +3,7 @@ import {
   makeASTCompletionIndex,
   makeNamespaceInfo,
   createASTCompletionIndex,
-} from "src/compiler/autocompletionFactory";
+} from "src/autocomplete/autocompletionFactory";
 import {
   RecipeTreeNode as Recipe,
   CallTreeNode as Call,
@@ -18,7 +18,10 @@ import {
   ValueListTreeNode as ValueList,
   StatementListTreeNode as StatementList,
 } from "src/compiler/ast";
-import { TokenType, ContextScenarioType } from "src/compiler/autocompletion";
+import {
+  TokenType,
+  ContextScenarioType,
+} from "src/autocomplete/autocompletion";
 import { Position } from "src/compiler/compilationErrors";
 
 // Helper function to create positions for testing
