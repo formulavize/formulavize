@@ -48,8 +48,8 @@ import {
 } from "@codemirror/view";
 
 import { fizLanguage } from "@formulavize/lang-fiz";
-import { ASTCompletionIndex } from "../compiler/autocompletion";
-import { getAllDynamicCompletionSources } from "../compiler/autocompleter";
+import { ASTCompletionIndex } from "../autocomplete/autocompletion";
+import { getAllDynamicCompletionSources } from "../autocomplete/autocompleter";
 
 export default defineComponent({
   name: "TextEditor",

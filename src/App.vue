@@ -71,8 +71,8 @@ import { Dag } from "./compiler/dag";
 import { Compiler } from "./compiler/driver";
 import { CompilationError } from "./compiler/compilationErrors";
 import { errorToDiagnostic, ErrorReporter } from "./compiler/errorReporter";
-import { ASTCompletionIndex } from "./compiler/autocompletion";
-import { createASTCompletionIndex } from "./compiler/autocompletionFactory";
+import { ASTCompletionIndex } from "./autocomplete/autocompletion";
+import { createASTCompletionIndex } from "./autocomplete/autocompletionFactory";
 // @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";

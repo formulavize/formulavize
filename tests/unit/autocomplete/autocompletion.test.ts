@@ -6,7 +6,7 @@ import {
   NamespaceInfo,
   ContextScenario,
   ASTCompletionIndex,
-} from "src/compiler/autocompletion";
+} from "src/autocomplete/autocompletion";
 
 describe("ASTCompletionIndex", () => {
   let tokenInfo: TokenInfo[];

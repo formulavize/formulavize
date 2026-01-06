@@ -8,7 +8,7 @@ import {
   NamedStyleTreeNode,
   StyleBindingTreeNode,
   NamespaceTreeNode,
-} from "./ast";
+} from "../compiler/ast";
 import {
   ASTCompletionIndex,
   TokenInfo,

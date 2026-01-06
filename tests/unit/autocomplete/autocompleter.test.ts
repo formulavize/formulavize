@@ -12,7 +12,7 @@ import {
   createQualifiedVariableCompletionSource,
   createQualifiedStyleCompletionSource,
   getAllDynamicCompletionSources,
-} from "src/compiler/autocompleter";
+} from "src/autocomplete/autocompleter";
 import {
   ASTCompletionIndex,
   ContextScenarioType,
@@ -20,7 +20,7 @@ import {
   TokenInfo,
   NamespaceInfo,
   ContextScenario,
-} from "src/compiler/autocompletion";
+} from "src/autocomplete/autocompletion";
 
 // Mock CompletionContext for testing
 function createMockContext(
