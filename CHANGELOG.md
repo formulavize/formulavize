@@ -1,5 +1,42 @@
 # Changelog
 
+## [1.6.0](https://github.com/formulavize/formulavize/compare/v1.5.0...v1.6.0) (2026-01-07)
+
+
+### Features
+
+* **autcompleter:** add qualified variable completions ([2845c42](https://github.com/formulavize/formulavize/commit/2845c4262f52fd47beac457bcd5fcd330deeda34))
+* **autocompleter:** add completion source for assignments ([0e91f81](https://github.com/formulavize/formulavize/commit/0e91f81e4540671ab3c06bbbfd60e88eb03b8efd))
+* **autocompleter:** add completion source for calls ([00c5f8b](https://github.com/formulavize/formulavize/commit/00c5f8bb1f904de4bf1cad68cbe0b4c7a49fa170))
+* **autocompleter:** add completion source for opening statements ([16cb604](https://github.com/formulavize/formulavize/commit/16cb6044ce175f486da6021616ceadc907664100))
+* **autocompleter:** add completion source for qualified styles ([3250cbc](https://github.com/formulavize/formulavize/commit/3250cbce84757993620f8efee932c27080c38ecc))
+* **autocompleter:** add namespaces to available tokens ([f2cd9a4](https://github.com/formulavize/formulavize/commit/f2cd9a4fc626c4148187742fe28204e36e9cd6a2))
+* **autocompleter:** add styletag completion source ([fb66513](https://github.com/formulavize/formulavize/commit/fb66513f54d89fea62425777c22eec7529e2bb84))
+* **autocompletion:** add autocomplete dump to debug mode ([6c3fd52](https://github.com/formulavize/formulavize/commit/6c3fd5229b3f4c95b984dfe13105e8c718fe3530))
+* **autocompletion:** add autocompletion within namespaces ([ec6448d](https://github.com/formulavize/formulavize/commit/ec6448dbd1de56ef7ac1f6cc82c9a4192ba2e6c6))
+* **autocompletion:** add ContextScenario for call statements ([e767e1a](https://github.com/formulavize/formulavize/commit/e767e1a990ef0d50899db1fb217173f61a224cbc))
+* **autocompletion:** add rudimentary autocomplete contextualization ([f4cc886](https://github.com/formulavize/formulavize/commit/f4cc886b8c789e3981fdee79d4d5678fdfd86376))
+* **autocompletion:** add rudimentary autocompletion ([71f49af](https://github.com/formulavize/formulavize/commit/71f49af4ad3136e844b99a3ca239234fc7775979))
+* **TextEditor:** add absolute offset to cursor tooltip ([fd3118b](https://github.com/formulavize/formulavize/commit/fd3118b2803e2053a44172fb10b1746d1fa2a981))
+* **TextEditor:** add cursor position tooltip in debug mode ([a6c30e5](https://github.com/formulavize/formulavize/commit/a6c30e54041c60bf040dfb44952e084dd3418835))
+* **TextEditor:** add text selection positions to cursor tooltip ([bf62c2e](https://github.com/formulavize/formulavize/commit/bf62c2e43a7976bfb9c35ca5c135b668952a48d9))
+
+
+### Bug Fixes
+
+* **autcompleter:** handle style completions on opening and new lines ([2835d23](https://github.com/formulavize/formulavize/commit/2835d23a8bd287a1cb652b6f425c1b5263eb249d))
+* **autocompleter:** acount for brackets in style context scenario ([6d608ed](https://github.com/formulavize/formulavize/commit/6d608ed4b681c243ee470e8d0315ab6a6264ea1e))
+* **autocompleter:** enable call completion beyond first argument ([f55650d](https://github.com/formulavize/formulavize/commit/f55650dd8ff852072a51f3038037c2a001769da1))
+* **autocompleter:** handle call arguments on opening and new lines ([617d481](https://github.com/formulavize/formulavize/commit/617d481c40b976416fc8cf14f1aa72b2c10a4952))
+* **autocompleter:** handle opening call lines with qualified vars ([78c386a](https://github.com/formulavize/formulavize/commit/78c386a935177587723c13ebc7af9fab2f4b68fa))
+* **autocompleter:** handle statement completions on namespace openings ([91d07ea](https://github.com/formulavize/formulavize/commit/91d07ea9e2842f14696fb6d3e8003b12052b0ec2))
+* **autocompleter:** prevent autocomplete from duplicating namespaces ([0a00d7c](https://github.com/formulavize/formulavize/commit/0a00d7c6706f0bc2d44aaec53ef80038b8fcdf5d))
+* **autocompleter:** resolve end namespaces starting from innermost ([031c5b6](https://github.com/formulavize/formulavize/commit/031c5b62c8fa41d0968ce748684edcb99d00c2c7))
+* **autocompletion:** autocompleting styles and vars in RHS namespaces ([57c77df](https://github.com/formulavize/formulavize/commit/57c77df32513e2e9ca13da09f9134a12a73c79d7))
+* **autocompletionFactory:** autcomplete styles for RHS calls ([cacac76](https://github.com/formulavize/formulavize/commit/cacac76736be4a2336ebab8a24051813819edf0f))
+* **autocompletionFactory:** set var token end position to end of assignment ([43aec78](https://github.com/formulavize/formulavize/commit/43aec784a83ee6b43c7da4591c1b6392af511242))
+* **ToolBar:** allow debug tabs behind toolbar to be selected ([54dfd46](https://github.com/formulavize/formulavize/commit/54dfd46ca4e1e70231e6d3f669816f407359bb09))
+
 ## [1.5.0](https://github.com/formulavize/formulavize/compare/v1.4.1...v1.5.0) (2025-08-17)
 
 
