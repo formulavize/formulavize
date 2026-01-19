@@ -91,6 +91,12 @@ export class ImportCacher {
     return compilation.DAG;
   }
 
+  async getCachedCompilation(
+    packageLocation: string,
+  ): Promise<Compilation | undefined> {
+    return this.cache[packageLocation];
+  }
+
   clearCache(): void {
     this.cache = {};
   }

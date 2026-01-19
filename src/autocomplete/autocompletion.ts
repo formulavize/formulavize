@@ -31,7 +31,7 @@ export interface TokenInfo {
 // A nestible namespace with its own completion index
 export interface NamespaceInfo {
   name: string;
-  completionIndex: ASTCompletionIndex;
+  completionIndex: CompletionIndex;
   startPosition: number;
   endPosition: number;
 }
@@ -59,7 +59,7 @@ export const ScenarioToTokenTypes: Record<
 // This is a simple implementation. There is room for optimization here using
 // binary search (since tokens are processed in order - enforce via test cases)
 // and tries for prefix matching.
-export class ASTCompletionIndex {
+export class CompletionIndex {
   readonly tokens: TokenInfo[];
   readonly contextScenarios: ContextScenario[];
   readonly namespaces: NamespaceInfo[];
@@ -110,8 +110,8 @@ export class ASTCompletionIndex {
     return this.namespaces.find(isNamespaceInRange) || null;
   }
 
-  getNestedCompletionIndexChainAt(position: number): ASTCompletionIndex[] {
-    const chain: ASTCompletionIndex[] = [];
+  getNestedCompletionIndexChainAt(position: number): CompletionIndex[] {
+    const chain: CompletionIndex[] = [];
     chain.push(this);
     let nsInfo = this.getNamespaceAt(position);
     while (nsInfo) {

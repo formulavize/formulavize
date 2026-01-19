@@ -5,14 +5,14 @@ import {
   TokenInfo,
   NamespaceInfo,
   ContextScenario,
-  ASTCompletionIndex,
+  CompletionIndex,
 } from "src/autocomplete/autocompletion";
 
-describe("ASTCompletionIndex", () => {
+describe("CompletionIndex", () => {
   let tokenInfo: TokenInfo[];
   let contextScenarios: ContextScenario[];
   let namespaces: NamespaceInfo[];
-  let completionIndex: ASTCompletionIndex;
+  let completionIndex: CompletionIndex;
 
   beforeEach(() => {
     tokenInfo = [
@@ -27,7 +27,7 @@ describe("ASTCompletionIndex", () => {
       { type: ContextScenarioType.Statement, from: 25, to: 35 },
     ];
 
-    const nestedCompletionIndex = new ASTCompletionIndex(
+    const nestedCompletionIndex = new CompletionIndex(
       [{ type: TokenType.Variable, value: "z", endPosition: 50 }],
       [{ type: ContextScenarioType.QualifiedName, from: 45, to: 55 }],
     );
@@ -41,7 +41,7 @@ describe("ASTCompletionIndex", () => {
       },
     ];
 
-    completionIndex = new ASTCompletionIndex(
+    completionIndex = new CompletionIndex(
       tokenInfo,
       contextScenarios,
       namespaces,
@@ -136,7 +136,7 @@ describe("ASTCompletionIndex", () => {
     });
 
     test("returns null when no namespaces exist", () => {
-      const emptyIndex = new ASTCompletionIndex();
+      const emptyIndex = new CompletionIndex();
       const namespace = emptyIndex.getNamespaceAt(50);
       expect(namespace).toBeNull();
     });
@@ -229,7 +229,7 @@ describe("ASTCompletionIndex", () => {
     });
 
     test("returns empty array when no tokens are available", () => {
-      const emptyIndex = new ASTCompletionIndex();
+      const emptyIndex = new CompletionIndex();
       const tokens = emptyIndex.getTokensAvailableAt(10);
       expect(tokens).toEqual([]);
     });

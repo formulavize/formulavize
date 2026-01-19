@@ -14,7 +14,7 @@ import {
   getAllDynamicCompletionSources,
 } from "src/autocomplete/autocompleter";
 import {
-  ASTCompletionIndex,
+  CompletionIndex,
   ContextScenarioType,
   TokenType,
   TokenInfo,
@@ -102,7 +102,7 @@ describe("autocompleter", () => {
   let tokenInfo: TokenInfo[];
   let contextScenarios: ContextScenario[];
   let namespaces: NamespaceInfo[];
-  let completionIndex: ASTCompletionIndex;
+  let completionIndex: CompletionIndex;
 
   beforeEach(() => {
     tokenInfo = [
@@ -121,7 +121,7 @@ describe("autocompleter", () => {
       { type: ContextScenarioType.StyleArgList, from: 90, to: 110 },
     ];
 
-    const nestedCompletionIndex = new ASTCompletionIndex(
+    const nestedCompletionIndex = new CompletionIndex(
       [
         { type: TokenType.Variable, value: "sin", endPosition: 70 },
         { type: TokenType.Variable, value: "cos", endPosition: 75 },
@@ -139,7 +139,7 @@ describe("autocompleter", () => {
       },
     ];
 
-    completionIndex = new ASTCompletionIndex(
+    completionIndex = new CompletionIndex(
       tokenInfo,
       contextScenarios,
       namespaces,
@@ -226,7 +226,7 @@ describe("autocompleter", () => {
         0,
       );
 
-      // "math" ends at 50, and ASTCompletionIndex.getTokensUpTo uses endPosition < position.
+      // "math" ends at 50, and CompletionIndex.getTokensUpTo uses endPosition < position.
       expect(result.options).toHaveLength(0);
     });
   });
@@ -535,7 +535,7 @@ describe("autocompleter", () => {
         0,
       );
 
-      // "x" ends at 10, and ASTCompletionIndex.getTokensUpTo uses endPosition < position.
+      // "x" ends at 10, and CompletionIndex.getTokensUpTo uses endPosition < position.
       expect(result.options).toEqual([]);
     });
   });
@@ -558,11 +558,11 @@ describe("autocompleter", () => {
 
     test("handles nested namespace path", () => {
       // Setup nested namespace in math namespace
-      const trigCompletionIndex = new ASTCompletionIndex([
+      const trigCompletionIndex = new CompletionIndex([
         { type: TokenType.Variable, value: "sin", endPosition: 85 },
       ]);
 
-      const mathWithNested = new ASTCompletionIndex(
+      const mathWithNested = new CompletionIndex(
         [],
         [],
         [
@@ -575,7 +575,7 @@ describe("autocompleter", () => {
         ],
       );
 
-      const rootWithNested = new ASTCompletionIndex(
+      const rootWithNested = new CompletionIndex(
         [],
         [],
         [
@@ -593,14 +593,14 @@ describe("autocompleter", () => {
     });
 
     test("selects the most recent namespace definition before the position", () => {
-      const firstMathIndex = new ASTCompletionIndex([
+      const firstMathIndex = new CompletionIndex([
         { type: TokenType.Variable, value: "old", endPosition: 10 },
       ]);
-      const secondMathIndex = new ASTCompletionIndex([
+      const secondMathIndex = new CompletionIndex([
         { type: TokenType.Variable, value: "new", endPosition: 10 },
       ]);
 
-      const root = new ASTCompletionIndex(
+      const root = new CompletionIndex(
         [],
         [],
         [
@@ -624,8 +624,8 @@ describe("autocompleter", () => {
     });
 
     test("returns null when position equals namespace endPosition", () => {
-      const nsIndex = new ASTCompletionIndex();
-      const root = new ASTCompletionIndex(
+      const nsIndex = new CompletionIndex();
+      const root = new CompletionIndex(
         [],
         [],
         [
@@ -664,14 +664,14 @@ describe("autocompleter", () => {
     });
 
     test("prefers the innermost completion index in the nested chain", () => {
-      const outerMathIndex = new ASTCompletionIndex([
+      const outerMathIndex = new CompletionIndex([
         { type: TokenType.Variable, value: "outer", endPosition: 10 },
       ]);
-      const innerMathIndex = new ASTCompletionIndex([
+      const innerMathIndex = new CompletionIndex([
         { type: TokenType.Variable, value: "inner", endPosition: 10 },
       ]);
 
-      const outer = new ASTCompletionIndex(
+      const outer = new CompletionIndex(
         [],
         [],
         [
@@ -683,7 +683,7 @@ describe("autocompleter", () => {
           },
         ],
       );
-      const inner = new ASTCompletionIndex(
+      const inner = new CompletionIndex(
         [],
         [],
         [
@@ -832,7 +832,7 @@ describe("autocompleter", () => {
 
     beforeEach(() => {
       // Create a namespace with style tags
-      const styleNamespace = new ASTCompletionIndex([
+      const styleNamespace = new CompletionIndex([
         { type: TokenType.StyleTag, value: "red", endPosition: 70 },
         { type: TokenType.StyleTag, value: "blue", endPosition: 75 },
       ]);
@@ -850,9 +850,7 @@ describe("autocompleter", () => {
             endPosition: 100,
           },
         ],
-        getNestedCompletionIndexChainAt: (): ASTCompletionIndex[] => [
-          mockIndex,
-        ],
+        getNestedCompletionIndexChainAt: (): CompletionIndex[] => [mockIndex],
       });
 
       source = createQualifiedStyleCompletionSource(mockIndex);
