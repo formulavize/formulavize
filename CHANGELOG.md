@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.7.0](https://github.com/formulavize/formulavize/compare/v1.6.0...v1.7.0) (2026-01-19)
+
+
+### Features
+
+* **autocomplete:** add imports to CompletionIndex ([e69c2e3](https://github.com/formulavize/formulavize/commit/e69c2e3946725c70be639c92d7b87e232977357e))
+
 ## [1.6.0](https://github.com/formulavize/formulavize/compare/v1.5.0...v1.6.0) (2026-01-07)
 
 
