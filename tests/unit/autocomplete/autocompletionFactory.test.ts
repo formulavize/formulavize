@@ -1,8 +1,8 @@
 import { describe, test, expect } from "vitest";
 import {
-  makeASTCompletionIndex,
+  makeCompletionIndex,
   makeNamespaceInfo,
-  createASTCompletionIndex,
+  createCompletionIndex,
 } from "src/autocomplete/autocompletionFactory";
 import {
   RecipeTreeNode as Recipe,
@@ -29,22 +29,22 @@ function pos(from: number, to: number): Position {
   return { from, to };
 }
 
-describe("makeASTCompletionIndex captures tokens", () => {
-  test("creates empty index for empty statements", () => {
+describe("makeCompletionIndex captures tokens", () => {
+  test("creates empty index for empty statements", async () => {
     const statements: Assignment[] = [];
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.tokens).toEqual([]);
     expect(index.contextScenarios).toEqual([]);
     expect(index.namespaces).toEqual([]);
   });
 
-  test("creates tokens from assignment statements", () => {
+  test("creates tokens from assignment statements", async () => {
     const varNode = new LocalVariable("myVar");
     const assignmentNode = new Assignment([varNode], null, pos(0, 10));
     const statements = [assignmentNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.tokens).toHaveLength(1);
     expect(index.tokens[0]).toEqual({
@@ -54,13 +54,13 @@ describe("makeASTCompletionIndex captures tokens", () => {
     });
   });
 
-  test("creates tokens from multiple variables in assignment", () => {
+  test("creates tokens from multiple variables in assignment", async () => {
     const var1 = new LocalVariable("var1");
     const var2 = new LocalVariable("var2");
     const assignmentNode = new Assignment([var1, var2], null, pos(0, 15));
     const statements = [assignmentNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.tokens).toHaveLength(2);
     expect(index.tokens[0]).toEqual({
@@ -75,12 +75,12 @@ describe("makeASTCompletionIndex captures tokens", () => {
     });
   });
 
-  test("creates tokens from named style statements", () => {
+  test("creates tokens from named style statements", async () => {
     const styleNode = new Style(new Map(), [], pos(5, 20));
     const namedStyleNode = new NamedStyle("myStyle", styleNode, pos(0, 25));
     const statements = [namedStyleNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.tokens).toHaveLength(1);
     expect(index.tokens[0]).toEqual({
@@ -90,7 +90,7 @@ describe("makeASTCompletionIndex captures tokens", () => {
     });
   });
 
-  test("creates tokens from style binding statements", () => {
+  test("creates tokens from style binding statements", async () => {
     const styleTagList = new StyleTagList([], pos(10, 20));
     const styleBindingNode = new StyleBinding(
       "keyword",
@@ -99,7 +99,7 @@ describe("makeASTCompletionIndex captures tokens", () => {
     );
     const statements = [styleBindingNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.tokens).toHaveLength(1);
     expect(index.tokens[0]).toEqual({
@@ -109,7 +109,7 @@ describe("makeASTCompletionIndex captures tokens", () => {
     });
   });
 
-  test("creates tokens from namespace statements", () => {
+  test("creates tokens from namespace statements", async () => {
     const statementList = new StatementList([], pos(10, 30));
     const namespaceNode = new Namespace(
       "myNamespace",
@@ -120,7 +120,7 @@ describe("makeASTCompletionIndex captures tokens", () => {
     );
     const statements = [namespaceNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.tokens).toHaveLength(1);
     expect(index.tokens[0]).toEqual({
@@ -130,25 +130,25 @@ describe("makeASTCompletionIndex captures tokens", () => {
     });
   });
 
-  test("ignores statements with unsupported node types", () => {
+  test("ignores statements with unsupported node types", async () => {
     // Create a call node which should not produce tokens in makeTokenRecords
     const callNode = new Call("testFunc", null, null, pos(0, 10));
     const statements = [callNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.tokens).toEqual([]);
   });
 });
 
-describe("makeASTCompletionIndex captures context scenarios", () => {
-  test("creates context scenario for assignment RHS", () => {
+describe("makeCompletionIndex captures context scenarios", () => {
+  test("creates context scenario for assignment RHS", async () => {
     const varNode = new LocalVariable("myVar");
     const rhsNode = new QualifiedVariable(["otherVar"], pos(15, 25));
     const assignmentNode = new Assignment([varNode], rhsNode, pos(0, 30));
     const statements = [assignmentNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.contextScenarios).toHaveLength(1);
     expect(index.contextScenarios[0]).toEqual({
@@ -158,12 +158,12 @@ describe("makeASTCompletionIndex captures context scenarios", () => {
     });
   });
 
-  test("creates context scenario for call arguments", () => {
+  test("creates context scenario for call arguments", async () => {
     const argList = new ValueList([], pos(10, 20));
     const callNode = new Call("testFunc", argList, null, pos(0, 25));
     const statements = [callNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.contextScenarios).toHaveLength(1);
     expect(index.contextScenarios[0]).toEqual({
@@ -173,12 +173,12 @@ describe("makeASTCompletionIndex captures context scenarios", () => {
     });
   });
 
-  test("creates context scenario for named style arguments", () => {
+  test("creates context scenario for named style arguments", async () => {
     const styleNode = new Style(new Map(), [], pos(15, 25));
     const namedStyleNode = new NamedStyle("myStyle", styleNode, pos(0, 30));
     const statements = [namedStyleNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.contextScenarios).toHaveLength(1);
     expect(index.contextScenarios[0]).toEqual({
@@ -188,7 +188,7 @@ describe("makeASTCompletionIndex captures context scenarios", () => {
     });
   });
 
-  test("creates context scenario for style binding", () => {
+  test("creates context scenario for style binding", async () => {
     const styleTagList = new StyleTagList([], pos(10, 20));
     const styleBindingNode = new StyleBinding(
       "keyword",
@@ -197,7 +197,7 @@ describe("makeASTCompletionIndex captures context scenarios", () => {
     );
     const statements = [styleBindingNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.contextScenarios).toHaveLength(1);
     expect(index.contextScenarios[0]).toEqual({
@@ -207,7 +207,7 @@ describe("makeASTCompletionIndex captures context scenarios", () => {
     });
   });
 
-  test("creates multiple context scenarios for namespace", () => {
+  test("creates multiple context scenarios for namespace", async () => {
     const argList = new ValueList([], pos(15, 25));
     const styling = new Style(new Map(), [], pos(30, 40));
     const statementList = new StatementList([], pos(45, 55));
@@ -220,7 +220,7 @@ describe("makeASTCompletionIndex captures context scenarios", () => {
     );
     const statements = [namespaceNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.contextScenarios).toHaveLength(2);
     expect(index.contextScenarios).toContainEqual({
@@ -235,22 +235,22 @@ describe("makeASTCompletionIndex captures context scenarios", () => {
     });
   });
 
-  test("handles statements with missing positions gracefully", () => {
+  test("handles statements with missing positions gracefully", async () => {
     const varNode = new LocalVariable("myVar");
     const assignmentNode = new Assignment([varNode], null); // No position
     const statements = [assignmentNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.contextScenarios).toEqual([]);
   });
 
-  test("creates context scenario for call styling", () => {
+  test("creates context scenario for call styling", async () => {
     const styling = new Style(new Map(), [], pos(15, 25));
     const callNode = new Call("testFunc", null, styling, pos(0, 30));
     const statements = [callNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.contextScenarios).toHaveLength(1);
     expect(index.contextScenarios[0]).toEqual({
@@ -260,14 +260,14 @@ describe("makeASTCompletionIndex captures context scenarios", () => {
     });
   });
 
-  test("creates nested context scenarios for assignment with call RHS", () => {
+  test("creates nested context scenarios for assignment with call RHS", async () => {
     const styling = new Style(new Map(), [], pos(20, 30));
     const callNode = new Call("testFunc", null, styling, pos(10, 35));
     const varNode = new LocalVariable("myVar");
     const assignmentNode = new Assignment([varNode], callNode, pos(0, 40));
     const statements = [assignmentNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     // Should have both ValueName (blanket for RHS) and StyleArgList (from Call)
     expect(index.contextScenarios).toHaveLength(2);
@@ -286,8 +286,8 @@ describe("makeASTCompletionIndex captures context scenarios", () => {
   });
 });
 
-describe("makeASTCompletionIndex captures namespaces", () => {
-  test("creates namespace info for namespace statements", () => {
+describe("makeCompletionIndex captures namespaces", () => {
+  test("creates namespace info for namespace statements", async () => {
     const innerVar = new LocalVariable("innerVar");
     const innerAssignment = new Assignment([innerVar], null, pos(50, 60));
     const statementList = new StatementList([innerAssignment], pos(45, 65));
@@ -300,7 +300,7 @@ describe("makeASTCompletionIndex captures namespaces", () => {
     );
     const statements = [namespaceNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.namespaces).toHaveLength(1);
     const namespaceInfo = index.namespaces[0];
@@ -311,16 +311,16 @@ describe("makeASTCompletionIndex captures namespaces", () => {
     expect(namespaceInfo.completionIndex.tokens[0].value).toBe("innerVar");
   });
 
-  test("filters out namespaces with null statement lists", () => {
+  test("filters out namespaces with null statement lists", async () => {
     const namespaceNode = new Namespace("testNamespace", null); // No statement list
     const statements = [namespaceNode];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.namespaces).toEqual([]);
   });
 
-  test("creates nested namespace hierarchies", () => {
+  test("creates nested namespace hierarchies", async () => {
     // Create nested namespace structure
     const deepVar = new LocalVariable("deepVar");
     const deepAssignment = new Assignment([deepVar], null, pos(80, 90));
@@ -349,7 +349,7 @@ describe("makeASTCompletionIndex captures namespaces", () => {
 
     const statements = [midNamespace];
 
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.namespaces).toHaveLength(1);
     const midNamespaceInfo = index.namespaces[0];
@@ -369,7 +369,7 @@ describe("makeASTCompletionIndex captures namespaces", () => {
     expect(deepNamespaceInfo.completionIndex.tokens[0].value).toBe("deepVar");
   });
 
-  test("captures namespaces from assignment RHS", () => {
+  test("captures namespaces from assignment RHS", async () => {
     const innerVar = new LocalVariable("innerVar");
     const innerAssignment = new Assignment([innerVar], null, pos(30, 40));
     const statementList = new StatementList([innerAssignment], pos(25, 45));
@@ -379,7 +379,7 @@ describe("makeASTCompletionIndex captures namespaces", () => {
     const assignmentNode = new Assignment([varNode], namespaceNode, pos(0, 50));
 
     const statements = [assignmentNode];
-    const index = makeASTCompletionIndex(statements);
+    const index = await makeCompletionIndex(statements);
 
     expect(index.namespaces).toHaveLength(1);
     const nsInfo = index.namespaces[0];
@@ -390,13 +390,13 @@ describe("makeASTCompletionIndex captures namespaces", () => {
 });
 
 describe("makeNamespaceInfo", () => {
-  test("creates namespace info with valid statement list", () => {
+  test("creates namespace info with valid statement list", async () => {
     const innerVar = new LocalVariable("testVar");
     const innerAssignment = new Assignment([innerVar], null, pos(20, 30));
     const statementList = new StatementList([innerAssignment], pos(15, 35));
     const namespaceNode = new Namespace("testNamespace", statementList);
 
-    const namespaceInfo = makeNamespaceInfo(namespaceNode);
+    const namespaceInfo = await makeNamespaceInfo(namespaceNode);
 
     expect(namespaceInfo).not.toBeNull();
     expect(namespaceInfo!.name).toBe("testNamespace");
@@ -406,26 +406,26 @@ describe("makeNamespaceInfo", () => {
     expect(namespaceInfo!.completionIndex.tokens[0].value).toBe("testVar");
   });
 
-  test("returns null for namespace without statement list", () => {
+  test("returns null for namespace without statement list", async () => {
     const namespaceNode = new Namespace("testNamespace", null);
 
-    const namespaceInfo = makeNamespaceInfo(namespaceNode);
+    const namespaceInfo = await makeNamespaceInfo(namespaceNode);
 
     expect(namespaceInfo).toBeNull();
   });
 
-  test("returns null for namespace with statement list without position", () => {
+  test("returns null for namespace with statement list without position", async () => {
     const statementList = new StatementList([]); // No position
     const namespaceNode = new Namespace("testNamespace", statementList);
 
-    const namespaceInfo = makeNamespaceInfo(namespaceNode);
+    const namespaceInfo = await makeNamespaceInfo(namespaceNode);
 
     expect(namespaceInfo).toBeNull();
   });
 });
 
-describe("createASTCompletionIndex", () => {
-  test("creates completion index from recipe node", () => {
+describe("createCompletionIndex", () => {
+  test("creates completion index from recipe node", async () => {
     const varNode = new LocalVariable("recipeVar");
     const assignmentNode = new Assignment([varNode], null, pos(0, 15));
     const styleNode = new Style(new Map(), [], pos(20, 30));
@@ -436,7 +436,7 @@ describe("createASTCompletionIndex", () => {
     );
     const recipeNode = new Recipe([assignmentNode, namedStyleNode]);
 
-    const index = createASTCompletionIndex(recipeNode);
+    const index = await createCompletionIndex(recipeNode);
 
     expect(index.tokens).toHaveLength(2);
     expect(index.tokens).toContainEqual({

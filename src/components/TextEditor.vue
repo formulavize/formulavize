@@ -48,7 +48,7 @@ import {
 } from "@codemirror/view";
 
 import { fizLanguage } from "@formulavize/lang-fiz";
-import { ASTCompletionIndex } from "../autocomplete/autocompletion";
+import { CompletionIndex } from "../autocomplete/autocompletion";
 import { getAllDynamicCompletionSources } from "../autocomplete/autocompleter";
 
 export default defineComponent({
@@ -67,7 +67,7 @@ export default defineComponent({
       default: () => [],
     },
     completionIndex: {
-      type: Object as () => ASTCompletionIndex | undefined,
+      type: Object as () => CompletionIndex | undefined,
       required: false,
       default: undefined,
     },
@@ -82,7 +82,7 @@ export default defineComponent({
       this.$emit("update-editorstate", updatedState);
     }, this.editorDebounceDelay);
 
-    const createAutocompletion = (completionIndex?: ASTCompletionIndex) => {
+    const createAutocompletion = (completionIndex?: CompletionIndex) => {
       if (!completionIndex) {
         return autocompletion();
       }

@@ -8,9 +8,10 @@ import {
   NamedStyleTreeNode,
   StyleBindingTreeNode,
   NamespaceTreeNode,
+  ImportTreeNode,
 } from "../compiler/ast";
 import {
-  ASTCompletionIndex,
+  CompletionIndex,
   TokenInfo,
   TokenType,
   ContextScenarioType,
@@ -177,14 +178,23 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
     .otherwise(() => []);
 }
 
-export function makeNamespaceInfo(
+type ImportedASTLookup = (path: string) => Promise<RecipeTreeNode | undefined>;
+
+export async function makeNamespaceInfo(
   namespaceNode: NamespaceTreeNode,
-): NamespaceInfo | null {
+  importedASTLookupFn?: ImportedASTLookup,
+  visitedImports: Set<string> = new Set(),
+): Promise<NamespaceInfo | null> {
   const stmtListPosition = namespaceNode.StatementList?.Position;
   if (!stmtListPosition) return null;
 
   const statements = namespaceNode.Statements;
-  const nestedCompletionIndex = makeASTCompletionIndex(statements);
+  // use makeCompletionIndex so that imports inside the namespace are processed
+  const nestedCompletionIndex = await makeCompletionIndex(
+    statements,
+    importedASTLookupFn,
+    visitedImports,
+  );
   return {
     name: namespaceNode.Name,
     completionIndex: nestedCompletionIndex,
@@ -193,34 +203,141 @@ export function makeNamespaceInfo(
   };
 }
 
-export function makeASTCompletionIndex(
+/**
+ * Creates a completion index based ONLY on the declarations in the current list of statements.
+ * Does not traverse imports directly (though might through recursive makeCompletionIndex calls).
+ */
+export async function makeASTCompletionIndex(
   statements: StatementTreeNode[],
-): ASTCompletionIndex {
+  importedASTLookupFn?: ImportedASTLookup,
+  visitedImports: Set<string> = new Set(),
+): Promise<CompletionIndex> {
   const tokenRecords = statements.flatMap(makeTokenRecords);
   const contextScenarios = statements.flatMap(makeContextScenarios);
 
-  const namespaceInfos = statements.flatMap((stmt) =>
-    match(stmt.Type)
-      .with(NodeType.Namespace, () => {
-        const nsInfo = makeNamespaceInfo(stmt as NamespaceTreeNode);
-        return nsInfo ? [nsInfo] : [];
-      })
-      .with(NodeType.Assignment, () => {
-        const assignment = stmt as AssignmentTreeNode;
-        if (assignment.Rhs?.Type === NodeType.Namespace) {
-          const nsInfo = makeNamespaceInfo(assignment.Rhs as NamespaceTreeNode);
+  const namespaceInfosNested = await Promise.all(
+    statements.map((stmt) =>
+      match(stmt.Type)
+        .with(NodeType.Namespace, async () => {
+          const nsInfo = await makeNamespaceInfo(
+            stmt as NamespaceTreeNode,
+            importedASTLookupFn,
+            visitedImports,
+          );
           return nsInfo ? [nsInfo] : [];
-        }
-        return [];
-      })
-      .otherwise(() => []),
+        })
+        .with(NodeType.Assignment, async () => {
+          const assignment = stmt as AssignmentTreeNode;
+          if (assignment.Rhs?.Type === NodeType.Namespace) {
+            const nsInfo = await makeNamespaceInfo(
+              assignment.Rhs as NamespaceTreeNode,
+              importedASTLookupFn,
+              visitedImports,
+            );
+            return nsInfo ? [nsInfo] : [];
+          }
+          return [];
+        })
+        .otherwise(async () => []),
+    ),
   );
+  const namespaceInfos = namespaceInfosNested.flat();
 
-  return new ASTCompletionIndex(tokenRecords, contextScenarios, namespaceInfos);
+  return new CompletionIndex(tokenRecords, contextScenarios, namespaceInfos);
 }
 
-export function createASTCompletionIndex(
+async function processImports(
+  statements: StatementTreeNode[],
+  importedASTLookupFn: ImportedASTLookup,
+  visitedImports: Set<string>,
+): Promise<CompletionIndex> {
+  const tokenRecords: TokenInfo[] = [];
+  const namespaceInfos: NamespaceInfo[] = [];
+
+  const importNodes = statements.filter(
+    (s) => s.Type === NodeType.Import,
+  ) as ImportTreeNode[];
+
+  for (const importNode of importNodes) {
+    if (visitedImports.has(importNode.ImportLocation)) continue;
+
+    const importedAst = await importedASTLookupFn(importNode.ImportLocation);
+    if (!importedAst) continue;
+
+    const newVisited = new Set(visitedImports);
+    newVisited.add(importNode.ImportLocation);
+
+    // Recursive call to full makeCompletionIndex to handle imports inside the imported file
+    const importedIndex = await makeCompletionIndex(
+      importedAst.Statements,
+      importedASTLookupFn,
+      newVisited,
+    );
+
+    const importStmtEnd = importNode.Position?.to ?? 0;
+    const scopeEnd = Infinity;
+
+    // If aliased, it becomes a namespace
+    if (importNode.ImportName) {
+      namespaceInfos.push({
+        name: importNode.ImportName,
+        completionIndex: importedIndex,
+        startPosition: importStmtEnd,
+        endPosition: scopeEnd,
+      });
+    } else {
+      // Flatten tokens and namespaces into current scope
+      // Override their endPosition to the import statement's end (token visibility start)
+      const newTokens = importedIndex.Tokens.map((t) => ({
+        ...t,
+        endPosition: importStmtEnd,
+      }));
+      tokenRecords.push(...newTokens);
+
+      const newNamespaces = importedIndex.Namespaces.map((ns) => ({
+        ...ns,
+        startPosition: importStmtEnd,
+        endPosition: scopeEnd,
+      }));
+      namespaceInfos.push(...newNamespaces);
+    }
+  }
+
+  return new CompletionIndex(tokenRecords, [], namespaceInfos);
+}
+
+export async function makeCompletionIndex(
+  statements: StatementTreeNode[],
+  importedASTLookupFn?: ImportedASTLookup,
+  visitedImports: Set<string> = new Set(),
+): Promise<CompletionIndex> {
+  // Get AST based index (local definitions)
+  const astIndex = await makeASTCompletionIndex(
+    statements,
+    importedASTLookupFn,
+    visitedImports,
+  );
+
+  // If no import lookup function, return AST index directly
+  if (!importedASTLookupFn) return astIndex;
+
+  // Get Import based completion data
+  const importIndex = await processImports(
+    statements,
+    importedASTLookupFn,
+    visitedImports,
+  );
+
+  return new CompletionIndex(
+    [...astIndex.Tokens, ...importIndex.Tokens],
+    [...astIndex.ContextScenarios, ...importIndex.ContextScenarios],
+    [...astIndex.Namespaces, ...importIndex.Namespaces],
+  );
+}
+
+export async function createCompletionIndex(
   recipeNode: RecipeTreeNode,
-): ASTCompletionIndex {
-  return makeASTCompletionIndex(recipeNode.Statements);
+  importedASTLookupFn?: ImportedASTLookup,
+): Promise<CompletionIndex> {
+  return makeCompletionIndex(recipeNode.Statements, importedASTLookupFn);
 }

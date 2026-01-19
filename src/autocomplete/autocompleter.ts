@@ -5,14 +5,14 @@ import {
 } from "@codemirror/autocomplete";
 
 import {
-  ASTCompletionIndex,
+  CompletionIndex,
   ContextScenarioType,
   ScenarioToTokenTypes,
   TokenType,
 } from "./autocompletion";
 
 export function createCompletions(
-  completionIndex: ASTCompletionIndex,
+  completionIndex: CompletionIndex,
   position: number,
   applicableTokenTypes: Set<TokenType>,
   word: string,
@@ -34,7 +34,7 @@ export function createCompletions(
 }
 
 export function createStatementCompletionSource(
-  completionIndex: ASTCompletionIndex,
+  completionIndex: CompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
     // Check if we're already in a specific context scenario
@@ -65,7 +65,7 @@ export function createStatementCompletionSource(
 }
 
 export function createAssignmentRhsCompletionSource(
-  completionIndex: ASTCompletionIndex,
+  completionIndex: CompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
     // Match a word after an equal sign
@@ -90,7 +90,7 @@ export function createAssignmentRhsCompletionSource(
 }
 
 export function createCallCompletionSource(
-  completionIndex: ASTCompletionIndex,
+  completionIndex: CompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
     // Check if we're in a ValueName context scenario
@@ -112,9 +112,9 @@ export function createCallCompletionSource(
     }
 
     // Fallback: Match a word after an open bracket or after a comma
-    // This is needed because autocompletion looks at ASTCompletionIndex
+    // This is needed because autocompletion looks at CompletionIndex
     // immediately while the parser awaits debouncing logic so the new
-    // context scenario has not yet been registered in ASTCompletionIndex.
+    // context scenario has not yet been registered in CompletionIndex.
     const match = context.matchBefore(/\((?:[^,()]*,\s*)*\s*\w*|,\s*\w*/);
     if (!match || (match.from === match.to && !context.explicit)) {
       return null;
@@ -143,7 +143,7 @@ export function createCallCompletionSource(
 }
 
 export function createStyleCompletionSource(
-  completionIndex: ASTCompletionIndex,
+  completionIndex: CompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
     // Check if we're in a StyleArgList context scenario
@@ -180,7 +180,7 @@ export function createStyleCompletionSource(
 }
 
 export function createNamespacedCompletions(
-  completionIndex: ASTCompletionIndex,
+  completionIndex: CompletionIndex,
   position: number,
   applicableTokenTypes: Set<TokenType>,
   namespacePrefix: string,
@@ -204,10 +204,10 @@ export function createNamespacedCompletions(
 }
 
 export function getEndNamespace(
-  completionIndex: ASTCompletionIndex,
+  completionIndex: CompletionIndex,
   namespacePath: string[],
   position: number,
-): ASTCompletionIndex | null {
+): CompletionIndex | null {
   // Start searching from the current namespace
   let searchIndex = completionIndex;
 
@@ -231,14 +231,14 @@ export function getEndNamespace(
 }
 
 export function resolveEndNamespace(
-  completionIndex: ASTCompletionIndex,
+  completionIndex: CompletionIndex,
   namespacePath: string[],
   position: number,
-): ASTCompletionIndex | null {
+): CompletionIndex | null {
   const nestedCompletionIndexChain =
     completionIndex.getNestedCompletionIndexChainAt(position);
 
-  let targetCompletionIndex: ASTCompletionIndex | null = null;
+  let targetCompletionIndex: CompletionIndex | null = null;
   for (let i = nestedCompletionIndexChain.length - 1; i >= 0; i--) {
     const result = getEndNamespace(
       nestedCompletionIndexChain[i],
@@ -256,7 +256,7 @@ export function resolveEndNamespace(
 }
 
 export function createQualifiedVariableCompletionSource(
-  completionIndex: ASTCompletionIndex,
+  completionIndex: CompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
     const contextScenario = completionIndex.getContextScenarioAt(context.pos);
@@ -328,7 +328,7 @@ export function createQualifiedVariableCompletionSource(
 }
 
 export function createQualifiedStyleCompletionSource(
-  completionIndex: ASTCompletionIndex,
+  completionIndex: CompletionIndex,
 ): CompletionSource {
   return (context: CompletionContext): CompletionResult | null => {
     const contextScenario = completionIndex.getContextScenarioAt(context.pos);
@@ -395,7 +395,7 @@ export function createQualifiedStyleCompletionSource(
 }
 
 export function getAllDynamicCompletionSources(
-  completionIndex: ASTCompletionIndex,
+  completionIndex: CompletionIndex,
 ): CompletionSource[] {
   const sources = [
     createQualifiedVariableCompletionSource,
