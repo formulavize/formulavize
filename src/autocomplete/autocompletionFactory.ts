@@ -251,57 +251,67 @@ async function processImports(
   importedASTLookupFn: ImportedASTLookup,
   visitedImports: Set<string>,
 ): Promise<CompletionIndex> {
-  const tokenRecords: TokenInfo[] = [];
-  const namespaceInfos: NamespaceInfo[] = [];
-
   const importNodes = statements.filter(
     (s) => s.Type === NodeType.Import,
   ) as ImportTreeNode[];
 
-  for (const importNode of importNodes) {
-    if (visitedImports.has(importNode.ImportLocation)) continue;
+  const importResults = await Promise.all(
+    importNodes.map(async (importNode) => {
+      if (visitedImports.has(importNode.ImportLocation)) return null;
 
-    const importedAst = await importedASTLookupFn(importNode.ImportLocation);
-    if (!importedAst) continue;
+      const importedAst = await importedASTLookupFn(importNode.ImportLocation);
+      if (!importedAst) return null;
 
-    const newVisited = new Set(visitedImports);
-    newVisited.add(importNode.ImportLocation);
+      const newVisited = new Set(visitedImports);
+      newVisited.add(importNode.ImportLocation);
 
-    // Recursive call to full makeCompletionIndex to handle imports inside the imported file
-    const importedIndex = await makeCompletionIndex(
-      importedAst.Statements,
-      importedASTLookupFn,
-      newVisited,
-    );
+      // Recursive call to full makeCompletionIndex to handle imports inside the imported file
+      const importedIndex = await makeCompletionIndex(
+        importedAst.Statements,
+        importedASTLookupFn,
+        newVisited,
+      );
 
-    const importStmtEnd = importNode.Position?.to ?? 0;
-    const scopeEnd = Infinity;
+      const importStmtEnd = importNode.Position?.to ?? 0;
+      const scopeEnd = Infinity;
 
-    // If aliased, it becomes a namespace
-    if (importNode.ImportName) {
-      namespaceInfos.push({
-        name: importNode.ImportName,
-        completionIndex: importedIndex,
-        startPosition: importStmtEnd,
-        endPosition: scopeEnd,
-      });
-    } else {
-      // Flatten tokens and namespaces into current scope
-      // Override their endPosition to the import statement's end (token visibility start)
-      const newTokens = importedIndex.Tokens.map((t) => ({
-        ...t,
-        endPosition: importStmtEnd,
-      }));
-      tokenRecords.push(...newTokens);
+      // If aliased, it becomes a namespace
+      if (importNode.ImportName) {
+        return {
+          tokens: [] as TokenInfo[],
+          namespaces: [
+            {
+              name: importNode.ImportName,
+              completionIndex: importedIndex,
+              startPosition: importStmtEnd,
+              endPosition: scopeEnd,
+            },
+          ] as NamespaceInfo[],
+        };
+      } else {
+        // Flatten tokens and namespaces into current scope
+        // Override their endPosition to the import statement's end (token visibility start)
+        return {
+          tokens: importedIndex.Tokens.map((t) => ({
+            ...t,
+            endPosition: importStmtEnd,
+          })),
+          namespaces: importedIndex.Namespaces.map((ns) => ({
+            ...ns,
+            startPosition: importStmtEnd,
+            endPosition: scopeEnd,
+          })),
+        };
+      }
+    }),
+  );
 
-      const newNamespaces = importedIndex.Namespaces.map((ns) => ({
-        ...ns,
-        startPosition: importStmtEnd,
-        endPosition: scopeEnd,
-      }));
-      namespaceInfos.push(...newNamespaces);
-    }
-  }
+  const successfulImports = importResults.filter(
+    (r): r is NonNullable<typeof r> => r !== null,
+  );
+
+  const tokenRecords = successfulImports.flatMap((r) => r.tokens);
+  const namespaceInfos = successfulImports.flatMap((r) => r.namespaces);
 
   return new CompletionIndex(tokenRecords, [], namespaceInfos);
 }
