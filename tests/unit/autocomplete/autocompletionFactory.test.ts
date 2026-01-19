@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import {
   makeCompletionIndex,
   makeNamespaceInfo,
@@ -17,6 +17,7 @@ import {
   NamespaceTreeNode as Namespace,
   ValueListTreeNode as ValueList,
   StatementListTreeNode as StatementList,
+  ImportTreeNode as Import,
 } from "src/compiler/ast";
 import {
   TokenType,
@@ -449,5 +450,163 @@ describe("createCompletionIndex", () => {
       value: "recipeStyle",
       endPosition: 35,
     });
+  });
+});
+
+describe("makeCompletionIndex with imports", () => {
+  test("imports definitions into global scope", async () => {
+    // remote.fiz:
+    // exportedVar =
+    const remoteVar = new LocalVariable("exportedVar");
+    const remoteAssignment = new Assignment([remoteVar], null, pos(0, 15));
+    const remoteRecipe = new Recipe([remoteAssignment]);
+
+    // main.fiz:
+    // @ "remote.fiz"
+    const importNode = new Import("remote.fiz", null, pos(0, 20));
+    const mainStatements = [importNode];
+
+    const mockLookup = vi.fn().mockImplementation(async (path: string) => {
+      if (path === "remote.fiz") return remoteRecipe;
+      return undefined;
+    });
+
+    const index = await makeCompletionIndex(mainStatements, mockLookup);
+
+    expect(mockLookup).toHaveBeenCalledWith("remote.fiz");
+    expect(index.tokens).toHaveLength(1);
+    expect(index.tokens[0]).toEqual({
+      type: TokenType.Variable,
+      value: "exportedVar",
+      endPosition: 20, // should take the import statement's end position
+    });
+  });
+
+  test("imports definitions as namespace when aliased", async () => {
+    // remote.fiz:
+    // exportedVar =
+    const remoteVar = new LocalVariable("exportedVar");
+    const remoteAssignment = new Assignment([remoteVar], null, pos(0, 15));
+    const remoteRecipe = new Recipe([remoteAssignment]);
+
+    // main.fiz:
+    // Remote @ "remote.fiz"
+    const importNode = new Import("remote.fiz", "Remote", pos(0, 30));
+    const mainStatements = [importNode];
+
+    const mockLookup = vi.fn().mockImplementation(async (path: string) => {
+      if (path === "remote.fiz") return remoteRecipe;
+      return undefined;
+    });
+
+    const index = await makeCompletionIndex(mainStatements, mockLookup);
+
+    expect(mockLookup).toHaveBeenCalledWith("remote.fiz");
+    // Should not populate tokens in global scope
+    expect(index.tokens).toHaveLength(0);
+
+    // Should populate namespace
+    expect(index.namespaces).toHaveLength(1);
+    expect(index.namespaces[0].name).toBe("Remote");
+    expect(index.namespaces[0].startPosition).toBe(30);
+    expect(index.namespaces[0].endPosition).toBe(Infinity);
+
+    // Inner tokens
+    expect(index.namespaces[0].completionIndex.tokens).toHaveLength(1);
+    expect(index.namespaces[0].completionIndex.tokens[0]).toEqual({
+      type: TokenType.Variable,
+      value: "exportedVar",
+      endPosition: 15, // Inside namespace, retains original position
+    });
+  });
+
+  test("handles transitive imports", async () => {
+    // lib.fiz:
+    // libVar =
+    const libVar = new LocalVariable("libVar");
+    const libAssignment = new Assignment([libVar], null, pos(0, 10));
+    const libRecipe = new Recipe([libAssignment]);
+
+    // middle.fiz:
+    // @ "lib.fiz"
+    // midVar =
+    const importLib = new Import("lib.fiz", null, pos(0, 20));
+    const midVar = new LocalVariable("midVar");
+    const midAssignment = new Assignment([midVar], null, pos(25, 35));
+    const middleRecipe = new Recipe([importLib, midAssignment]);
+
+    // main.fiz:
+    // @ "middle.fiz"
+    const importMiddle = new Import("middle.fiz", null, pos(0, 25));
+    const mainStatements = [importMiddle];
+
+    const mockLookup = vi.fn().mockImplementation(async (path: string) => {
+      if (path === "lib.fiz") return libRecipe;
+      if (path === "middle.fiz") return middleRecipe;
+      return undefined;
+    });
+
+    const index = await makeCompletionIndex(mainStatements, mockLookup);
+
+    expect(mockLookup).toHaveBeenCalledWith("middle.fiz");
+    expect(mockLookup).toHaveBeenCalledWith("lib.fiz");
+
+    // imports from middle.fiz are flattened
+    // imports from lib.fiz (via middle.fiz) are also flattened into main
+
+    // tokens should include: libVar (from lib->middle->main) and midVar (from middle->main)
+    const tokenValues = index.tokens.map((t) => t.value).sort();
+    expect(tokenValues).toEqual(["libVar", "midVar"]);
+
+    // Check end positions are updated to import statement end
+    expect(index.tokens.find((t) => t.value === "libVar")?.endPosition).toBe(
+      25,
+    );
+    expect(index.tokens.find((t) => t.value === "midVar")?.endPosition).toBe(
+      25,
+    );
+  });
+
+  test("handles circular imports gracefully", async () => {
+    // a.fiz:
+    // @ "b.fiz"
+    // varA =
+    const importB = new Import("b.fiz", null, pos(0, 20));
+    const varA = new LocalVariable("varA");
+    const assignA = new Assignment([varA], null, pos(25, 35));
+
+    // b.fiz:
+    // @ "a.fiz"
+    // varB =
+    const importA = new Import("a.fiz", null, pos(0, 20));
+    const varB = new LocalVariable("varB");
+    const assignB = new Assignment([varB], null, pos(25, 35));
+
+    const recipeA = new Recipe([importB, assignA]);
+    const recipeB = new Recipe([importA, assignB]);
+
+    const mockLookup = vi.fn().mockImplementation(async (path: string) => {
+      if (path === "a.fiz") return recipeA;
+      if (path === "b.fiz") return recipeB;
+      return undefined;
+    });
+
+    // Start from a.fiz equivalent (or main importing a.fiz)
+    // main.fiz:
+    // @ "a.fiz"
+    const importA_main = new Import("a.fiz", null, pos(0, 20));
+    const mainStatements = [importA_main];
+
+    const index = await makeCompletionIndex(mainStatements, mockLookup);
+
+    // a.fiz imports b.fiz
+    // b.fiz imports a.fiz -> should stop here
+    // So index should have:
+    // - contents of a.fiz (varA)
+    // - contents of b.fiz (varB)
+    // - contents of a.fiz (from b's import) -> skipped
+
+    const tokenValues = index.tokens.map((t) => t.value).sort();
+    expect(tokenValues).toEqual(["varA", "varB"]);
   });
 });
