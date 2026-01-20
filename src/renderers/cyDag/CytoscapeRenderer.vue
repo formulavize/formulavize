@@ -19,13 +19,16 @@ import {
 } from "@floating-ui/dom";
 // @ts-expect-error: missing types
 import svg from "cytoscape-svg";
-import { makeCyElements } from "../compiler/cyGraphFactory";
-import { makeCyStylesheets } from "../compiler/cyStyleSheetsFactory";
-import { extendCyPopperElements } from "../compiler/cyPopperExtender";
-import { Dag } from "../compiler/dag";
-import { ImageExportFormat } from "../compiler/constants";
+import { makeCyElements } from "./cyGraphFactory";
+import { makeCyStylesheets } from "./cyStyleSheetsFactory";
+import { extendCyPopperElements } from "./cyPopperExtender";
+import { Dag } from "../../compiler/dag";
+import { ImageExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
-import { IRenderer, ImageExportOptions } from "./rendererTypes";
+import {
+  ImageExportOptions,
+  RendererComponent,
+} from "../../compiler/rendererTypes";
 
 declare module "cytoscape-popper" {
   // PopperOptions extends ComputePositionConfig from @floating-ui/dom
@@ -176,10 +179,7 @@ export default defineComponent({
       saveAs(imgBlob, fileName);
     },
   },
-});
-
-// Export type assertion helper for IRenderer interface
-export type CytoscapeRendererType = IRenderer;
+}) as RendererComponent;
 </script>
 
 <style scoped>

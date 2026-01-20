@@ -1,6 +1,6 @@
 import { Component } from "vue";
-import { Dag } from "../compiler/dag";
-import { ImageExportFormat } from "../compiler/constants";
+import { Dag } from "./dag";
+import { ImageExportFormat } from "./constants";
 
 /**
  * Options for exporting an image from a renderer.
@@ -39,4 +39,4 @@ export interface RendererProps {
 /**
  * Type for renderer component constructors.
  */
-export type RendererComponent = Component;
+export type RendererComponent = Component<RendererProps>;

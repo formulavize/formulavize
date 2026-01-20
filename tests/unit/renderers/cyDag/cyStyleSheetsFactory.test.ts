@@ -10,7 +10,7 @@ import {
   makeNameStyleSheets,
   getBaseStylesheet,
   makeCyStylesheets,
-} from "src/compiler/cyStyleSheetsFactory";
+} from "src/renderers/cyDag/cyStyleSheetsFactory";
 import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
 import { Dag, DagElement } from "src/compiler/dag";
 
