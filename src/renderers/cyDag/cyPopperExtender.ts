@@ -1,6 +1,15 @@
 import cytoscape, { Selector } from "cytoscape";
-import { DESCRIPTION_PROPERTY, DESCRIPTION_PREFIX } from "./constants";
-import { Dag, DagElement, ElementId, StyleTag, StyleProperties } from "./dag";
+import {
+  DESCRIPTION_PROPERTY,
+  DESCRIPTION_PREFIX,
+} from "../../compiler/constants";
+import {
+  Dag,
+  DagElement,
+  ElementId,
+  StyleTag,
+  StyleProperties,
+} from "../../compiler/dag";
 
 const POPPER_OUTER_DIV_CLASS: string = "popper-outer-div";
 const POPPER_INNER_DIV_CLASS: string = "popper-inner-div";

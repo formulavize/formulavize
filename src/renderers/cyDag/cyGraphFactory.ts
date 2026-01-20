@@ -1,5 +1,5 @@
 import { EdgeDefinition, ElementsDefinition, NodeDefinition } from "cytoscape";
-import { Dag } from "./dag";
+import { Dag } from "../../compiler/dag";
 
 export function makeCyNodes(dag: Dag): NodeDefinition[] {
   return dag.getNodeList().map((node) => ({

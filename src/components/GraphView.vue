@@ -5,10 +5,14 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType, Component } from "vue";
+import { defineComponent, PropType } from "vue";
 import { Dag } from "../compiler/dag";
-import { IRenderer, ImageExportOptions } from "./rendererTypes";
-import CytoscapeRenderer from "./CytoscapeRenderer.vue";
+import {
+  IRenderer,
+  ImageExportOptions,
+  RendererComponent,
+} from "../compiler/rendererTypes";
+import CytoscapeRenderer from "../renderers/cyDag/CytoscapeRenderer.vue";
 
 // GraphView - Component for rendering the DAG visualization
 // Uses a pluggable renderer component to display the graph enabling flexibility
@@ -21,7 +25,7 @@ export default defineComponent({
       default: () => new Dag(""),
     },
     rendererComponent: {
-      type: Object as PropType<Component>,
+      type: Object as PropType<RendererComponent & IRenderer>,
       default: () => CytoscapeRenderer,
     },
   },

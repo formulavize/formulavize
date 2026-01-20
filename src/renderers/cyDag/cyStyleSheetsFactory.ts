@@ -1,6 +1,6 @@
 import { Stylesheet } from "cytoscape";
-import { DESCRIPTION_PROPERTY } from "./constants";
-import { Dag, DagElement, StyleTag, StyleProperties } from "./dag";
+import { DESCRIPTION_PROPERTY } from "../../compiler/constants";
+import { Dag, DagElement, StyleTag, StyleProperties } from "../../compiler/dag";
 
 // a list of known property prefixes that should not be passed to cytoscape
 const NON_CYTOSCAPE_PROPERTY_PREFIXES: string[] = [
