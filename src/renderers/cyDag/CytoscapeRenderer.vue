@@ -26,7 +26,7 @@ import { Dag } from "../../compiler/dag";
 import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
 import {
-  ImageExportOptions,
+  FileExportOptions,
   RendererComponent,
 } from "../../compiler/rendererTypes";
 
@@ -141,7 +141,7 @@ const CytoscapeRenderer = defineComponent({
       });
     },
 
-    exportImage(exportOptions: ImageExportOptions): void {
+    export(exportOptions: FileExportOptions): void {
       if (!this.cy) {
         console.error("Cytoscape instance not initialized");
         return;

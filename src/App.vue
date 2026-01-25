@@ -194,7 +194,7 @@ export default defineComponent({
       scalingFactor: number;
     }) {
       const graphView = this.$refs.graphView as typeof GraphView;
-      graphView.exportImage(exportOptions);
+      graphView.export(exportOptions);
     },
     async copySourceToClipboard() {
       try {

@@ -3,9 +3,9 @@ import { Dag } from "./dag";
 import { ExportFormat } from "./constants";
 
 /**
- * Options for exporting an image from a renderer.
+ * Options for exporting a file from a renderer.
  */
-export interface ImageExportOptions {
+export interface FileExportOptions {
   fileName: string;
   fileType: ExportFormat;
   scalingFactor: number;
@@ -23,10 +23,10 @@ export interface IRenderer {
   updateDag(dag: Dag): void;
 
   /**
-   * Export the current visualization as an image.
+   * Export the current visualization as a file.
    * @param options Export configuration options
    */
-  exportImage(options: ImageExportOptions): void;
+  export(options: FileExportOptions): void;
 }
 
 /**
