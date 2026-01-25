@@ -155,17 +155,13 @@ export default defineComponent({
       );
     },
     debugMode() {
-      // repaint the conditionally rendered GraphView
-      const existingEditorState = cloneDeep(this.curEditorState);
-      this.updateEditorState(existingEditorState as EditorState);
+      this.repaint(); // repaint the conditionally rendered GraphView
     },
     selectedRenderer(newRendererId: string) {
       const renderer = this.registeredRenderers.get(newRendererId);
       if (renderer) {
         this.rendererComponent = renderer;
-        // repaint the GraphView with new renderer
-        const existingEditorState = cloneDeep(this.curEditorState);
-        this.updateEditorState(existingEditorState as EditorState);
+        this.repaint(); // repaint the GraphView with new renderer
       } else {
         console.error(`Renderer with id "${newRendererId}" not found`);
       }
@@ -182,10 +178,13 @@ export default defineComponent({
     );
   },
   methods: {
+    repaint() {
+      const existingEditorState = cloneDeep(this.curEditorState);
+      this.updateEditorState(existingEditorState as EditorState);
+    },
     registerRenderer(id: string, renderer: RendererType): void {
       this.registeredRenderers.set(id, renderer);
     },
-
     updateEditorState(editorState: EditorState) {
       this.curEditorState = editorState;
     },
