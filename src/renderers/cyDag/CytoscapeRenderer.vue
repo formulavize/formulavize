@@ -187,6 +187,7 @@ const CytoscapeRenderer = defineComponent({
 });
 
 export default Object.assign(CytoscapeRenderer, {
+  displayName: "Cytoscape Renderer",
   supportedExportFormats: [
     ExportFormat.PNG,
     ExportFormat.JPG,

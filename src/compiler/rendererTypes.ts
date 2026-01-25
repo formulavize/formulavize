@@ -38,8 +38,10 @@ export interface RendererProps {
 
 /**
  * Type for renderer component constructors.
- * All renderer components must have a static supportedExportFormats property.
+ * All renderer components must have
+ * static displayName and supportedExportFormats properties.
  */
 export type RendererComponent = Component<RendererProps> & {
+  readonly displayName: string;
   readonly supportedExportFormats: readonly ExportFormat[];
 };
