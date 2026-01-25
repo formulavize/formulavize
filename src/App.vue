@@ -59,7 +59,7 @@ import { defineComponent } from "vue";
 import { cloneDeep } from "lodash";
 import { EditorState, Text } from "@codemirror/state";
 import { Diagnostic } from "@codemirror/lint";
-import { ImageExportFormat } from "./compiler/constants";
+import { ExportFormat } from "./compiler/constants";
 import TextEditor from "./components/TextEditor.vue";
 import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
@@ -134,7 +134,7 @@ export default defineComponent({
     },
     handleExport(exportOptions: {
       fileName: string;
-      fileType: ImageExportFormat;
+      fileType: ExportFormat;
       scalingFactor: number;
     }) {
       const graphView = this.$refs.graphView as typeof GraphView;

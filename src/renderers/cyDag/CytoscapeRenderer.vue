@@ -23,7 +23,7 @@ import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
 import { extendCyPopperElements } from "./cyPopperExtender";
 import { Dag } from "../../compiler/dag";
-import { ImageExportFormat } from "../../compiler/constants";
+import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
 import {
   ImageExportOptions,
@@ -153,21 +153,21 @@ export default defineComponent({
       // manually edit layouts in an svg editor.
       const scaleFactor = exportOptions.scalingFactor;
       const imgBlob = match(exportOptions.fileType)
-        .with(ImageExportFormat.PNG, () => {
+        .with(ExportFormat.PNG, () => {
           return this.cy!.png({
             full: true,
             scale: scaleFactor,
             output: "blob",
           });
         })
-        .with(ImageExportFormat.JPG, () => {
+        .with(ExportFormat.JPG, () => {
           return this.cy!.jpg({
             full: true,
             scale: scaleFactor,
             output: "blob",
           });
         })
-        .with(ImageExportFormat.SVG, () => {
+        .with(ExportFormat.SVG, () => {
           // @ts-expect-error: missing types
           const svgData = this.cy!.svg({ full: true, scale: scaleFactor });
           return new Blob([svgData], {
