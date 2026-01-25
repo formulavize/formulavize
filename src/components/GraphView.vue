@@ -9,7 +9,7 @@ import { defineComponent, PropType } from "vue";
 import { Dag } from "../compiler/dag";
 import {
   IRenderer,
-  ImageExportOptions,
+  FileExportOptions,
   RendererComponent,
 } from "../compiler/rendererTypes";
 
@@ -30,16 +30,12 @@ export default defineComponent({
   },
   methods: {
     /**
-     * Export the current visualization as an image.
-     * This method delegates to the renderer's exportImage implementation.
+     * Export the current visualization as a file.
+     * This method delegates to the renderer's export implementation.
      */
-    exportImage(exportOptions: ImageExportOptions): void {
+    export(exportOptions: FileExportOptions): void {
       const renderer = this.$refs.renderer as IRenderer;
-      if (renderer && typeof renderer.exportImage === "function") {
-        renderer.exportImage(exportOptions);
-      } else {
-        console.error("Renderer does not support image export");
-      }
+      renderer?.export?.(exportOptions);
     },
   },
 });

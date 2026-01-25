@@ -15,7 +15,7 @@ import { defineComponent, PropType } from "vue";
 import { Dag } from "../../compiler/dag";
 import {
   RendererComponent,
-  ImageExportOptions,
+  FileExportOptions,
 } from "../../compiler/rendererTypes";
 import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
@@ -55,7 +55,7 @@ const MinimalExampleRenderer = defineComponent({
       });
     },
 
-    exportImage(exportOptions: ImageExportOptions): void {
+    export(exportOptions: FileExportOptions): void {
       if (exportOptions.fileType !== ExportFormat.TXT) {
         console.error(
           `MinimalExampleRenderer: Unsupported export format "${exportOptions.fileType}". Only TXT is supported.`,
