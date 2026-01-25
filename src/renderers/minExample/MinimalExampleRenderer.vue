@@ -27,7 +27,7 @@ import { saveAs } from "file-saver";
  * This renderer simply displays basic DAG statistics.
  * It demonstrates the minimal interface required for a renderer.
  */
-export default defineComponent({
+const MinimalExampleRenderer = defineComponent({
   name: "MinimalExampleRenderer",
   props: {
     dag: {
@@ -58,10 +58,6 @@ export default defineComponent({
       });
     },
 
-    getSupportedExportFormats(): ExportFormat[] {
-      return [ExportFormat.TXT];
-    },
-
     exportImage(exportOptions: ImageExportOptions): void {
       if (exportOptions.fileType !== ExportFormat.TXT) {
         console.error(
@@ -81,6 +77,10 @@ Edge Count: ${this.edgeCount}
       saveAs(blob, `${exportOptions.fileName}.txt`);
     },
   },
+});
+
+export default Object.assign(MinimalExampleRenderer, {
+  supportedExportFormats: [ExportFormat.TXT],
 }) as RendererComponent;
 </script>
 

@@ -23,12 +23,6 @@ export interface IRenderer {
   updateDag(dag: Dag): void;
 
   /**
-   * Get the list of export formats supported by this renderer.
-   * @returns Array of supported export formats
-   */
-  getSupportedExportFormats(): ExportFormat[];
-
-  /**
    * Export the current visualization as an image.
    * @param options Export configuration options
    */
@@ -44,5 +38,8 @@ export interface RendererProps {
 
 /**
  * Type for renderer component constructors.
+ * All renderer components must have a static supportedExportFormats property.
  */
-export type RendererComponent = Component<RendererProps>;
+export type RendererComponent = Component<RendererProps> & {
+  readonly supportedExportFormats: readonly ExportFormat[];
+};

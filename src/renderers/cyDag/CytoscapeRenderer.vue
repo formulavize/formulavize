@@ -63,7 +63,7 @@ cytoscape.use(dagre);
 cytoscape.use(cytoscapePopper(popperFactory));
 cytoscape.use(svg);
 
-export default defineComponent({
+const CytoscapeRenderer = defineComponent({
   name: "CytoscapeRenderer",
   props: {
     dag: {
@@ -138,10 +138,6 @@ export default defineComponent({
       });
     },
 
-    getSupportedExportFormats(): ExportFormat[] {
-      return [ExportFormat.PNG, ExportFormat.JPG, ExportFormat.SVG];
-    },
-
     exportImage(exportOptions: ImageExportOptions): void {
       if (!this.cy) {
         console.error("Cytoscape instance not initialized");
@@ -188,6 +184,14 @@ export default defineComponent({
       saveAs(imgBlob, fileName);
     },
   },
+});
+
+export default Object.assign(CytoscapeRenderer, {
+  supportedExportFormats: [
+    ExportFormat.PNG,
+    ExportFormat.JPG,
+    ExportFormat.SVG,
+  ],
 }) as RendererComponent;
 </script>
 
