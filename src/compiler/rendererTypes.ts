@@ -45,3 +45,5 @@ export type RendererComponent = Component<RendererProps> & {
   readonly displayName: string;
   readonly supportedExportFormats: readonly ExportFormat[];
 };
+
+export type RendererType = RendererComponent & IRenderer;
