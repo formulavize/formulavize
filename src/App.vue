@@ -54,6 +54,7 @@
   />
   <ExportOptionsPopup
     v-model:show-export="showExportPopup"
+    :supported-export-formats="supportedExportFormats"
     @export-with-options="handleExport"
   />
   <OptionsPopup
@@ -134,6 +135,23 @@ export default defineComponent({
         id,
         name,
       }));
+    },
+    supportedExportFormats(): ExportFormat[] {
+      // Get supported formats from the renderer component by accessing its methods
+      if (
+        "methods" in this.rendererComponent &&
+        this.rendererComponent.methods &&
+        "getSupportedExportFormats" in this.rendererComponent.methods &&
+        typeof this.rendererComponent.methods.getSupportedExportFormats ===
+          "function"
+      ) {
+        // Call the method without instance context to get the static list
+        return this.rendererComponent.methods.getSupportedExportFormats.call(
+          {},
+        );
+      }
+      // Fallback to all formats if not available
+      return Object.values(ExportFormat);
     },
   },
   watch: {
