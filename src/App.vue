@@ -123,17 +123,14 @@ export default defineComponent({
       selectedRenderer: "cytoscape",
       rendererComponent: markRaw(CytoscapeRenderer) as RendererComponent &
         IRenderer,
-      registeredRenderers: new Map<
-        string,
-        { name: string; renderer: RendererComponent & IRenderer }
-      >(),
+      registeredRenderers: new Map<string, RendererComponent & IRenderer>(),
     };
   },
   computed: {
     rendererOptions(): Array<{ id: string; name: string }> {
-      return Array.from(this.registeredRenderers, ([id, { name }]) => ({
+      return Array.from(this.registeredRenderers, ([id, renderer]) => ({
         id,
-        name,
+        name: renderer.displayName,
       }));
     },
     supportedExportFormats(): readonly ExportFormat[] {
@@ -164,9 +161,9 @@ export default defineComponent({
       this.updateEditorState(existingEditorState as EditorState);
     },
     selectedRenderer(newRendererId: string) {
-      const entry = this.registeredRenderers.get(newRendererId);
-      if (entry) {
-        this.rendererComponent = entry.renderer;
+      const renderer = this.registeredRenderers.get(newRendererId);
+      if (renderer) {
+        this.rendererComponent = renderer;
         // repaint the GraphView with new renderer
         const existingEditorState = cloneDeep(this.curEditorState);
         this.updateEditorState(existingEditorState as EditorState);
@@ -178,22 +175,19 @@ export default defineComponent({
   mounted() {
     this.registerRenderer(
       "cytoscape",
-      "Cytoscape Renderer",
       markRaw(CytoscapeRenderer) as RendererComponent & IRenderer,
     );
     this.registerRenderer(
       "minimal",
-      "Minimal Example Renderer",
       markRaw(MinimalExampleRenderer) as RendererComponent & IRenderer,
     );
   },
   methods: {
     registerRenderer(
       id: string,
-      name: string,
       renderer: RendererComponent & IRenderer,
     ): void {
-      this.registeredRenderers.set(id, { name, renderer });
+      this.registeredRenderers.set(id, renderer);
     },
 
     updateEditorState(editorState: EditorState) {

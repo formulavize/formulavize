@@ -80,6 +80,7 @@ Edge Count: ${this.edgeCount}
 });
 
 export default Object.assign(MinimalExampleRenderer, {
+  displayName: "Minimal Example Renderer",
   supportedExportFormats: [ExportFormat.TXT],
 }) as RendererComponent;
 </script>
