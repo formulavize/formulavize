@@ -91,7 +91,7 @@ export default defineComponent({
       required: true,
     },
     supportedExportFormats: {
-      type: Array as PropType<ExportFormat[]>,
+      type: Array as PropType<readonly ExportFormat[]>,
       required: true,
     },
   },
@@ -116,7 +116,7 @@ export default defineComponent({
     };
   },
   computed: {
-    formatOptions(): ExportFormat[] {
+    formatOptions(): readonly ExportFormat[] {
       return this.supportedExportFormats;
     },
     isFormValid() {
@@ -124,7 +124,7 @@ export default defineComponent({
     },
   },
   watch: {
-    supportedExportFormats(newFormats: ExportFormat[]) {
+    supportedExportFormats(newFormats: readonly ExportFormat[]) {
       // Reset fileType if current selection is not in the new list
       if (!newFormats.includes(this.fileType)) {
         this.fileType = newFormats[0] || ExportFormat.PNG;
