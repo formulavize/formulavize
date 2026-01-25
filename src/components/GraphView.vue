@@ -12,7 +12,6 @@ import {
   ImageExportOptions,
   RendererComponent,
 } from "../compiler/rendererTypes";
-import CytoscapeRenderer from "../renderers/cyDag/CytoscapeRenderer.vue";
 
 // GraphView - Component for rendering the DAG visualization
 // Uses a pluggable renderer component to display the graph enabling flexibility
@@ -26,7 +25,7 @@ export default defineComponent({
     },
     rendererComponent: {
       type: Object as PropType<RendererComponent & IRenderer>,
-      default: () => CytoscapeRenderer,
+      required: true,
     },
   },
   methods: {

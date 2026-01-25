@@ -32,6 +32,19 @@
             />
           </v-col>
         </v-row>
+        <v-row>
+          <v-col cols="12" class="py-1">
+            <v-select
+              label="Renderer"
+              :model-value="selectedRenderer"
+              :items="[
+                { title: 'Cytoscape Renderer', value: 'cytoscape' },
+                { title: 'Minimal Example Renderer', value: 'minimal' },
+              ]"
+              @update:model-value="$emit('update:selectedRenderer', $event)"
+            />
+          </v-col>
+        </v-row>
       </v-card-text>
       <v-card-actions>
         <v-btn @click="$emit('update:showOptions', false)">
@@ -61,8 +74,17 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
+    selectedRenderer: {
+      type: String,
+      required: true,
+    },
   },
-  emits: ["update:showOptions", "update:tabToIndent", "update:debugMode"],
+  emits: [
+    "update:showOptions",
+    "update:tabToIndent",
+    "update:debugMode",
+    "update:selectedRenderer",
+  ],
   setup() {
     return {
       mdiCloseCircleOutline,

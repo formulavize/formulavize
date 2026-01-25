@@ -11,10 +11,19 @@
       />
     </pane>
     <pane>
-      <GraphView v-if="!debugMode" ref="graphView" :cur-dag="curDag as Dag" />
+      <GraphView
+        v-if="!debugMode"
+        ref="graphView"
+        :cur-dag="curDag as Dag"
+        :renderer-component="rendererComponent"
+      />
       <tabs v-else :options="{ useUrlFragment: false }">
         <tab name="Output">
-          <GraphView ref="graphView" :cur-dag="curDag as Dag" />
+          <GraphView
+            ref="graphView"
+            :cur-dag="curDag as Dag"
+            :renderer-component="rendererComponent"
+          />
         </tab>
         <tab name="AST">
           <TextDumpView title="AST Dump" :content="curAst.debugDumpTree()" />
@@ -51,11 +60,12 @@
     v-model:show-options="showOptionsPopup"
     v-model:tab-to-indent="tabToIndent"
     v-model:debug-mode="debugMode"
+    v-model:selected-renderer="selectedRenderer"
   />
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, markRaw } from "vue";
 import { cloneDeep } from "lodash";
 import { EditorState, Text } from "@codemirror/state";
 import { Diagnostic } from "@codemirror/lint";
@@ -64,6 +74,9 @@ import TextEditor from "./components/TextEditor.vue";
 import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
 import ToolBar from "./components/ToolBar.vue";
+import CytoscapeRenderer from "./renderers/cyDag/CytoscapeRenderer.vue";
+import MinimalExampleRenderer from "./renderers/minExample/minimalExampleRenderer.vue";
+import { RendererComponent, IRenderer } from "./compiler/rendererTypes";
 import ExportOptionsPopup from "./components/ExportOptionsPopup.vue";
 import OptionsPopup from "./components/OptionsPopup.vue";
 import { RecipeTreeNode } from "./compiler/ast";
@@ -105,6 +118,9 @@ export default defineComponent({
       showExportPopup: false,
       showOptionsPopup: false,
       tabToIndent: false,
+      selectedRenderer: "cytoscape" as "cytoscape" | "minimal",
+      rendererComponent: markRaw(CytoscapeRenderer) as RendererComponent &
+        IRenderer,
     };
   },
   watch: {
@@ -124,6 +140,16 @@ export default defineComponent({
     },
     debugMode() {
       // repaint the conditionally rendered GraphView
+      const existingEditorState = cloneDeep(this.curEditorState);
+      this.updateEditorState(existingEditorState as EditorState);
+    },
+    selectedRenderer(newRenderer: "cytoscape" | "minimal") {
+      this.rendererComponent = markRaw(
+        newRenderer === "cytoscape"
+          ? CytoscapeRenderer
+          : MinimalExampleRenderer,
+      ) as RendererComponent & IRenderer;
+      // repaint the GraphView with new renderer
       const existingEditorState = cloneDeep(this.curEditorState);
       this.updateEditorState(existingEditorState as EditorState);
     },

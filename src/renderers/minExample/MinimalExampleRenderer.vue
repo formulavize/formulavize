@@ -13,7 +13,10 @@
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
 import { Dag } from "../../compiler/dag";
-import { ImageExportOptions } from "../../compiler/rendererTypes";
+import {
+  RendererComponent,
+  ImageExportOptions,
+} from "../../compiler/rendererTypes";
 import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
 
@@ -78,7 +81,7 @@ Edge Count: ${this.edgeCount}
       saveAs(blob, `${exportOptions.fileName}.txt`);
     },
   },
-});
+}) as RendererComponent;
 </script>
 
 <style scoped>
