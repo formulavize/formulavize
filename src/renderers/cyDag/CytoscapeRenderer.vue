@@ -138,6 +138,10 @@ export default defineComponent({
       });
     },
 
+    getSupportedExportFormats(): ExportFormat[] {
+      return [ExportFormat.PNG, ExportFormat.JPG, ExportFormat.SVG];
+    },
+
     exportImage(exportOptions: ImageExportOptions): void {
       if (!this.cy) {
         console.error("Cytoscape instance not initialized");
@@ -174,7 +178,12 @@ export default defineComponent({
             type: "image/svg+xml;charset=utf-8",
           });
         })
-        .exhaustive();
+        .otherwise((format) => {
+          console.error(`Unsupported export format: ${format}`);
+          return null;
+        });
+
+      if (!imgBlob) return;
       const fileName = exportOptions.fileName + "." + exportOptions.fileType;
       saveAs(imgBlob, fileName);
     },

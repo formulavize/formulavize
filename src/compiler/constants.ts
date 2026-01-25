@@ -10,4 +10,5 @@ export enum ExportFormat {
   PNG = "png",
   JPG = "jpg",
   SVG = "svg",
+  TXT = "txt",
 }

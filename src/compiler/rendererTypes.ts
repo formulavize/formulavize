@@ -23,6 +23,12 @@ export interface IRenderer {
   updateDag(dag: Dag): void;
 
   /**
+   * Get the list of export formats supported by this renderer.
+   * @returns Array of supported export formats
+   */
+  getSupportedExportFormats(): ExportFormat[];
+
+  /**
    * Export the current visualization as an image.
    * @param options Export configuration options
    */
