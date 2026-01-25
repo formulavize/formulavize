@@ -61,7 +61,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from "vue";
+import { defineComponent, ref, PropType } from "vue";
 import { mdiExport, mdiCloseCircleOutline, mdiDownload } from "@mdi/js";
 import { ExportFormat } from "../compiler/constants";
 import { VForm } from "vuetify/components";
@@ -90,6 +90,10 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
+    supportedExportFormats: {
+      type: Array as PropType<ExportFormat[]>,
+      required: true,
+    },
   },
   emits: ["update:showExport", "export-with-options"],
   setup() {
@@ -106,15 +110,25 @@ export default defineComponent({
   },
   data() {
     return {
-      formatOptions: Object.values(ExportFormat),
       fileName: "formulavize",
       fileType: ExportFormat.PNG,
       scalingPct: 100,
     };
   },
   computed: {
+    formatOptions(): ExportFormat[] {
+      return this.supportedExportFormats;
+    },
     isFormValid() {
       return this.exportForm?.isValid ?? false;
+    },
+  },
+  watch: {
+    supportedExportFormats(newFormats: ExportFormat[]) {
+      // Reset fileType if current selection is not in the new list
+      if (!newFormats.includes(this.fileType)) {
+        this.fileType = newFormats[0] || ExportFormat.PNG;
+      }
     },
   },
   methods: {
