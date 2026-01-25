@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.8.0](https://github.com/formulavize/formulavize/compare/v1.7.0...v1.8.0) (2026-01-25)
+
+
+### Features
+
+* **App:** selectable renderer gets dependency injected ([7dcea0b](https://github.com/formulavize/formulavize/commit/7dcea0b894856baf334782c55244ac55d13489fa))
+* **MinimalExampleRenderer:** add MinimalExampleRenderer.vue for reference ([e806c55](https://github.com/formulavize/formulavize/commit/e806c55585e04eb098f1123208faae809db55ae4))
+* **rendererTypes:** renderers expose supported export formats ([5394a71](https://github.com/formulavize/formulavize/commit/5394a7170f2187efacb4cf19c5eef85be7503244))
+
+
+### Bug Fixes
+
+* **App:** fix MinimalExampleRenderer import typo ([d154c2f](https://github.com/formulavize/formulavize/commit/d154c2f3df77837b9d5d0713dcda402e8a2b0a82))
+* **ExportOptionsPopup:** export options change based on selected renderer ([9c202a5](https://github.com/formulavize/formulavize/commit/9c202a531d44ea6c759e3a4ea2805ee59c3567bb))
+
 ## [1.7.0](https://github.com/formulavize/formulavize/compare/v1.6.0...v1.7.0) (2026-01-19)
 
 
