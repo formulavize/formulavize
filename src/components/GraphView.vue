@@ -7,11 +7,7 @@
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
 import { Dag } from "../compiler/dag";
-import {
-  IRenderer,
-  FileExportOptions,
-  RendererComponent,
-} from "../compiler/rendererTypes";
+import { FileExportOptions, RendererType } from "../compiler/rendererTypes";
 
 // GraphView - Component for rendering the DAG visualization
 // Uses a pluggable renderer component to display the graph enabling flexibility
@@ -24,7 +20,7 @@ export default defineComponent({
       default: () => new Dag(""),
     },
     rendererComponent: {
-      type: Object as PropType<RendererComponent & IRenderer>,
+      type: Object as PropType<RendererType>,
       required: true,
     },
   },
@@ -34,7 +30,7 @@ export default defineComponent({
      * This method delegates to the renderer's export implementation.
      */
     export(exportOptions: FileExportOptions): void {
-      const renderer = this.$refs.renderer as IRenderer;
+      const renderer = this.$refs.renderer as RendererType;
       renderer?.export?.(exportOptions);
     },
   },
