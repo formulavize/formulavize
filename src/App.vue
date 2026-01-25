@@ -77,7 +77,7 @@ import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
 import ToolBar from "./components/ToolBar.vue";
 import CytoscapeRenderer from "./renderers/cyDag/CytoscapeRenderer.vue";
-import MinimalExampleRenderer from "./renderers/minExample/minimalExampleRenderer.vue";
+import MinimalExampleRenderer from "./renderers/minExample/MinimalExampleRenderer.vue";
 import { RendererType } from "./compiler/rendererTypes";
 import ExportOptionsPopup from "./components/ExportOptionsPopup.vue";
 import OptionsPopup from "./components/OptionsPopup.vue";
