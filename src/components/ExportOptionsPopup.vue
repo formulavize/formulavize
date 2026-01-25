@@ -63,7 +63,7 @@
 <script lang="ts">
 import { defineComponent, ref } from "vue";
 import { mdiExport, mdiCloseCircleOutline, mdiDownload } from "@mdi/js";
-import { ImageExportFormat } from "../compiler/constants";
+import { ExportFormat } from "../compiler/constants";
 import { VForm } from "vuetify/components";
 
 const fileNameRules = [
@@ -106,9 +106,9 @@ export default defineComponent({
   },
   data() {
     return {
-      formatOptions: Object.values(ImageExportFormat),
+      formatOptions: Object.values(ExportFormat),
       fileName: "formulavize",
-      fileType: ImageExportFormat.PNG,
+      fileType: ExportFormat.PNG,
       scalingPct: 100,
     };
   },

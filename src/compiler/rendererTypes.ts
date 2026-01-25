@@ -1,13 +1,13 @@
 import { Component } from "vue";
 import { Dag } from "./dag";
-import { ImageExportFormat } from "./constants";
+import { ExportFormat } from "./constants";
 
 /**
  * Options for exporting an image from a renderer.
  */
 export interface ImageExportOptions {
   fileName: string;
-  fileType: ImageExportFormat;
+  fileType: ExportFormat;
   scalingFactor: number;
 }
 
