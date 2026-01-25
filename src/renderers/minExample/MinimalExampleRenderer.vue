@@ -21,11 +21,8 @@ import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
 
 /**
- * MinimalExampleRenderer - A minimal example renderer for demonstration purposes.
- * This shows how easy it is to create alternative renderers.
- *
- * This renderer simply displays basic DAG statistics.
- * It demonstrates the minimal interface required for a renderer.
+ * MinimalExampleRenderer - A minimal example renderer to demonstrate renderer structure.
+ * This renderer displays basic DAG statistics.
  */
 const MinimalExampleRenderer = defineComponent({
   name: "MinimalExampleRenderer",

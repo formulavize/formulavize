@@ -63,6 +63,9 @@ cytoscape.use(dagre);
 cytoscape.use(cytoscapePopper(popperFactory));
 cytoscape.use(svg);
 
+/**
+ * CytoscapeRenderer - A renderer using Cytoscape.js for DAG visualization.
+ */
 const CytoscapeRenderer = defineComponent({
   name: "CytoscapeRenderer",
   props: {
