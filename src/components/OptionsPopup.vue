@@ -37,10 +37,12 @@
             <v-select
               label="Renderer"
               :model-value="selectedRenderer"
-              :items="[
-                { title: 'Cytoscape Renderer', value: 'cytoscape' },
-                { title: 'Minimal Example Renderer', value: 'minimal' },
-              ]"
+              :items="
+                rendererOptions.map((opt) => ({
+                  title: opt.name,
+                  value: opt.id,
+                }))
+              "
               @update:model-value="$emit('update:selectedRenderer', $event)"
             />
           </v-col>
@@ -57,7 +59,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, PropType } from "vue";
 import { mdiCloseCircleOutline, mdiCogOutline } from "@mdi/js";
 export default defineComponent({
   name: "OptionsPopup",
@@ -76,6 +78,10 @@ export default defineComponent({
     },
     selectedRenderer: {
       type: String,
+      required: true,
+    },
+    rendererOptions: {
+      type: Array as PropType<Array<{ id: string; name: string }>>,
       required: true,
     },
   },
