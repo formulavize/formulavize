@@ -78,7 +78,7 @@ import TextDumpView from "./components/TextDumpView.vue";
 import ToolBar from "./components/ToolBar.vue";
 import CytoscapeRenderer from "./renderers/cyDag/CytoscapeRenderer.vue";
 import MinimalExampleRenderer from "./renderers/minExample/MinimalExampleRenderer.vue";
-import { RendererType } from "./compiler/rendererTypes";
+import { RendererComponent } from "./compiler/rendererTypes";
 import ExportOptionsPopup from "./components/ExportOptionsPopup.vue";
 import OptionsPopup from "./components/OptionsPopup.vue";
 import { RecipeTreeNode } from "./compiler/ast";
@@ -121,8 +121,8 @@ export default defineComponent({
       showOptionsPopup: false,
       tabToIndent: false,
       selectedRenderer: "cytoscape",
-      rendererComponent: markRaw(CytoscapeRenderer) as RendererType,
-      registeredRenderers: new Map<string, RendererType>(),
+      rendererComponent: markRaw(CytoscapeRenderer) as RendererComponent,
+      registeredRenderers: new Map<string, RendererComponent>(),
     };
   },
   computed: {
@@ -170,11 +170,11 @@ export default defineComponent({
   mounted() {
     this.registerRenderer(
       "cytoscape",
-      markRaw(CytoscapeRenderer) as RendererType,
+      markRaw(CytoscapeRenderer) as RendererComponent,
     );
     this.registerRenderer(
       "minimal",
-      markRaw(MinimalExampleRenderer) as RendererType,
+      markRaw(MinimalExampleRenderer) as RendererComponent,
     );
   },
   methods: {
@@ -182,7 +182,7 @@ export default defineComponent({
       const existingEditorState = cloneDeep(this.curEditorState);
       this.updateEditorState(existingEditorState as EditorState);
     },
-    registerRenderer(id: string, renderer: RendererType): void {
+    registerRenderer(id: string, renderer: RendererComponent): void {
       this.registeredRenderers.set(id, renderer);
     },
     updateEditorState(editorState: EditorState) {
