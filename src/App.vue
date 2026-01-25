@@ -78,7 +78,7 @@ import TextDumpView from "./components/TextDumpView.vue";
 import ToolBar from "./components/ToolBar.vue";
 import CytoscapeRenderer from "./renderers/cyDag/CytoscapeRenderer.vue";
 import MinimalExampleRenderer from "./renderers/minExample/minimalExampleRenderer.vue";
-import { RendererComponent, IRenderer } from "./compiler/rendererTypes";
+import { RendererType } from "./compiler/rendererTypes";
 import ExportOptionsPopup from "./components/ExportOptionsPopup.vue";
 import OptionsPopup from "./components/OptionsPopup.vue";
 import { RecipeTreeNode } from "./compiler/ast";
@@ -121,9 +121,8 @@ export default defineComponent({
       showOptionsPopup: false,
       tabToIndent: false,
       selectedRenderer: "cytoscape",
-      rendererComponent: markRaw(CytoscapeRenderer) as RendererComponent &
-        IRenderer,
-      registeredRenderers: new Map<string, RendererComponent & IRenderer>(),
+      rendererComponent: markRaw(CytoscapeRenderer) as RendererType,
+      registeredRenderers: new Map<string, RendererType>(),
     };
   },
   computed: {
@@ -175,18 +174,15 @@ export default defineComponent({
   mounted() {
     this.registerRenderer(
       "cytoscape",
-      markRaw(CytoscapeRenderer) as RendererComponent & IRenderer,
+      markRaw(CytoscapeRenderer) as RendererType,
     );
     this.registerRenderer(
       "minimal",
-      markRaw(MinimalExampleRenderer) as RendererComponent & IRenderer,
+      markRaw(MinimalExampleRenderer) as RendererType,
     );
   },
   methods: {
-    registerRenderer(
-      id: string,
-      renderer: RendererComponent & IRenderer,
-    ): void {
+    registerRenderer(id: string, renderer: RendererType): void {
       this.registeredRenderers.set(id, renderer);
     },
 
