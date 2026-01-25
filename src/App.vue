@@ -61,6 +61,7 @@
     v-model:tab-to-indent="tabToIndent"
     v-model:debug-mode="debugMode"
     v-model:selected-renderer="selectedRenderer"
+    :renderer-options="rendererOptions"
   />
 </template>
 
@@ -118,10 +119,22 @@ export default defineComponent({
       showExportPopup: false,
       showOptionsPopup: false,
       tabToIndent: false,
-      selectedRenderer: "cytoscape" as "cytoscape" | "minimal",
+      selectedRenderer: "cytoscape",
       rendererComponent: markRaw(CytoscapeRenderer) as RendererComponent &
         IRenderer,
+      registeredRenderers: new Map<
+        string,
+        { name: string; renderer: RendererComponent & IRenderer }
+      >(),
     };
+  },
+  computed: {
+    rendererOptions(): Array<{ id: string; name: string }> {
+      return Array.from(this.registeredRenderers, ([id, { name }]) => ({
+        id,
+        name,
+      }));
+    },
   },
   watch: {
     async curEditorState(newEditorState: EditorState) {
@@ -143,18 +156,39 @@ export default defineComponent({
       const existingEditorState = cloneDeep(this.curEditorState);
       this.updateEditorState(existingEditorState as EditorState);
     },
-    selectedRenderer(newRenderer: "cytoscape" | "minimal") {
-      this.rendererComponent = markRaw(
-        newRenderer === "cytoscape"
-          ? CytoscapeRenderer
-          : MinimalExampleRenderer,
-      ) as RendererComponent & IRenderer;
-      // repaint the GraphView with new renderer
-      const existingEditorState = cloneDeep(this.curEditorState);
-      this.updateEditorState(existingEditorState as EditorState);
+    selectedRenderer(newRendererId: string) {
+      const entry = this.registeredRenderers.get(newRendererId);
+      if (entry) {
+        this.rendererComponent = entry.renderer;
+        // repaint the GraphView with new renderer
+        const existingEditorState = cloneDeep(this.curEditorState);
+        this.updateEditorState(existingEditorState as EditorState);
+      } else {
+        console.error(`Renderer with id "${newRendererId}" not found`);
+      }
     },
   },
+  mounted() {
+    this.registerRenderer(
+      "cytoscape",
+      "Cytoscape Renderer",
+      markRaw(CytoscapeRenderer) as RendererComponent & IRenderer,
+    );
+    this.registerRenderer(
+      "minimal",
+      "Minimal Example Renderer",
+      markRaw(MinimalExampleRenderer) as RendererComponent & IRenderer,
+    );
+  },
   methods: {
+    registerRenderer(
+      id: string,
+      name: string,
+      renderer: RendererComponent & IRenderer,
+    ): void {
+      this.registeredRenderers.set(id, { name, renderer });
+    },
+
     updateEditorState(editorState: EditorState) {
       this.curEditorState = editorState;
     },
