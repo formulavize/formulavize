@@ -14,6 +14,7 @@
 import { defineComponent, PropType } from "vue";
 import { Dag } from "../../compiler/dag";
 import { ImageExportOptions } from "../../compiler/rendererTypes";
+import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
 
 /**
@@ -54,8 +55,18 @@ export default defineComponent({
       });
     },
 
+    getSupportedExportFormats(): ExportFormat[] {
+      return [ExportFormat.TXT];
+    },
+
     exportImage(exportOptions: ImageExportOptions): void {
-      // Simple text export as an example
+      if (exportOptions.fileType !== ExportFormat.TXT) {
+        console.error(
+          `MinimalExampleRenderer: Unsupported export format "${exportOptions.fileType}". Only TXT is supported.`,
+        );
+        return;
+      }
+
       const content = `
 Basic DAG Statistics
 --------------------
