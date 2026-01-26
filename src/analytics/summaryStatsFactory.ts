@@ -62,11 +62,11 @@ function calculateStructuralStats(dag: Dag): DagStructuralStats {
     return map;
   }, new Map<string, number>());
 
-  const avgFanOut =
+  const avgOutDegree =
     totalNodeCount > 0
       ? sumNumList(Array.from(nodeToOutEdges.values())) / totalNodeCount
       : 0;
-  const avgFanIn =
+  const avgInDegree =
     totalNodeCount > 0
       ? sumNumList(Array.from(nodeToInEdges.values())) / totalNodeCount
       : 0;
@@ -76,8 +76,8 @@ function calculateStructuralStats(dag: Dag): DagStructuralStats {
     edgeCount: totalEdgeCount,
     maxNestingDepth,
     totalChildDags: allDags.length - 1, // Exclude root DAG
-    avgFanOut,
-    avgFanIn,
+    avgOutDegree,
+    avgInDegree,
   };
 }
 
