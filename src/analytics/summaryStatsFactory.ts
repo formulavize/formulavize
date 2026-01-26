@@ -62,13 +62,15 @@ function calculateStructuralStats(dag: Dag): DagStructuralStats {
     return map;
   }, new Map<string, number>());
 
-  const avgOutDegree =
-    totalNodeCount > 0
-      ? sumNumList(Array.from(nodeToOutEdges.values())) / totalNodeCount
-      : 0;
+  const maxInDegree = Math.max(0, ...Array.from(nodeToInEdges.values()));
+  const maxOutDegree = Math.max(0, ...Array.from(nodeToOutEdges.values()));
   const avgInDegree =
     totalNodeCount > 0
       ? sumNumList(Array.from(nodeToInEdges.values())) / totalNodeCount
+      : 0;
+  const avgOutDegree =
+    totalNodeCount > 0
+      ? sumNumList(Array.from(nodeToOutEdges.values())) / totalNodeCount
       : 0;
 
   return {
@@ -76,8 +78,10 @@ function calculateStructuralStats(dag: Dag): DagStructuralStats {
     edgeCount: totalEdgeCount,
     maxNestingDepth,
     totalChildDags: allDags.length - 1, // Exclude root DAG
-    avgOutDegree,
+    maxInDegree,
+    maxOutDegree,
     avgInDegree,
+    avgOutDegree,
   };
 }
 
