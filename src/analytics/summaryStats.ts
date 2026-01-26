@@ -3,8 +3,8 @@ export interface DagStructuralStats {
   edgeCount: number;
   maxNestingDepth: number;
   totalChildDags: number;
-  avgFanOut: number;
-  avgFanIn: number;
+  avgOutDegree: number;
+  avgInDegree: number;
 }
 
 export interface NamespaceStats {
