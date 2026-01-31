@@ -45,6 +45,14 @@ export interface NamingStats {
   avgEdgeNameLength: number;
 }
 
+export interface ASTStats {
+  totalNodeCount: number;
+  maxAstDepth: number;
+  leafNodeCount: number;
+  avgChildrenPerNode: number;
+  nodeTypeCount: Record<string, number>;
+}
+
 export class SummaryStats {
   structural: DagStructuralStats;
   namespace: NamespaceStats;
@@ -52,6 +60,7 @@ export class SummaryStats {
   variable: VariableStats;
   imports: ImportStats;
   naming: NamingStats;
+  ast: ASTStats;
 
   constructor(
     structural: DagStructuralStats,
@@ -60,6 +69,7 @@ export class SummaryStats {
     variable: VariableStats,
     imports: ImportStats,
     naming: NamingStats,
+    ast: ASTStats,
   ) {
     this.structural = structural;
     this.namespace = namespace;
@@ -67,6 +77,7 @@ export class SummaryStats {
     this.variable = variable;
     this.imports = imports;
     this.naming = naming;
+    this.ast = ast;
   }
 
   toJSON(): Record<string, unknown> {
@@ -77,6 +88,7 @@ export class SummaryStats {
       variable: this.variable,
       imports: this.imports,
       naming: this.naming,
+      ast: this.ast,
     };
   }
 
