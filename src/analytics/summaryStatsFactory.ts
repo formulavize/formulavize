@@ -1,5 +1,6 @@
 import { Compilation } from "../compiler/compilation";
 import { Dag, DagElement } from "../compiler/dag";
+import { BaseTreeNode, NodeType } from "../compiler/ast";
 import {
   SummaryStats,
   DagStructuralStats,
@@ -8,6 +9,7 @@ import {
   VariableStats,
   ImportStats,
   NamingStats,
+  ASTStats,
 } from "./summaryStats";
 
 function collectAllDags(dag: Dag): Dag[] {
@@ -232,8 +234,52 @@ function calculateNamingStats(dag: Dag): NamingStats {
   };
 }
 
+function calculateASTStats(ast: BaseTreeNode): ASTStats {
+  function collectNodes(node: BaseTreeNode): BaseTreeNode[] {
+    return [node, ...node.getChildren().flatMap(collectNodes)];
+  }
+  const allNodes = collectNodes(ast);
+  const totalNodeCount = allNodes.length;
+
+  function calculateDepth(node: BaseTreeNode): number {
+    const children = node.getChildren();
+    if (children.length === 0) return 1;
+    return 1 + Math.max(...children.map(calculateDepth));
+  }
+  const maxAstDepth = calculateDepth(ast);
+
+  const leafNodeCount = allNodes.filter(
+    (node) => node.getChildren().length === 0,
+  ).length;
+
+  const totalChildren = allNodes.reduce(
+    (sum, node) => sum + node.getChildren().length,
+    0,
+  );
+  const avgChildrenPerNode =
+    totalNodeCount > 0 ? totalChildren / totalNodeCount : 0;
+
+  const nodeTypeCount = allNodes.reduce(
+    (counts, node) => {
+      const typeName = NodeType[node.Type];
+      counts[typeName] = (counts[typeName] ?? 0) + 1;
+      return counts;
+    },
+    {} as Record<string, number>,
+  );
+
+  return {
+    totalNodeCount,
+    maxAstDepth,
+    leafNodeCount,
+    avgChildrenPerNode,
+    nodeTypeCount,
+  };
+}
+
 export function createSummaryStats(compilation: Compilation): SummaryStats {
   const dag = compilation.DAG;
+  const ast = compilation.AST;
 
   const structural = calculateStructuralStats(dag);
   const namespace = calculateNamespaceStats(dag);
@@ -241,6 +287,7 @@ export function createSummaryStats(compilation: Compilation): SummaryStats {
   const variable = calculateVariableStats(dag);
   const imports = calculateImportStats(dag);
   const naming = calculateNamingStats(dag);
+  const astStats = calculateASTStats(ast);
 
   return new SummaryStats(
     structural,
@@ -249,5 +296,6 @@ export function createSummaryStats(compilation: Compilation): SummaryStats {
     variable,
     imports,
     naming,
+    astStats,
   );
 }
