@@ -13,47 +13,46 @@ import {
 import { DEFAULT_POSITION } from "src/compiler/compilationErrors";
 import { parseFromSource } from "src/compiler/driver";
 
-function createCompilation(dag: Dag): Compilation {
-  const emptyAst = new RecipeTreeNode([], DEFAULT_POSITION);
-  return new Compilation("", emptyAst, dag, []);
-}
+describe("DAG statistics", () => {
+  function createCompilationWithDag(dag: Dag): Compilation {
+    const emptyAst = new RecipeTreeNode([], DEFAULT_POSITION);
+    return new Compilation("", emptyAst, dag, []);
+  }
 
-function makeNode(
-  id: string,
-  name: string,
-  styleTags: string[][] = [],
-  styleProperties: Map<string, string> = new Map(),
-): DagNode {
-  return {
-    id,
-    name,
-    styleTags,
-    styleProperties,
-  };
-}
+  function makeNode(
+    id: string,
+    name: string,
+    styleTags: string[][] = [],
+    styleProperties: Map<string, string> = new Map(),
+  ): DagNode {
+    return {
+      id,
+      name,
+      styleTags,
+      styleProperties,
+    };
+  }
 
-function makeEdge(
-  id: string,
-  name: string,
-  srcNodeId: string,
-  destNodeId: string,
-  styleTags: string[][] = [],
-  styleProperties: Map<string, string> = new Map(),
-): DagEdge {
-  return {
-    id,
-    name,
-    srcNodeId,
-    destNodeId,
-    styleTags,
-    styleProperties,
-  };
-}
-
-describe("createSummaryStats", () => {
+  function makeEdge(
+    id: string,
+    name: string,
+    srcNodeId: string,
+    destNodeId: string,
+    styleTags: string[][] = [],
+    styleProperties: Map<string, string> = new Map(),
+  ): DagEdge {
+    return {
+      id,
+      name,
+      srcNodeId,
+      destNodeId,
+      styleTags,
+      styleProperties,
+    };
+  }
   test("empty dag returns zero stats", () => {
     const dag = new Dag("root");
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats).toMatchObject({
@@ -104,7 +103,7 @@ describe("createSummaryStats", () => {
   test("dag with single node", () => {
     const dag = new Dag("root");
     dag.addNode(makeNode("node1", "test"));
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.structural.nodeCount).toBe(1);
@@ -117,7 +116,7 @@ describe("createSummaryStats", () => {
     dag.addNode(makeNode("node1", "a"));
     dag.addNode(makeNode("node2", "bb"));
     dag.addNode(makeNode("node3", "ccc"));
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.structural.nodeCount).toBe(3);
@@ -129,7 +128,7 @@ describe("createSummaryStats", () => {
     dag.addNode(makeNode("node1", "source"));
     dag.addNode(makeNode("node2", "target"));
     dag.addEdge(makeEdge("edge1", "myEdge", "node1", "node2"));
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.structural.edgeCount).toBe(1);
@@ -145,7 +144,7 @@ describe("createSummaryStats", () => {
     dag.addNode(makeNode("node3", "n3"));
     dag.addEdge(makeEdge("edge1", "namedEdge", "node1", "node2"));
     dag.addEdge(makeEdge("edge2", "", "node2", "node3"));
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.structural.edgeCount).toBe(2);
@@ -162,7 +161,7 @@ describe("createSummaryStats", () => {
     // node1 has fan-out of 2, node2 and node3 each have fan-in of 1
     dag.addEdge(makeEdge("edge1", "", "node1", "node2"));
     dag.addEdge(makeEdge("edge2", "", "node1", "node3"));
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.structural.maxInDegree).toBe(1); // node2 and node3 each have in-degree of 1
@@ -177,7 +176,7 @@ describe("createSummaryStats", () => {
     const child2 = new Dag("child2", child1, "c2");
     const _child3 = new Dag("child3", child2, "c3");
 
-    const compilation = createCompilation(root);
+    const compilation = createCompilationWithDag(root);
     const stats = createSummaryStats(compilation);
 
     expect(stats.structural.maxNestingDepth).toBe(3);
@@ -190,7 +189,7 @@ describe("createSummaryStats", () => {
     const _child2 = new Dag("child2", root, "c2");
     const _grandchild1 = new Dag("gc1", child1, "gc1");
 
-    const compilation = createCompilation(root);
+    const compilation = createCompilationWithDag(root);
     const stats = createSummaryStats(compilation);
 
     expect(stats.structural.maxNestingDepth).toBe(2);
@@ -203,7 +202,7 @@ describe("createSummaryStats", () => {
     const _child2 = new Dag("child2", child1, "namespace2");
     const _child3 = new Dag("child3", root, "namespace3");
 
-    const compilation = createCompilation(root);
+    const compilation = createCompilationWithDag(root);
     const stats = createSummaryStats(compilation);
 
     expect(stats.namespace.namespaceCount).toBe(3);
@@ -216,7 +215,7 @@ describe("createSummaryStats", () => {
     const _child1 = new Dag("child1", root, "named");
     const _child2 = new Dag("child2", root, ""); // unnamed
 
-    const compilation = createCompilation(root);
+    const compilation = createCompilationWithDag(root);
     const stats = createSummaryStats(compilation);
 
     expect(stats.namespace.namespaceCount).toBe(1);
@@ -228,7 +227,7 @@ describe("createSummaryStats", () => {
     dag.addNode(makeNode("node1", "n1", [["tag1"], ["tag2"]]));
     dag.addNode(makeNode("node2", "n2", [["tag3"]]));
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.styling.totalStyleTagCount).toBe(3);
@@ -251,7 +250,7 @@ describe("createSummaryStats", () => {
     );
     dag.addNode(makeNode("node2", "n2", [], new Map([["shape", "circle"]])));
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.styling.totalStylePropertyCount).toBe(3);
@@ -265,7 +264,7 @@ describe("createSummaryStats", () => {
     dag.addNode(makeNode("node2", "n2"));
     dag.addEdge(makeEdge("edge1", "e1", "node1", "node2", [["edgeStyle"]]));
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.styling.totalStyleTagCount).toBe(1);
@@ -281,7 +280,7 @@ describe("createSummaryStats", () => {
       new Map([["dagProp", "value"]]),
     );
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.styling.totalStyleTagCount).toBe(2);
@@ -295,7 +294,7 @@ describe("createSummaryStats", () => {
     dag.addStyleBinding("keyword1", [["style", "tag1"]]);
     dag.addStyleBinding("keyword2", [["style", "tag2"]]);
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.styling.styleBindingCount).toBe(2);
@@ -307,7 +306,7 @@ describe("createSummaryStats", () => {
     dag.setVarNode("var2", "node2");
     dag.setVarNode("var3", "node3");
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.variable.variableDeclarationCount).toBe(3);
@@ -321,7 +320,7 @@ describe("createSummaryStats", () => {
     });
     dag.setVarStyle("styleVar2", null);
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.variable.styleVariableDeclarationCount).toBe(2);
@@ -336,7 +335,7 @@ describe("createSummaryStats", () => {
       ]),
     );
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.variable.qualifiedStyleUsageCount).toBe(2);
@@ -353,7 +352,7 @@ describe("createSummaryStats", () => {
       ]),
     );
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.variable.qualifiedStyleUsageCount).toBe(1);
@@ -366,7 +365,7 @@ describe("createSummaryStats", () => {
     dag.addUsedImport("import2");
     dag.addUsedImport("import1"); // duplicate - Set will ignore
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     // Since addUsedImport uses a Set, duplicates are automatically removed
@@ -381,7 +380,7 @@ describe("createSummaryStats", () => {
     child.addUsedImport("import2");
     child.addUsedImport("import1"); // duplicate across dags
 
-    const compilation = createCompilation(root);
+    const compilation = createCompilationWithDag(root);
     const stats = createSummaryStats(compilation);
 
     expect(stats.imports.importCount).toBe(3);
@@ -394,7 +393,7 @@ describe("createSummaryStats", () => {
     dag.addNode(makeNode("node2", "n2", []));
     dag.addEdge(makeEdge("edge1", "e1", "node1", "node2"));
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     // Total elements: 2 nodes + 1 edge + 1 dag = 4
@@ -411,21 +410,19 @@ describe("createSummaryStats", () => {
     const branch2 = new Dag("b2", root, "branch2");
     const _branch2child = new Dag("b2c", branch2, "b2child");
 
-    const compilation = createCompilation(root);
+    const compilation = createCompilationWithDag(root);
     const stats = createSummaryStats(compilation);
 
     expect(stats.structural.maxNestingDepth).toBe(3); // root -> b1 -> b1c -> b1gc
     expect(stats.structural.totalChildDags).toBe(5);
     expect(stats.namespace.namespaceCount).toBe(5);
   });
-});
 
-describe("edge cases", () => {
   test("dag with zero-length node names", () => {
     const dag = new Dag("root");
     dag.addNode(makeNode("node1", ""));
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.naming.avgNodeNameLength).toBe(0);
@@ -437,7 +434,7 @@ describe("edge cases", () => {
     dag.addNode(makeNode("node2", "n2"));
     dag.addEdge(makeEdge("edge1", "", "node1", "node2"));
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.naming.namedEdgeCount).toBe(0);
@@ -451,7 +448,7 @@ describe("edge cases", () => {
     dag.addNode(makeNode("node2", "n2"));
     dag.addEdge(makeEdge("edge1", "   ", "node1", "node2"));
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.naming.namedEdgeCount).toBe(0);
@@ -462,7 +459,7 @@ describe("edge cases", () => {
     const dag = new Dag("root");
     dag.addNode(makeNode("node1", "n1", [["tag1"], ["tag2"], ["tag3"]]));
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.variable.qualifiedStyleUsageCount).toBe(0);
@@ -474,7 +471,7 @@ describe("edge cases", () => {
     const dag = new Dag("root");
     dag.addNode(makeNode("node1", "n1", []));
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.styling.totalStyleTagCount).toBe(0);
@@ -485,7 +482,7 @@ describe("edge cases", () => {
     const dag = new Dag("root");
     dag.addNode(makeNode("node1", "n1", []));
 
-    const compilation = createCompilation(dag);
+    const compilation = createCompilationWithDag(dag);
     const stats = createSummaryStats(compilation);
 
     expect(stats.styling.totalStylePropertyCount).toBe(0);
