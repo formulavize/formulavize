@@ -10,6 +10,7 @@ import {
   ImportStats,
   NamingStats,
   ASTStats,
+  SourceCodeStats,
 } from "./summaryStats";
 
 function collectAllDags(dag: Dag): Dag[] {
@@ -277,9 +278,26 @@ function calculateASTStats(ast: BaseTreeNode): ASTStats {
   };
 }
 
+function calculateSourceCodeStats(source: string): SourceCodeStats {
+  const totalCharacterCount = source.length;
+  const lines = source.split("\n");
+  const lineCount = lines.length;
+  const lineLengths = lines.map((line) => line.length);
+  const maxLineLength = Math.max(0, ...lineLengths);
+  const avgLineLength = avgNumList(lineLengths);
+
+  return {
+    totalCharacterCount,
+    lineCount,
+    maxLineLength,
+    avgLineLength,
+  };
+}
+
 export function createSummaryStats(compilation: Compilation): SummaryStats {
   const dag = compilation.DAG;
   const ast = compilation.AST;
+  const source = compilation.Source;
 
   const structural = calculateStructuralStats(dag);
   const namespace = calculateNamespaceStats(dag);
@@ -288,6 +306,7 @@ export function createSummaryStats(compilation: Compilation): SummaryStats {
   const imports = calculateImportStats(dag);
   const naming = calculateNamingStats(dag);
   const astStats = calculateASTStats(ast);
+  const sourceStats = calculateSourceCodeStats(source);
 
   return new SummaryStats(
     structural,
@@ -297,5 +316,6 @@ export function createSummaryStats(compilation: Compilation): SummaryStats {
     imports,
     naming,
     astStats,
+    sourceStats,
   );
 }

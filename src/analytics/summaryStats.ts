@@ -53,6 +53,13 @@ export interface ASTStats {
   nodeTypeCount: Record<string, number>;
 }
 
+export interface SourceCodeStats {
+  totalCharacterCount: number;
+  lineCount: number;
+  maxLineLength: number;
+  avgLineLength: number;
+}
+
 export class SummaryStats {
   structural: DagStructuralStats;
   namespace: NamespaceStats;
@@ -61,6 +68,7 @@ export class SummaryStats {
   imports: ImportStats;
   naming: NamingStats;
   ast: ASTStats;
+  source: SourceCodeStats;
 
   constructor(
     structural: DagStructuralStats,
@@ -70,6 +78,7 @@ export class SummaryStats {
     imports: ImportStats,
     naming: NamingStats,
     ast: ASTStats,
+    source: SourceCodeStats,
   ) {
     this.structural = structural;
     this.namespace = namespace;
@@ -78,6 +87,7 @@ export class SummaryStats {
     this.imports = imports;
     this.naming = naming;
     this.ast = ast;
+    this.source = source;
   }
 
   toJSON(): Record<string, unknown> {
@@ -89,6 +99,7 @@ export class SummaryStats {
       imports: this.imports,
       naming: this.naming,
       ast: this.ast,
+      source: this.source,
     };
   }
 
