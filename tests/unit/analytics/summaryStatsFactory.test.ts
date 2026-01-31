@@ -12,11 +12,13 @@ import {
 } from "src/compiler/ast";
 import { DEFAULT_POSITION } from "src/compiler/compilationErrors";
 import { parseFromSource } from "src/compiler/driver";
+import { SummaryStats } from "src/analytics/summaryStats";
 
 describe("DAG statistics", () => {
-  function createCompilationWithDag(dag: Dag): Compilation {
+  function createDagStats(dag: Dag): SummaryStats {
     const emptyAst = new RecipeTreeNode([], DEFAULT_POSITION);
-    return new Compilation("", emptyAst, dag, []);
+    const compilation = new Compilation("", emptyAst, dag, []);
+    return createSummaryStats(compilation);
   }
 
   function makeNode(
@@ -50,10 +52,11 @@ describe("DAG statistics", () => {
       styleProperties,
     };
   }
+
   test("empty dag returns zero stats", () => {
     const dag = new Dag("root");
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createDagStats(dag);
 
     expect(stats).toMatchObject({
       structural: {
@@ -103,8 +106,8 @@ describe("DAG statistics", () => {
   test("dag with single node", () => {
     const dag = new Dag("root");
     dag.addNode(makeNode("node1", "test"));
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createDagStats(dag);
 
     expect(stats.structural.nodeCount).toBe(1);
     expect(stats.structural.edgeCount).toBe(0);
@@ -116,8 +119,8 @@ describe("DAG statistics", () => {
     dag.addNode(makeNode("node1", "a"));
     dag.addNode(makeNode("node2", "bb"));
     dag.addNode(makeNode("node3", "ccc"));
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createDagStats(dag);
 
     expect(stats.structural.nodeCount).toBe(3);
     expect(stats.naming.avgNodeNameLength).toBe(2); // (1 + 2 + 3) / 3
@@ -128,8 +131,8 @@ describe("DAG statistics", () => {
     dag.addNode(makeNode("node1", "source"));
     dag.addNode(makeNode("node2", "target"));
     dag.addEdge(makeEdge("edge1", "myEdge", "node1", "node2"));
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createDagStats(dag);
 
     expect(stats.structural.edgeCount).toBe(1);
     expect(stats.naming.namedEdgeCount).toBe(1);
@@ -144,8 +147,8 @@ describe("DAG statistics", () => {
     dag.addNode(makeNode("node3", "n3"));
     dag.addEdge(makeEdge("edge1", "namedEdge", "node1", "node2"));
     dag.addEdge(makeEdge("edge2", "", "node2", "node3"));
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createDagStats(dag);
 
     expect(stats.structural.edgeCount).toBe(2);
     expect(stats.naming.namedEdgeCount).toBe(1);
@@ -161,8 +164,8 @@ describe("DAG statistics", () => {
     // node1 has fan-out of 2, node2 and node3 each have fan-in of 1
     dag.addEdge(makeEdge("edge1", "", "node1", "node2"));
     dag.addEdge(makeEdge("edge2", "", "node1", "node3"));
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createDagStats(dag);
 
     expect(stats.structural.maxInDegree).toBe(1); // node2 and node3 each have in-degree of 1
     expect(stats.structural.maxOutDegree).toBe(2); // node1 has out-degree of 2
@@ -176,8 +179,7 @@ describe("DAG statistics", () => {
     const child2 = new Dag("child2", child1, "c2");
     const _child3 = new Dag("child3", child2, "c3");
 
-    const compilation = createCompilationWithDag(root);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(root);
 
     expect(stats.structural.maxNestingDepth).toBe(3);
     expect(stats.structural.totalChildDags).toBe(3);
@@ -189,8 +191,7 @@ describe("DAG statistics", () => {
     const _child2 = new Dag("child2", root, "c2");
     const _grandchild1 = new Dag("gc1", child1, "gc1");
 
-    const compilation = createCompilationWithDag(root);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(root);
 
     expect(stats.structural.maxNestingDepth).toBe(2);
     expect(stats.structural.totalChildDags).toBe(3);
@@ -202,8 +203,7 @@ describe("DAG statistics", () => {
     const _child2 = new Dag("child2", child1, "namespace2");
     const _child3 = new Dag("child3", root, "namespace3");
 
-    const compilation = createCompilationWithDag(root);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(root);
 
     expect(stats.namespace.namespaceCount).toBe(3);
     expect(stats.namespace.maxNamespaceDepth).toBe(2); // root -> child1 -> child2
@@ -215,8 +215,7 @@ describe("DAG statistics", () => {
     const _child1 = new Dag("child1", root, "named");
     const _child2 = new Dag("child2", root, ""); // unnamed
 
-    const compilation = createCompilationWithDag(root);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(root);
 
     expect(stats.namespace.namespaceCount).toBe(1);
     expect(stats.namespace.maxNamespaceDepth).toBe(1);
@@ -227,8 +226,7 @@ describe("DAG statistics", () => {
     dag.addNode(makeNode("node1", "n1", [["tag1"], ["tag2"]]));
     dag.addNode(makeNode("node2", "n2", [["tag3"]]));
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.styling.totalStyleTagCount).toBe(3);
     expect(stats.styling.taggedStyleCount).toBe(2); // 2 nodes have tags
@@ -250,8 +248,7 @@ describe("DAG statistics", () => {
     );
     dag.addNode(makeNode("node2", "n2", [], new Map([["shape", "circle"]])));
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.styling.totalStylePropertyCount).toBe(3);
     expect(stats.styling.inlineStyleCount).toBe(2);
@@ -264,8 +261,7 @@ describe("DAG statistics", () => {
     dag.addNode(makeNode("node2", "n2"));
     dag.addEdge(makeEdge("edge1", "e1", "node1", "node2", [["edgeStyle"]]));
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.styling.totalStyleTagCount).toBe(1);
     expect(stats.styling.taggedStyleCount).toBe(1);
@@ -280,8 +276,7 @@ describe("DAG statistics", () => {
       new Map([["dagProp", "value"]]),
     );
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.styling.totalStyleTagCount).toBe(2);
     expect(stats.styling.totalStylePropertyCount).toBe(1);
@@ -294,8 +289,7 @@ describe("DAG statistics", () => {
     dag.addStyleBinding("keyword1", [["style", "tag1"]]);
     dag.addStyleBinding("keyword2", [["style", "tag2"]]);
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.styling.styleBindingCount).toBe(2);
   });
@@ -306,8 +300,7 @@ describe("DAG statistics", () => {
     dag.setVarNode("var2", "node2");
     dag.setVarNode("var3", "node3");
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.variable.variableDeclarationCount).toBe(3);
   });
@@ -320,8 +313,7 @@ describe("DAG statistics", () => {
     });
     dag.setVarStyle("styleVar2", null);
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.variable.styleVariableDeclarationCount).toBe(2);
   });
@@ -335,8 +327,7 @@ describe("DAG statistics", () => {
       ]),
     );
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.variable.qualifiedStyleUsageCount).toBe(2);
     expect(stats.variable.maxQualifiedStylePartLength).toBe(3);
@@ -352,8 +343,7 @@ describe("DAG statistics", () => {
       ]),
     );
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.variable.qualifiedStyleUsageCount).toBe(1);
     expect(stats.variable.maxQualifiedStylePartLength).toBe(2);
@@ -365,8 +355,7 @@ describe("DAG statistics", () => {
     dag.addUsedImport("import2");
     dag.addUsedImport("import1"); // duplicate - Set will ignore
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     // Since addUsedImport uses a Set, duplicates are automatically removed
     expect(stats.imports.importCount).toBe(2);
@@ -380,8 +369,7 @@ describe("DAG statistics", () => {
     child.addUsedImport("import2");
     child.addUsedImport("import1"); // duplicate across dags
 
-    const compilation = createCompilationWithDag(root);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(root);
 
     expect(stats.imports.importCount).toBe(3);
     expect(stats.imports.uniqueImportCount).toBe(2);
@@ -393,8 +381,7 @@ describe("DAG statistics", () => {
     dag.addNode(makeNode("node2", "n2", []));
     dag.addEdge(makeEdge("edge1", "e1", "node1", "node2"));
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     // Total elements: 2 nodes + 1 edge + 1 dag = 4
     // But only 1 has a tag, so avgStyleTagsPerElement = 1 / 4
@@ -410,8 +397,7 @@ describe("DAG statistics", () => {
     const branch2 = new Dag("b2", root, "branch2");
     const _branch2child = new Dag("b2c", branch2, "b2child");
 
-    const compilation = createCompilationWithDag(root);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(root);
 
     expect(stats.structural.maxNestingDepth).toBe(3); // root -> b1 -> b1c -> b1gc
     expect(stats.structural.totalChildDags).toBe(5);
@@ -422,8 +408,7 @@ describe("DAG statistics", () => {
     const dag = new Dag("root");
     dag.addNode(makeNode("node1", ""));
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.naming.avgNodeNameLength).toBe(0);
   });
@@ -434,8 +419,7 @@ describe("DAG statistics", () => {
     dag.addNode(makeNode("node2", "n2"));
     dag.addEdge(makeEdge("edge1", "", "node1", "node2"));
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.naming.namedEdgeCount).toBe(0);
     expect(stats.naming.unnamedEdgeCount).toBe(1);
@@ -448,8 +432,7 @@ describe("DAG statistics", () => {
     dag.addNode(makeNode("node2", "n2"));
     dag.addEdge(makeEdge("edge1", "   ", "node1", "node2"));
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.naming.namedEdgeCount).toBe(0);
     expect(stats.naming.unnamedEdgeCount).toBe(1);
@@ -459,8 +442,7 @@ describe("DAG statistics", () => {
     const dag = new Dag("root");
     dag.addNode(makeNode("node1", "n1", [["tag1"], ["tag2"], ["tag3"]]));
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.variable.qualifiedStyleUsageCount).toBe(0);
     expect(stats.variable.maxQualifiedStylePartLength).toBe(0);
@@ -471,8 +453,7 @@ describe("DAG statistics", () => {
     const dag = new Dag("root");
     dag.addNode(makeNode("node1", "n1", []));
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.styling.totalStyleTagCount).toBe(0);
     expect(stats.styling.taggedStyleCount).toBe(0);
@@ -482,8 +463,7 @@ describe("DAG statistics", () => {
     const dag = new Dag("root");
     dag.addNode(makeNode("node1", "n1", []));
 
-    const compilation = createCompilationWithDag(dag);
-    const stats = createSummaryStats(compilation);
+    const stats = createDagStats(dag);
 
     expect(stats.styling.totalStylePropertyCount).toBe(0);
     expect(stats.styling.inlineStyleCount).toBe(0);
@@ -491,15 +471,16 @@ describe("DAG statistics", () => {
 });
 
 describe("AST statistics", () => {
-  function createCompilationWithAst(ast: RecipeTreeNode): Compilation {
+  function createAstStats(ast: RecipeTreeNode): SummaryStats {
     const dag = new Dag("root");
-    return new Compilation("", ast, dag, []);
+    const compilation = new Compilation("", ast, dag, []);
+    return createSummaryStats(compilation);
   }
 
   test("empty AST returns base stats", () => {
     const ast = new RecipeTreeNode([], DEFAULT_POSITION);
-    const compilation = createCompilationWithAst(ast);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createAstStats(ast);
 
     expect(stats.ast).toMatchObject({
       totalNodeCount: 1, // Recipe node itself
@@ -513,8 +494,8 @@ describe("AST statistics", () => {
   test("AST with single statement", () => {
     const varNode = new QualifiedVarTreeNode(["x"], DEFAULT_POSITION);
     const ast = new RecipeTreeNode([varNode], DEFAULT_POSITION);
-    const compilation = createCompilationWithAst(ast);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createAstStats(ast);
 
     expect(stats.ast.totalNodeCount).toBe(2); // Recipe + QVar
     expect(stats.ast.maxAstDepth).toBe(2);
@@ -524,8 +505,8 @@ describe("AST statistics", () => {
 
   test("AST with assignment", () => {
     const { ast } = parseFromSource("x = y");
-    const compilation = createCompilationWithAst(ast);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createAstStats(ast);
 
     // Recipe -> Assignment -> (LocalVar, QVar)
     expect(stats.ast.totalNodeCount).toBe(4);
@@ -539,8 +520,8 @@ describe("AST statistics", () => {
     const argList = new ValueListTreeNode([arg], DEFAULT_POSITION);
     const call = new CallTreeNode("myFunc", argList, null, DEFAULT_POSITION);
     const ast = new RecipeTreeNode([call], DEFAULT_POSITION);
-    const compilation = createCompilationWithAst(ast);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createAstStats(ast);
 
     // Recipe -> Call -> ArgList -> QVar
     expect(stats.ast.totalNodeCount).toBe(4);
@@ -553,8 +534,8 @@ describe("AST statistics", () => {
     const var2 = new QualifiedVarTreeNode(["b"], DEFAULT_POSITION);
     const var3 = new QualifiedVarTreeNode(["c"], DEFAULT_POSITION);
     const ast = new RecipeTreeNode([var1, var2, var3], DEFAULT_POSITION);
-    const compilation = createCompilationWithAst(ast);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createAstStats(ast);
 
     expect(stats.ast.totalNodeCount).toBe(4); // Recipe + 3 QVars
     expect(stats.ast.maxAstDepth).toBe(2);
@@ -573,8 +554,8 @@ describe("AST statistics", () => {
       DEFAULT_POSITION,
     );
     const ast = new RecipeTreeNode([namespace], DEFAULT_POSITION);
-    const compilation = createCompilationWithAst(ast);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createAstStats(ast);
 
     // Recipe -> Namespace -> StatementList -> QVar
     expect(stats.ast.totalNodeCount).toBe(4);
@@ -609,8 +590,8 @@ describe("AST statistics", () => {
     );
 
     const ast = new RecipeTreeNode([outerNamespace], DEFAULT_POSITION);
-    const compilation = createCompilationWithAst(ast);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createAstStats(ast);
 
     // Recipe -> Namespace(outer) -> StatementList -> Namespace(inner) -> StatementList -> Variable
     expect(stats.ast.totalNodeCount).toBe(6);
@@ -620,8 +601,8 @@ describe("AST statistics", () => {
 
   test("AST node type counting", () => {
     const { ast } = parseFromSource("x = a; b");
-    const compilation = createCompilationWithAst(ast);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createAstStats(ast);
 
     expect(stats.ast.nodeTypeCount).toMatchObject({
       Recipe: 1,
@@ -633,8 +614,8 @@ describe("AST statistics", () => {
 
   test("AST with mixed structure", () => {
     const { ast } = parseFromSource("x = y(); z()");
-    const compilation = createCompilationWithAst(ast);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createAstStats(ast);
 
     // Recipe -> (Assignment, Call)
     // Assignment -> (LocalVar, Call)
@@ -646,15 +627,17 @@ describe("AST statistics", () => {
 });
 
 describe("Source code statistics", () => {
-  function createCompilationWithSource(source: string): Compilation {
+  function createRawSourceStats(source: string): SummaryStats {
     const dag = new Dag("root");
     const ast = new RecipeTreeNode([], DEFAULT_POSITION);
-    return new Compilation(source, ast, dag, []);
+    const compilation = new Compilation(source, ast, dag, []);
+    return createSummaryStats(compilation);
   }
 
   test("empty source returns zero stats", () => {
-    const compilation = createCompilationWithSource("");
-    const stats = createSummaryStats(compilation);
+    const source = "";
+
+    const stats = createRawSourceStats(source);
 
     expect(stats.source).toMatchObject({
       totalCharacterCount: 0,
@@ -665,8 +648,9 @@ describe("Source code statistics", () => {
   });
 
   test("single line source", () => {
-    const compilation = createCompilationWithSource("x = 5");
-    const stats = createSummaryStats(compilation);
+    const source = "x = 5";
+
+    const stats = createRawSourceStats(source);
 
     expect(stats.source).toMatchObject({
       totalCharacterCount: 5,
@@ -678,8 +662,8 @@ describe("Source code statistics", () => {
 
   test("multi-line source with equal length lines", () => {
     const source = "abc\ndef\nghi";
-    const compilation = createCompilationWithSource(source);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createRawSourceStats(source);
 
     expect(stats.source).toMatchObject({
       totalCharacterCount: 11, // 3 + 1 + 3 + 1 + 3
@@ -691,8 +675,8 @@ describe("Source code statistics", () => {
 
   test("multi-line source with varying line lengths", () => {
     const source = "a\nbb\nccc\ndddd";
-    const compilation = createCompilationWithSource(source);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createRawSourceStats(source);
 
     expect(stats.source).toMatchObject({
       totalCharacterCount: 13, // 1 + 1 + 2 + 1 + 3 + 1 + 4
@@ -704,8 +688,8 @@ describe("Source code statistics", () => {
 
   test("source with only newlines", () => {
     const source = "\n\n\n";
-    const compilation = createCompilationWithSource(source);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createRawSourceStats(source);
 
     expect(stats.source).toMatchObject({
       totalCharacterCount: 3,
@@ -717,8 +701,8 @@ describe("Source code statistics", () => {
 
   test("source with trailing newline", () => {
     const source = "line1\nline2\n";
-    const compilation = createCompilationWithSource(source);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createRawSourceStats(source);
 
     expect(stats.source).toMatchObject({
       totalCharacterCount: 12,
@@ -730,8 +714,8 @@ describe("Source code statistics", () => {
 
   test("source with tabs and special characters", () => {
     const source = "a\tb\nc\rd";
-    const compilation = createCompilationWithSource(source);
-    const stats = createSummaryStats(compilation);
+
+    const stats = createRawSourceStats(source);
 
     expect(stats.source.totalCharacterCount).toBe(7);
     expect(stats.source.lineCount).toBe(2);
