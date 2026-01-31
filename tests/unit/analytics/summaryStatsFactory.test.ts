@@ -2,8 +2,16 @@ import { describe, test, expect } from "vitest";
 import { Dag, DagEdge, DagNode } from "src/compiler/dag";
 import { Compilation } from "src/compiler/compilation";
 import { createSummaryStats } from "src/analytics/summaryStatsFactory";
-import { RecipeTreeNode } from "src/compiler/ast";
+import {
+  RecipeTreeNode,
+  CallTreeNode,
+  QualifiedVarTreeNode,
+  ValueListTreeNode,
+  NamespaceTreeNode,
+  StatementListTreeNode,
+} from "src/compiler/ast";
 import { DEFAULT_POSITION } from "src/compiler/compilationErrors";
+import { parseFromSource } from "src/compiler/driver";
 
 function createCompilation(dag: Dag): Compilation {
   const emptyAst = new RecipeTreeNode([], DEFAULT_POSITION);
@@ -482,5 +490,160 @@ describe("edge cases", () => {
 
     expect(stats.styling.totalStylePropertyCount).toBe(0);
     expect(stats.styling.inlineStyleCount).toBe(0);
+  });
+});
+
+describe("AST statistics", () => {
+  function createCompilationWithAst(ast: RecipeTreeNode): Compilation {
+    const dag = new Dag("root");
+    return new Compilation("", ast, dag, []);
+  }
+
+  test("empty AST returns base stats", () => {
+    const ast = new RecipeTreeNode([], DEFAULT_POSITION);
+    const compilation = createCompilationWithAst(ast);
+    const stats = createSummaryStats(compilation);
+
+    expect(stats.ast).toMatchObject({
+      totalNodeCount: 1, // Recipe node itself
+      maxAstDepth: 1,
+      leafNodeCount: 1,
+      avgChildrenPerNode: 0,
+      nodeTypeCount: { Recipe: 1 },
+    });
+  });
+
+  test("AST with single statement", () => {
+    const varNode = new QualifiedVarTreeNode(["x"], DEFAULT_POSITION);
+    const ast = new RecipeTreeNode([varNode], DEFAULT_POSITION);
+    const compilation = createCompilationWithAst(ast);
+    const stats = createSummaryStats(compilation);
+
+    expect(stats.ast.totalNodeCount).toBe(2); // Recipe + QVar
+    expect(stats.ast.maxAstDepth).toBe(2);
+    expect(stats.ast.leafNodeCount).toBe(1); // QVar has no children
+    expect(stats.ast.avgChildrenPerNode).toBeCloseTo(1 / 2); // Recipe has 1 child, QVar has 0
+  });
+
+  test("AST with assignment", () => {
+    const { ast } = parseFromSource("x = y");
+    const compilation = createCompilationWithAst(ast);
+    const stats = createSummaryStats(compilation);
+
+    // Recipe -> Assignment -> (LocalVar, QVar)
+    expect(stats.ast.totalNodeCount).toBe(4);
+    expect(stats.ast.maxAstDepth).toBe(3);
+    expect(stats.ast.leafNodeCount).toBe(2); // LocalVar and QVar
+    expect(stats.ast.avgChildrenPerNode).toBeCloseTo(3 / 4); // 3 children total / 4 nodes
+  });
+
+  test("AST with function call", () => {
+    const arg = new QualifiedVarTreeNode(["x"], DEFAULT_POSITION);
+    const argList = new ValueListTreeNode([arg], DEFAULT_POSITION);
+    const call = new CallTreeNode("myFunc", argList, null, DEFAULT_POSITION);
+    const ast = new RecipeTreeNode([call], DEFAULT_POSITION);
+    const compilation = createCompilationWithAst(ast);
+    const stats = createSummaryStats(compilation);
+
+    // Recipe -> Call -> ArgList -> QVar
+    expect(stats.ast.totalNodeCount).toBe(4);
+    expect(stats.ast.maxAstDepth).toBe(4);
+    expect(stats.ast.leafNodeCount).toBe(1); // Only QVar is a leaf
+  });
+
+  test("AST with multiple statements", () => {
+    const var1 = new QualifiedVarTreeNode(["a"], DEFAULT_POSITION);
+    const var2 = new QualifiedVarTreeNode(["b"], DEFAULT_POSITION);
+    const var3 = new QualifiedVarTreeNode(["c"], DEFAULT_POSITION);
+    const ast = new RecipeTreeNode([var1, var2, var3], DEFAULT_POSITION);
+    const compilation = createCompilationWithAst(ast);
+    const stats = createSummaryStats(compilation);
+
+    expect(stats.ast.totalNodeCount).toBe(4); // Recipe + 3 QVars
+    expect(stats.ast.maxAstDepth).toBe(2);
+    expect(stats.ast.leafNodeCount).toBe(3);
+    expect(stats.ast.avgChildrenPerNode).toBeCloseTo(3 / 4); // Recipe has 3 children
+  });
+
+  test("AST with namespace", () => {
+    const innerVar = new QualifiedVarTreeNode(["x"], DEFAULT_POSITION);
+    const stmtList = new StatementListTreeNode([innerVar], DEFAULT_POSITION);
+    const namespace = new NamespaceTreeNode(
+      "ns",
+      stmtList,
+      null,
+      null,
+      DEFAULT_POSITION,
+    );
+    const ast = new RecipeTreeNode([namespace], DEFAULT_POSITION);
+    const compilation = createCompilationWithAst(ast);
+    const stats = createSummaryStats(compilation);
+
+    // Recipe -> Namespace -> StatementList -> QVar
+    expect(stats.ast.totalNodeCount).toBe(4);
+    expect(stats.ast.maxAstDepth).toBe(4);
+    expect(stats.ast.leafNodeCount).toBe(1); // Only QVar
+  });
+
+  test("AST with nested namespace", () => {
+    const innerVar = new QualifiedVarTreeNode(["z"], DEFAULT_POSITION);
+    const innerStmtList = new StatementListTreeNode(
+      [innerVar],
+      DEFAULT_POSITION,
+    );
+    const innerNamespace = new NamespaceTreeNode(
+      "inner",
+      innerStmtList,
+      null,
+      null,
+      DEFAULT_POSITION,
+    );
+
+    const outerStmtList = new StatementListTreeNode(
+      [innerNamespace],
+      DEFAULT_POSITION,
+    );
+    const outerNamespace = new NamespaceTreeNode(
+      "outer",
+      outerStmtList,
+      null,
+      null,
+      DEFAULT_POSITION,
+    );
+
+    const ast = new RecipeTreeNode([outerNamespace], DEFAULT_POSITION);
+    const compilation = createCompilationWithAst(ast);
+    const stats = createSummaryStats(compilation);
+
+    // Recipe -> Namespace(outer) -> StatementList -> Namespace(inner) -> StatementList -> Variable
+    expect(stats.ast.totalNodeCount).toBe(6);
+    expect(stats.ast.maxAstDepth).toBe(6);
+    expect(stats.ast.leafNodeCount).toBe(1);
+  });
+
+  test("AST node type counting", () => {
+    const { ast } = parseFromSource("x = a; b");
+    const compilation = createCompilationWithAst(ast);
+    const stats = createSummaryStats(compilation);
+
+    expect(stats.ast.nodeTypeCount).toMatchObject({
+      Recipe: 1,
+      Assignment: 1,
+      LocalVariable: 1,
+      QualifiedVariable: 2,
+    });
+  });
+
+  test("AST with mixed structure", () => {
+    const { ast } = parseFromSource("x = y(); z()");
+    const compilation = createCompilationWithAst(ast);
+    const stats = createSummaryStats(compilation);
+
+    // Recipe -> (Assignment, Call)
+    // Assignment -> (LocalVar, Call)
+    // Call -> ValueList -> QVar
+    // Call -> ValueList
+    expect(stats.ast.totalNodeCount).toBe(7);
+    expect(stats.ast.leafNodeCount).toBe(3); // LocalVar, QVar, empty ValueList
   });
 });
