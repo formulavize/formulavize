@@ -647,3 +647,96 @@ describe("AST statistics", () => {
     expect(stats.ast.leafNodeCount).toBe(3); // LocalVar, QVar, empty ValueList
   });
 });
+
+describe("Source code statistics", () => {
+  function createCompilationWithSource(source: string): Compilation {
+    const dag = new Dag("root");
+    const ast = new RecipeTreeNode([], DEFAULT_POSITION);
+    return new Compilation(source, ast, dag, []);
+  }
+
+  test("empty source returns zero stats", () => {
+    const compilation = createCompilationWithSource("");
+    const stats = createSummaryStats(compilation);
+
+    expect(stats.source).toMatchObject({
+      totalCharacterCount: 0,
+      lineCount: 1, // Empty string split by '\n' gives one line
+      avgLineLength: 0,
+      maxLineLength: 0,
+    });
+  });
+
+  test("single line source", () => {
+    const compilation = createCompilationWithSource("x = 5");
+    const stats = createSummaryStats(compilation);
+
+    expect(stats.source).toMatchObject({
+      totalCharacterCount: 5,
+      lineCount: 1,
+      avgLineLength: 5,
+      maxLineLength: 5,
+    });
+  });
+
+  test("multi-line source with equal length lines", () => {
+    const source = "abc\ndef\nghi";
+    const compilation = createCompilationWithSource(source);
+    const stats = createSummaryStats(compilation);
+
+    expect(stats.source).toMatchObject({
+      totalCharacterCount: 11, // 3 + 1 + 3 + 1 + 3
+      lineCount: 3,
+      avgLineLength: 3, // (3 + 3 + 3) / 3
+      maxLineLength: 3,
+    });
+  });
+
+  test("multi-line source with varying line lengths", () => {
+    const source = "a\nbb\nccc\ndddd";
+    const compilation = createCompilationWithSource(source);
+    const stats = createSummaryStats(compilation);
+
+    expect(stats.source).toMatchObject({
+      totalCharacterCount: 13, // 1 + 1 + 2 + 1 + 3 + 1 + 4
+      lineCount: 4,
+      avgLineLength: 2.5, // (1 + 2 + 3 + 4) / 4
+      maxLineLength: 4,
+    });
+  });
+
+  test("source with only newlines", () => {
+    const source = "\n\n\n";
+    const compilation = createCompilationWithSource(source);
+    const stats = createSummaryStats(compilation);
+
+    expect(stats.source).toMatchObject({
+      totalCharacterCount: 3,
+      lineCount: 4, // 4 empty lines
+      avgLineLength: 0,
+      maxLineLength: 0,
+    });
+  });
+
+  test("source with trailing newline", () => {
+    const source = "line1\nline2\n";
+    const compilation = createCompilationWithSource(source);
+    const stats = createSummaryStats(compilation);
+
+    expect(stats.source).toMatchObject({
+      totalCharacterCount: 12,
+      lineCount: 3, // "line1", "line2", ""
+      avgLineLength: 10 / 3, // (5 + 5 + 0) / 3
+      maxLineLength: 5,
+    });
+  });
+
+  test("source with tabs and special characters", () => {
+    const source = "a\tb\nc\rd";
+    const compilation = createCompilationWithSource(source);
+    const stats = createSummaryStats(compilation);
+
+    expect(stats.source.totalCharacterCount).toBe(7);
+    expect(stats.source.lineCount).toBe(2);
+  });
+});
