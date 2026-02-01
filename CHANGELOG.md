@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.9.0](https://github.com/formulavize/formulavize/compare/v1.8.0...v1.9.0) (2026-02-01)
+
+
+### Features
+
+* **summaryStats:** add AST summary stats ([e04ca1f](https://github.com/formulavize/formulavize/commit/e04ca1f4bbc1b58d44402c0bbaf882567cb89a97))
+* **summaryStats:** add DAG summary stats module ([842eb1d](https://github.com/formulavize/formulavize/commit/842eb1da162e7417e0dad372dc463277f184dee7))
+* **summaryStats:** add source code summary stats ([d5d5420](https://github.com/formulavize/formulavize/commit/d5d5420cf84fa3c39e8ad3c50c644ba402a17cf7))
+
 ## [1.8.0](https://github.com/formulavize/formulavize/compare/v1.7.0...v1.8.0) (2026-01-25)
 
 
