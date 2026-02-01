@@ -1,4 +1,4 @@
-import { Stylesheet } from "cytoscape";
+import { StylesheetCSS } from "cytoscape";
 import { DESCRIPTION_PROPERTY } from "../../compiler/constants";
 import { Dag, DagElement, StyleTag, StyleProperties } from "../../compiler/dag";
 
@@ -59,26 +59,26 @@ export function makeElementStylesheets(
   dag: Dag,
   elementList: DagElement[],
   makeSelectorFunc: (id: string) => string,
-): Stylesheet[] {
+): StylesheetCSS[] {
   return elementList
     .filter((element) => hasStyleData(element))
     .map((element) => ({
       selector: makeSelectorFunc(element.id),
-      style: makeStyleObject(dag, element),
+      css: makeStyleObject(dag, element),
     }))
-    .filter((stylesheet) => Object.keys(stylesheet.style).length > 0);
+    .filter((stylesheet) => Object.keys(stylesheet.css).length > 0);
   // filter out empty stylesheets from any unresolved style tags
 }
 
-export function makeNodeStylesheets(dag: Dag): Stylesheet[] {
+export function makeNodeStylesheets(dag: Dag): StylesheetCSS[] {
   return makeElementStylesheets(dag, dag.getNodeList(), (id) => `node#${id}`);
 }
 
-export function makeEdgeStyleSheets(dag: Dag): Stylesheet[] {
+export function makeEdgeStyleSheets(dag: Dag): StylesheetCSS[] {
   return makeElementStylesheets(dag, dag.getEdgeList(), (id) => `edge#${id}`);
 }
 
-export function makeCompoundNodeStylesheet(dag: Dag): Stylesheet[] {
+export function makeCompoundNodeStylesheet(dag: Dag): StylesheetCSS[] {
   const dagNode = dag.getDagAsDagNode();
   return makeElementStylesheets(dag, [dagNode], (id) => `node#${id}`);
 }
@@ -87,17 +87,17 @@ export function makeDagLineageSelector(dag: Dag): string {
   return !dag.Parent ? "" : `[lineagePath*='/${dag.Id}']`;
 }
 
-export function makeClassStyleSheets(dag: Dag): Stylesheet[] {
+export function makeClassStyleSheets(dag: Dag): StylesheetCSS[] {
   const lineageSelector = makeDagLineageSelector(dag);
   return Array.from(dag.getFlattenedStyles()).map(
     ([styleTag, styleProperties]) => ({
       selector: `.${styleTag}${lineageSelector}`,
-      style: Object.fromEntries(filterCytoscapeProperties(styleProperties)),
+      css: Object.fromEntries(filterCytoscapeProperties(styleProperties)),
     }),
   );
 }
 
-export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
+export function makeNameStyleSheets(dag: Dag): StylesheetCSS[] {
   const lineageSelector = makeDagLineageSelector(dag);
   const flatStyleMap = dag.getFlattenedStyles();
   return Array.from(dag.getStyleBindings())
@@ -109,9 +109,7 @@ export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
         if (styleProperties) {
           return {
             selector: `[name='${keyword}']${lineageSelector}`,
-            style: Object.fromEntries(
-              filterCytoscapeProperties(styleProperties),
-            ),
+            css: Object.fromEntries(filterCytoscapeProperties(styleProperties)),
           };
         } else {
           console.warn(`keyword ${keyword} could not be bound to ${styleTag}`);
@@ -119,14 +117,14 @@ export function makeNameStyleSheets(dag: Dag): Stylesheet[] {
         }
       }),
     )
-    .filter(Boolean) as Stylesheet[];
+    .filter(Boolean) as StylesheetCSS[];
 }
 
-export function getBaseStylesheet(): Stylesheet[] {
+export function getBaseStylesheet(): StylesheetCSS[] {
   return [
     {
       selector: "node",
-      style: {
+      css: {
         label: "data(name)",
         "text-valign": "bottom",
         "text-wrap": "wrap",
@@ -134,7 +132,7 @@ export function getBaseStylesheet(): Stylesheet[] {
     },
     {
       selector: "edge",
-      style: {
+      css: {
         "curve-style": "bezier",
         "target-arrow-shape": "triangle",
       },
@@ -142,12 +140,12 @@ export function getBaseStylesheet(): Stylesheet[] {
   ];
 }
 
-export function makeCyStylesheets(dag: Dag): Stylesheet[] {
-  function makeChildStyleSheets(curDag: Dag): Stylesheet[] {
+export function makeCyStylesheets(dag: Dag): StylesheetCSS[] {
+  function makeChildStyleSheets(curDag: Dag): StylesheetCSS[] {
     return curDag.getChildDags().flatMap(makeCyStylesheets);
   }
 
-  const stylesheetsList: Stylesheet[][] = [
+  const stylesheetsList: StylesheetCSS[][] = [
     !dag.Parent ? getBaseStylesheet() : [],
     makeNodeStylesheets(dag),
     makeEdgeStyleSheets(dag),

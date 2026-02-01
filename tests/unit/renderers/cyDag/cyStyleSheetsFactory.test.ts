@@ -130,7 +130,7 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyNodeStyles = [
       {
         selector: "node#idY",
-        style: { a: "1" },
+        css: { a: "1" },
       },
     ];
     expect(makeNodeStylesheets(testDag)).toEqual(expectedCyNodeStyles);
@@ -160,7 +160,7 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyEdgeStyles = [
       {
         selector: "edge#idZ",
-        style: { a: "1" },
+        css: { a: "1" },
       },
     ];
     expect(makeEdgeStyleSheets(testDag)).toEqual(expectedCyEdgeStyles);
@@ -177,7 +177,7 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyClassStyles = [
       {
         selector: ".s",
-        style: { a: "1", b: "2" },
+        css: { a: "1", b: "2" },
       },
     ];
     expect(makeClassStyleSheets(testDag)).toEqual(expectedCyClassStyles);
@@ -195,7 +195,7 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyClassStyles = [
       {
         selector: ".s[lineagePath*='/childDag']",
-        style: { a: "1", b: "2" },
+        css: { a: "1", b: "2" },
       },
     ];
     expect(makeClassStyleSheets(childDag)).toEqual(expectedCyClassStyles);
@@ -219,11 +219,11 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyNameStyles = [
       {
         selector: "[name='x']",
-        style: { i: "1" },
+        css: { i: "1" },
       },
       {
         selector: "[name='x']",
-        style: { j: "2", k: "3" },
+        css: { j: "2", k: "3" },
       },
     ];
     expect(makeNameStyleSheets(testDag)).toEqual(expectedCyNameStyles);
@@ -243,11 +243,11 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyNameStyles = [
       {
         selector: "[name='x'][lineagePath*='/childDag']",
-        style: { i: "1" },
+        css: { i: "1" },
       },
       {
         selector: "[name='x'][lineagePath*='/childDag']",
-        style: { j: "2", k: "3" },
+        css: { j: "2", k: "3" },
       },
     ];
     expect(makeNameStyleSheets(childDag)).toEqual(expectedCyNameStyles);
@@ -263,15 +263,15 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyStyles = getBaseStylesheet().concat([
       {
         selector: ".a[lineagePath*='/childDag']",
-        style: { "background-color": "red" },
+        css: { "background-color": "red" },
       },
       {
         selector: "[name='x'][lineagePath*='/childDag']",
-        style: { "background-color": "red" },
+        css: { "background-color": "red" },
       },
       {
         selector: ".b[lineagePath*='/grandChildDag']",
-        style: { shape: "hexagon" },
+        css: { shape: "hexagon" },
       },
     ]);
     expect(makeCyStylesheets(testDag)).toEqual(expectedCyStyles);
@@ -284,7 +284,7 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyStyles = getBaseStylesheet().concat([
       {
         selector: "node#x",
-        style: { "background-color": "blue" },
+        css: { "background-color": "blue" },
       },
     ]);
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
@@ -304,7 +304,7 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyStyles = getBaseStylesheet().concat([
       {
         selector: ".b[lineagePath*='/x']",
-        style: { "background-color": "red" },
+        css: { "background-color": "red" },
       },
     ]);
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
@@ -325,11 +325,11 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyStyles = getBaseStylesheet().concat([
       {
         selector: ".b[lineagePath*='/x']",
-        style: { "background-color": "red" },
+        css: { "background-color": "red" },
       },
       {
         selector: "[name='y'][lineagePath*='/x']",
-        style: { "background-color": "red" },
+        css: { "background-color": "red" },
       },
     ]);
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
@@ -347,11 +347,11 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyStyles = getBaseStylesheet().concat([
       {
         selector: "node#idX",
-        style: { "background-color": "red" },
+        css: { "background-color": "red" },
       },
       {
         selector: ".b[lineagePath*='/x']",
-        style: { "background-color": "red" },
+        css: { "background-color": "red" },
       },
     ]);
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
@@ -370,11 +370,11 @@ describe("makes cytoscape stylesheets", () => {
     const expectedCyStyles = getBaseStylesheet().concat([
       {
         selector: ".b[lineagePath*='/x']",
-        style: { "background-color": "red" },
+        css: { "background-color": "red" },
       },
       {
         selector: "node#idX",
-        style: { "background-color": "red" },
+        css: { "background-color": "red" },
       },
     ]);
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
