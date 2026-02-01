@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "target": "esnext",
     "module": "esnext",
     "moduleResolution": "bundler",
+    "paths": {
+      "src/*": ["./src/*"]
+    },
     "strict": true,
     "noImplicitAny": true,
     "noImplicitThis": true,
@@ -13,7 +15,7 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
     "lib": ["esnext", "dom"],
-    "types": ["vite/client"],
+    "types": ["vite/client", "vitest"],
     // Bypass upstream type issues with Vuetify
     // https://github.com/vuetifyjs/vuetify/issues/21227
     "skipLibCheck": true
