@@ -133,11 +133,10 @@ const assignmentPuzzlets: Puzzlet[] = [
   {
     name: "Ace of Diamonds",
     instructions: [
-      normal("Now you're thinking with formulas!\n"), // Portal
       normal("Formulas form DAGs (Directed Acyclic Graphs).\n"),
       ...dramatic("FUNCTION IS NODE"),
       ...dramatic("ARG IS EDGE"),
-      ...dramatic("CODER IS YOU!"), // Baba is you
+      ...dramatic("CODER IS YOU!"),
       normal("Make a 4-node diamond DAG to continue."),
     ],
     examples: [],

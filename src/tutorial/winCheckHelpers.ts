@@ -1,13 +1,23 @@
-import { DagElement, DagEdge } from "src/compiler/dag";
+import { DagElement, DagEdge, Dag } from "src/compiler/dag";
+
+// Helper function to get edges coming into a node by ID
+export function getInEdges(nodeId: string, edgeList: DagEdge[]): DagEdge[] {
+  return edgeList.filter((edge) => edge.destNodeId === nodeId);
+}
+
+// Helper function to get edges going out of a node by ID
+export function getOutEdges(nodeId: string, edgeList: DagEdge[]): DagEdge[] {
+  return edgeList.filter((edge) => edge.srcNodeId === nodeId);
+}
 
 // Helper function to get in-degree of a node by ID
 export function getInDegree(nodeId: string, edgeList: DagEdge[]): number {
-  return edgeList.filter((edge) => edge.destNodeId === nodeId).length;
+  return getInEdges(nodeId, edgeList).length;
 }
 
 // Helper function to get out-degree of a node by ID
 export function getOutDegree(nodeId: string, edgeList: DagEdge[]): number {
-  return edgeList.filter((edge) => edge.srcNodeId === nodeId).length;
+  return getOutEdges(nodeId, edgeList).length;
 }
 
 // Helper function to create a map of node IDs to variable name counts
@@ -37,4 +47,9 @@ export function getStyleTaggedNodes(
       return properties.size > 0;
     });
   });
+}
+
+// Helper function to get all node IDs in a DAG
+export function getDagNodesIds(dag: Dag): Set<string> {
+  return new Set(dag.getNodeList().map((n) => n.id));
 }

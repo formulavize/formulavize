@@ -5,6 +5,7 @@ import { normal, fast, slow } from "../animationHelpers";
 import { functionsModule } from "./functionsModule";
 import { assignmentModule } from "./assignmentModule";
 import { styleModule } from "./styleModule";
+import { namespacesModule } from "./namespacesModule";
 
 export function createFizLesson(): Lesson {
   // Intro module
@@ -47,6 +48,7 @@ export function createFizLesson(): Lesson {
     functionsModule,
     assignmentModule,
     styleModule,
+    namespacesModule,
     outroModule,
   ]);
 }
