@@ -2,9 +2,9 @@ import { AnimationStep } from "./lesson";
 
 export enum TypingSpeed {
   Instant = 0,
-  Fast = 20,
-  Medium = 40,
-  Slow = 80,
+  Fast = 15,
+  Medium = 30,
+  Slow = 60,
 }
 
 export function createAnimationStep(
