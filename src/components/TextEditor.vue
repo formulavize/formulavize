@@ -31,7 +31,11 @@ import {
   Compartment,
   Extension,
   StateField,
+  Annotation,
   SelectionRange,
+  EditorSelection,
+  StateEffect,
+  StateEffectType,
 } from "@codemirror/state";
 import {
   EditorView,
@@ -50,6 +54,64 @@ import {
 import { fizLanguage } from "@formulavize/lang-fiz";
 import { CompletionIndex } from "../autocomplete/autocompletion";
 import { getAllDynamicCompletionSources } from "../autocomplete/autocompleter";
+
+// Tutorial header protection logic
+// This logic ensures that the tutorial header (a section of the editor
+// reserved for tutorial instructions) cannot be edited by the user when tutorial mode is enabled.
+
+// Factory function to create a number-based StateField that responds to a StateEffect
+const createNumberStateField = (stateEffect: StateEffectType<number>) =>
+  StateField.define<number>({
+    create() {
+      return 0;
+    },
+    update(value, transaction) {
+      for (const effect of transaction.effects) {
+        if (effect.is(stateEffect)) {
+          value = effect.value;
+        }
+      }
+      return value;
+    },
+  });
+
+// StateEffect to set the length of the read-only tutorial header
+const setReadOnlyHeaderLengthEffect = StateEffect.define<number>();
+// StateField to track the length of the tutorial header
+const readOnlyHeaderLengthField = createNumberStateField(
+  setReadOnlyHeaderLengthEffect,
+);
+
+// StateEffect to set the position where examples end
+const setExamplesEndPositionEffect = StateEffect.define<number>();
+// StateField to track where the examples section ends
+const examplesEndPositionField = createNumberStateField(
+  setExamplesEndPositionEffect,
+);
+
+// Annotation to bypass write protection when programmatically updating the editor content
+const bypassWriteProtection = Annotation.define<boolean>();
+
+// Transaction filter to block edits in the tutorial header
+const readOnlyHeaderTransactionFilter = EditorState.transactionFilter.of(
+  (transaction) => {
+    if (!transaction.docChanged) return transaction;
+    if (transaction.annotation(bypassWriteProtection)) return transaction;
+    const headerLength = transaction.startState.field(
+      readOnlyHeaderLengthField,
+    );
+    if (headerLength <= 0) return transaction;
+    let isInputBlocked = false;
+    transaction.changes.iterChanges((fromA) => {
+      if (fromA < headerLength) isInputBlocked = true;
+    });
+    return isInputBlocked ? [] : transaction;
+  },
+);
+
+const createTutorialHeaderProtection = (enabled: boolean): Extension => {
+  return enabled ? [readOnlyHeaderTransactionFilter] : [];
+};
 
 export default defineComponent({
   name: "TextEditor",
@@ -75,8 +137,18 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    tutorialMode: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ["update-editorstate"],
+  expose: ["setEditorText", "setTutorialHeaderText", "setExamplesText"],
+  data() {
+    return {
+      editorView: null as EditorView | null,
+    };
+  },
   mounted() {
     const emitEditorState = debounce((updatedState: EditorState): void => {
       this.$emit("update-editorstate", updatedState);
@@ -170,6 +242,7 @@ export default defineComponent({
     const keymapCompartment = new Compartment();
     const autocompletionCompartment = new Compartment();
     const cursorTooltipCompartment = new Compartment();
+    const tutorialHeaderCompartment = new Compartment();
 
     const editorState = EditorState.create({
       extensions: [
@@ -198,6 +271,11 @@ export default defineComponent({
           createAutocompletion(this.completionIndex),
         ),
         cursorTooltipCompartment.of(createCursorTooltip(this.debugMode)),
+        readOnlyHeaderLengthField,
+        examplesEndPositionField,
+        tutorialHeaderCompartment.of(
+          createTutorialHeaderProtection(this.tutorialMode),
+        ),
         fizLanguage,
       ],
     });
@@ -206,6 +284,7 @@ export default defineComponent({
       state: editorState,
       parent: this.$refs.editorview as Element,
     });
+    this.editorView = view;
     view.focus();
 
     watch(
@@ -213,6 +292,23 @@ export default defineComponent({
       (isTabbingOn) => {
         view.dispatch({
           effects: keymapCompartment.reconfigure(getKeymap(isTabbingOn)),
+        });
+      },
+    );
+
+    watch(
+      () => this.tutorialMode,
+      (isTutorialMode) => {
+        const effects = [
+          tutorialHeaderCompartment.reconfigure(
+            createTutorialHeaderProtection(isTutorialMode),
+          ),
+        ];
+        if (!isTutorialMode) {
+          effects.push(setReadOnlyHeaderLengthEffect.of(0));
+        }
+        view.dispatch({
+          effects,
         });
       },
     );
@@ -239,6 +335,59 @@ export default defineComponent({
         });
       },
     );
+  },
+  methods: {
+    setEditorText(text: string): void {
+      if (!this.editorView) return;
+      const docLength = this.editorView.state.doc.length;
+      this.editorView.dispatch({
+        changes: {
+          from: 0,
+          to: docLength,
+          insert: text,
+        },
+        effects: [setReadOnlyHeaderLengthEffect.of(0)],
+        annotations: bypassWriteProtection.of(true),
+      });
+      this.editorView.dispatch({
+        selection: EditorSelection.cursor(this.editorView.state.doc.length),
+      });
+    },
+    setTutorialHeaderText(text: string): void {
+      if (!this.editorView) return;
+      const headerLength = this.editorView.state.field(
+        readOnlyHeaderLengthField,
+      );
+      this.editorView.dispatch({
+        changes: {
+          from: 0,
+          to: headerLength,
+          insert: text,
+        },
+        effects: [
+          setReadOnlyHeaderLengthEffect.of(text.length),
+          setExamplesEndPositionEffect.of(0),
+        ],
+        annotations: bypassWriteProtection.of(true),
+      });
+    },
+    setExamplesText(text: string): void {
+      if (!this.editorView) return;
+      const headerLength = this.editorView.state.field(
+        readOnlyHeaderLengthField,
+      );
+      const examplesEnd = this.editorView.state.field(examplesEndPositionField);
+      const examplesEndPosition = examplesEnd > 0 ? examplesEnd : headerLength;
+      this.editorView.dispatch({
+        changes: {
+          from: headerLength,
+          to: examplesEndPosition,
+          insert: text,
+        },
+        effects: [setExamplesEndPositionEffect.of(headerLength + text.length)],
+        annotations: bypassWriteProtection.of(true),
+      });
+    },
   },
 });
 </script>

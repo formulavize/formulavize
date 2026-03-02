@@ -2,11 +2,13 @@
   <splitpanes id="panes" class="default-theme">
     <pane>
       <TextEditor
+        ref="textEditor"
         :editor-debounce-delay="editorDebounceDelay"
         :tab-to-indent="tabToIndent"
         :code-diagnostics="curDiagnostics"
         :completion-index="curCompletionIndex"
         :debug-mode="debugMode"
+        :tutorial-mode="tutorialMode"
         @update-editorstate="updateEditorState"
       />
     </pane>
@@ -48,6 +50,7 @@
   </splitpanes>
   <ToolBar
     id="toolbar"
+    v-model:tutorial-mode="tutorialMode"
     @open-export="showExportPopup = true"
     @open-options="showOptionsPopup = true"
     @copy-source="copySourceToClipboard"
@@ -88,6 +91,7 @@ import { CompilationError } from "./compiler/compilationErrors";
 import { errorToDiagnostic, ErrorReporter } from "./compiler/errorReporter";
 import { CompletionIndex } from "./autocomplete/autocompletion";
 import { createCompletionIndex } from "./autocomplete/autocompletionFactory";
+import { TutorialManager } from "./tutorial/tutorialManager";
 // @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -123,6 +127,9 @@ export default defineComponent({
       selectedRenderer: "cytoscape",
       rendererComponent: markRaw(CytoscapeRenderer) as RendererComponent,
       registeredRenderers: new Map<string, RendererComponent>(),
+      tutorialMode: false,
+      savedEditorText: "",
+      tutorialManager: new TutorialManager(),
     };
   },
   computed: {
@@ -153,8 +160,12 @@ export default defineComponent({
         async (path) =>
           (await this.compiler.ImportCacher.getCachedCompilation(path))?.AST,
       );
+      if (this.tutorialMode) {
+        this.tutorialManager.onCompilation(curCompilation);
+      }
     },
-    debugMode() {
+    debugMode(newVal: boolean) {
+      this.tutorialManager.setDisableAnimations(newVal);
       this.repaint(); // repaint the conditionally rendered GraphView
     },
     selectedRenderer(newRendererId: string) {
@@ -164,6 +175,21 @@ export default defineComponent({
         this.repaint(); // repaint the GraphView with new renderer
       } else {
         console.error(`Renderer with id "${newRendererId}" not found`);
+      }
+    },
+    tutorialMode(newVal: boolean) {
+      try {
+        if (newVal) {
+          this.savedEditorText = this.curEditorState.doc.toString();
+          this.tutorialManager.startTutorial();
+        } else {
+          this.tutorialManager.stopTutorial();
+          const textEditor = this.$refs.textEditor as typeof TextEditor;
+          textEditor?.setEditorText(this.savedEditorText);
+        }
+      } catch (err) {
+        console.error("Error toggling tutorial mode:", err);
+        this.tutorialMode = false;
       }
     },
   },
@@ -176,6 +202,16 @@ export default defineComponent({
       "minimal",
       markRaw(MinimalExampleRenderer) as RendererComponent,
     );
+    const textEditor = this.$refs.textEditor as typeof TextEditor;
+    this.tutorialManager.setCallbacks(
+      (text: string) => textEditor?.setEditorText(text),
+      (text: string) => textEditor?.setTutorialHeaderText(text),
+      (text: string) => textEditor?.setExamplesText(text),
+      () => {
+        this.tutorialMode = false;
+      },
+    );
+    this.tutorialManager.setDisableAnimations(this.debugMode);
   },
   methods: {
     repaint() {

@@ -3,6 +3,12 @@
     <img id="logo" src="/assets/formulavize_logo.svg" alt="Formulavize logo" />
     <h1>formulavize</h1>
     <v-btn-group density="comfortable">
+      <v-btn-toggle v-model="tutorialModeModel" density="comfortable">
+        <v-btn value="tutorial" icon>
+          <v-icon :icon="mdiSchoolOutline" />
+          <v-tooltip activator="parent" text="Tutorial" location="bottom" />
+        </v-btn>
+      </v-btn-toggle>
       <v-btn icon @click="$emit('copy-source')">
         <v-icon :icon="mdiContentCopy" />
         <v-tooltip
@@ -37,17 +43,40 @@
 
 <script lang="ts">
 import { defineComponent } from "vue";
-import { mdiContentCopy, mdiExport, mdiGithub, mdiCogOutline } from "@mdi/js";
+import {
+  mdiSchoolOutline,
+  mdiContentCopy,
+  mdiExport,
+  mdiGithub,
+  mdiCogOutline,
+} from "@mdi/js";
 export default defineComponent({
   name: "ToolBar",
-  emits: ["open-export", "open-options", "copy-source"],
+  props: {
+    tutorialMode: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  emits: ["open-export", "open-options", "copy-source", "update:tutorialMode"],
   setup() {
     return {
+      mdiSchoolOutline,
       mdiContentCopy,
       mdiExport,
       mdiCogOutline,
       mdiGithub,
     };
+  },
+  computed: {
+    tutorialModeModel: {
+      get(): string | undefined {
+        return this.tutorialMode ? "tutorial" : undefined;
+      },
+      set(value: string | undefined) {
+        this.$emit("update:tutorialMode", value === "tutorial");
+      },
+    },
   },
 });
 </script>
