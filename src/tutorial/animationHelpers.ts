@@ -29,7 +29,7 @@ export const slow = createSpeedHelper(TypingSpeed.Slow);
 
 export const dramatic = (text: string): AnimationStep[] => {
   // Type each word with a dramatic pause, then end with a newline
-  const dramaticDelay = 500;
+  const dramaticDelay = 300;
   const words = text.split(" ");
   const steps = words.flatMap((word, index) =>
     index < words.length - 1

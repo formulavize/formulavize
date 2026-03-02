@@ -217,7 +217,7 @@ const stylePuzzlets: Puzzlet[] = [
       normal("It's time to mix things up!\n"),
       normal("Show that you've got style by refactoring the recipe below.\n"),
       normal("Make keyword bindings for water, honey, seltzer, and serve.\n"),
-      normal("Apply all existing style properties through these bindings.\n"),
+      normal("Apply all existing style properties through these bindings."),
     ],
     examples: [
       fast('#temperature{ shape: "round-diamond" }\n'),
