@@ -6,6 +6,7 @@ import { functionsModule } from "./functionsModule";
 import { assignmentModule } from "./assignmentModule";
 import { styleModule } from "./styleModule";
 import { namespacesModule } from "./namespacesModule";
+import { importModule } from "./importModule";
 
 export function createFizLesson(): Lesson {
   // Intro module
@@ -49,6 +50,7 @@ export function createFizLesson(): Lesson {
     assignmentModule,
     styleModule,
     namespacesModule,
+    importModule,
     outroModule,
   ]);
 }
