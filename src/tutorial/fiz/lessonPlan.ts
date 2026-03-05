@@ -30,7 +30,7 @@ export function createFizLesson(): Lesson {
   const outroPuzzlet: Puzzlet = {
     name: "The End of the Beginning",
     instructions: [
-      slow("Congratulations! "),
+      slow("CONGRATULATIONS! "),
       normal("You completed the tutorial!\n"),
       normal("Uncomment the exit() function to exit this tutorial."),
     ],

@@ -8,11 +8,13 @@ export class TutorialManager {
     setTutorialHeaderText: ((text: string) => void) | null;
     setExamplesText: ((text: string) => void) | null;
     onTutorialComplete: (() => void) | null;
+    onLastPuzzletReached: (() => void) | null;
   } = {
     setEditorText: null,
     setTutorialHeaderText: null,
     setExamplesText: null,
     onTutorialComplete: null,
+    onLastPuzzletReached: null,
   };
 
   private isAnimating: boolean = false;
@@ -27,12 +29,14 @@ export class TutorialManager {
     setTutorialHeaderText: (text: string) => void,
     setExamplesText: (text: string) => void,
     onTutorialComplete: (() => void) | null = null,
+    onLastPuzzletReached: (() => void) | null = null,
   ): void {
     this.callbacks = {
       setEditorText,
       setTutorialHeaderText,
       setExamplesText,
       onTutorialComplete,
+      onLastPuzzletReached,
     };
   }
 
@@ -106,6 +110,14 @@ export class TutorialManager {
   private async animatePuzzlet(puzzlet: Puzzlet): Promise<void> {
     this.cancelAnimation(); // Prevent overlapping animations
     this.isAnimating = true;
+
+    // Check if this is the last puzzlet and trigger callback
+    const isLastPuzzlet =
+      this.currentLesson.getCurrentPuzzletIndex() ===
+      this.currentLesson.getNumPuzzlets() - 1;
+    if (isLastPuzzlet) {
+      this.callbacks.onLastPuzzletReached?.();
+    }
 
     if (puzzlet.clearEditorOnStart) {
       this.setEditorText("");
