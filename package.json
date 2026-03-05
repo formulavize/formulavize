@@ -26,6 +26,7 @@
     "@floating-ui/dom": "^1.7.5",
     "@formulavize/lang-fiz": "^1.0.0",
     "@lezer/common": "^1.5.0",
+    "@tsparticles/confetti": "^3.9.1",
     "cytoscape": "^3.33.1",
     "cytoscape-dagre": "^2.5.0",
     "cytoscape-popper": "^4.0.1",

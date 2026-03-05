@@ -67,6 +67,7 @@
     v-model:selected-renderer="selectedRenderer"
     :renderer-options="rendererOptions"
   />
+  <ConfettiEffect ref="confettiEffect" />
 </template>
 
 <script lang="ts">
@@ -79,6 +80,7 @@ import TextEditor from "./components/TextEditor.vue";
 import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
 import ToolBar from "./components/ToolBar.vue";
+import ConfettiEffect from "./components/ConfettiEffect.vue";
 import CytoscapeRenderer from "./renderers/cyDag/CytoscapeRenderer.vue";
 import MinimalExampleRenderer from "./renderers/minExample/MinimalExampleRenderer.vue";
 import { RendererComponent } from "./compiler/rendererTypes";
@@ -106,6 +108,7 @@ export default defineComponent({
     GraphView,
     TextDumpView,
     ToolBar,
+    ConfettiEffect,
     ExportOptionsPopup,
     OptionsPopup,
   },
@@ -203,12 +206,16 @@ export default defineComponent({
       markRaw(MinimalExampleRenderer) as RendererComponent,
     );
     const textEditor = this.$refs.textEditor as typeof TextEditor;
+    const confettiEffect = this.$refs.confettiEffect as typeof ConfettiEffect;
     this.tutorialManager.setCallbacks(
       (text: string) => textEditor?.setEditorText(text),
       (text: string) => textEditor?.setTutorialHeaderText(text),
       (text: string) => textEditor?.setExamplesText(text),
       () => {
         this.tutorialMode = false;
+      },
+      () => {
+        confettiEffect?.triggerConfetti();
       },
     );
     this.tutorialManager.setDisableAnimations(this.debugMode);
