@@ -35,7 +35,7 @@ export class Dag {
   private varNameToNodeId: Map<string, NodeId>;
   private varNameToStyleNode: Map<string, DagStyle | null>;
   private styleTagNameToFlatStyleMap: Map<string, StyleProperties>;
-  private styleBinding: Map<Keyword, StyleTag[]>;
+  private styleBinding: Map<Keyword, DagStyle>;
   private childDags: Map<DagId, Dag>;
   private namespaceNameToDagId: Map<string, DagId>;
   private lineagePath: string;
@@ -80,8 +80,8 @@ export class Dag {
     this.edgeMap.set(edge.id, edge);
   }
 
-  addStyleBinding(keyword: Keyword, styleTags: StyleTag[]): void {
-    this.styleBinding.set(keyword, styleTags);
+  addStyleBinding(keyword: Keyword, dagStyle: DagStyle): void {
+    this.styleBinding.set(keyword, dagStyle);
   }
 
   addChildDag(childDag: Dag): void {
@@ -274,7 +274,7 @@ export class Dag {
     return this.styleTagNameToFlatStyleMap;
   }
 
-  getStyleBindings(): Map<Keyword, StyleTag[]> {
+  getStyleBindings(): Map<Keyword, DagStyle> {
     return this.styleBinding;
   }
 
@@ -402,12 +402,13 @@ export class Dag {
       result +=
         childLeftPad + "Style: " + styleTag + stylePropertiesDump(style) + "\n";
     });
-    this.styleBinding.forEach((styleTags, keyword) => {
+    this.styleBinding.forEach((dagStyle, keyword) => {
       result +=
         childLeftPad +
         "StyleBinding: " +
         keyword +
-        styleTagDump(styleTags) +
+        styleTagDump(dagStyle.styleTags) +
+        stylePropertiesDump(dagStyle.styleProperties) +
         "\n";
     });
     this.childDags.forEach((subDag) => {

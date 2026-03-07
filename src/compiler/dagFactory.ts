@@ -8,7 +8,6 @@ import {
   AssignmentTreeNode,
   QualifiedVarTreeNode,
   NodeType,
-  StyleTagTreeNode,
   StyleTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
@@ -66,12 +65,13 @@ function makeImportError(node: BaseTreeNode, message: string): Error {
   return makeError(node, message, "Import");
 }
 
-function checkForMissingStyleTags(
-  styleTags: StyleTagTreeNode[],
+function checkStyleTagsInStyleNode(
+  styleNode: StyleTreeNode | null,
   workingDag: Dag | undefined,
   errors: Error[],
 ): void {
-  styleTags.forEach((styleTag) => {
+  if (!styleNode) return;
+  styleNode.StyleTags.forEach((styleTag) => {
     const styleTagName = styleTag.QualifiedTagName;
     if (!workingDag?.getStyle(styleTagName)) {
       const errMsg = makeRefError(
@@ -82,15 +82,6 @@ function checkForMissingStyleTags(
       console.debug(errMsg);
     }
   });
-}
-
-function checkStyleTagsInStyleNode(
-  styleNode: StyleTreeNode | null,
-  workingDag: Dag | undefined,
-  errors: Error[],
-): void {
-  if (!styleNode) return;
-  checkForMissingStyleTags(styleNode.StyleTags, workingDag, errors);
 }
 
 function argListToEdgeInfo(
@@ -421,11 +412,11 @@ export async function makeSubDag(
       })
       .with(NodeType.StyleBinding, () => {
         const styleBindingStmt = stmt as StyleBindingTreeNode;
-        const styleTags = styleBindingStmt.StyleTags;
-        checkForMissingStyleTags(styleTags, curLevelDag, errors);
+        const styleNode = styleBindingStmt.StyleNode;
+        checkStyleTagsInStyleNode(styleNode, curLevelDag, errors);
         curLevelDag.addStyleBinding(
           styleBindingStmt.Keyword,
-          styleTags.map((tag) => tag.QualifiedTagName),
+          makeDagStyle(styleNode),
         );
       })
       .with(NodeType.QualifiedVariable, () => null)

@@ -7,7 +7,6 @@ import {
   QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
   StyleTagTreeNode as StyleTagNode,
-  StyleTagListTreeNode as StyleTagList,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   NamespaceTreeNode as Namespace,
@@ -16,7 +15,7 @@ import {
   StatementListTreeNode as StatementList,
 } from "src/compiler/ast";
 import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
-import { Dag, StyleTag, StyleProperties, Keyword } from "src/compiler/dag";
+import { Dag, StyleProperties, Keyword, DagStyle } from "src/compiler/dag";
 import { makeDag } from "src/compiler/dagFactory";
 import { ImportCacher } from "src/compiler/importCacher";
 import {
@@ -739,26 +738,65 @@ describe("style binding tests", () => {
     const recipe = new Recipe([]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const defaultBindings = dag.getStyleBindings();
-    expect(defaultBindings).toEqual(new Map<Keyword, StyleTag[]>());
+    expect(defaultBindings).toEqual(new Map<Keyword, DagStyle>());
   });
   test("empty style binding", async () => {
-    const recipe = new Recipe([new StyleBinding("x", new StyleTagList([]))]);
+    const recipe = new Recipe([
+      new StyleBinding("x", new Style(new Map(), [])),
+    ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const styleBindings = dag.getStyleBindings();
-    const expectedBinding = new Map<Keyword, StyleTag[]>([["x", []]]);
+    const expectedBinding = new Map<Keyword, DagStyle>([
+      ["x", { styleTags: [], styleProperties: new Map() }],
+    ]);
     expect(styleBindings).toEqual(expectedBinding);
   });
   test("style bind multiple styles", async () => {
     const recipe = new Recipe([
       new StyleBinding(
         "x",
-        new StyleTagList([new StyleTagNode(["a"]), new StyleTagNode(["b"])]),
+        new Style(new Map(), [
+          new StyleTagNode(["a"]),
+          new StyleTagNode(["b"]),
+        ]),
       ),
     ]);
     const { dag } = await makeDag(recipe, dummyImporter);
     const styleBindings = dag.getStyleBindings();
-    const expectedBinding = new Map<Keyword, StyleTag[]>([
-      ["x", [["a"], ["b"]]],
+    const expectedBinding = new Map<Keyword, DagStyle>([
+      ["x", { styleTags: [["a"], ["b"]], styleProperties: new Map() }],
+    ]);
+    expect(styleBindings).toEqual(expectedBinding);
+  });
+  test("style binding with inline properties stored in dag", async () => {
+    const recipe = new Recipe([
+      new StyleBinding("x", new Style(new Map([["color", "red"]]), [])),
+    ]);
+    const { dag } = await makeDag(recipe, dummyImporter);
+    const styleBindings = dag.getStyleBindings();
+    const expectedBinding = new Map<Keyword, DagStyle>([
+      ["x", { styleTags: [], styleProperties: new Map([["color", "red"]]) }],
+    ]);
+    expect(styleBindings).toEqual(expectedBinding);
+  });
+  test("style binding with mixed tag and inline property", async () => {
+    const recipe = new Recipe([
+      new NamedStyle("s", new Style(new Map([["font-size", "12"]]))),
+      new StyleBinding(
+        "x",
+        new Style(new Map([["color", "red"]]), [new StyleTagNode(["s"])]),
+      ),
+    ]);
+    const { dag } = await makeDag(recipe, dummyImporter);
+    const styleBindings = dag.getStyleBindings();
+    const expectedBinding = new Map<Keyword, DagStyle>([
+      [
+        "x",
+        {
+          styleTags: [["s"]],
+          styleProperties: new Map([["color", "red"]]),
+        },
+      ],
     ]);
     expect(styleBindings).toEqual(expectedBinding);
   });
@@ -1070,7 +1108,7 @@ describe("error reporting", () => {
     const recipe = new Recipe([
       new StyleBinding(
         "x",
-        new StyleTagList([new StyleTagNode(["missingStyle"])]),
+        new Style(new Map(), [new StyleTagNode(["missingStyle"])]),
       ),
     ]);
     const { dag, errors } = await makeDag(recipe, dummyImporter);
@@ -1079,7 +1117,10 @@ describe("error reporting", () => {
     expectReferenceError(errors[0], "Style tag 'missingStyle' not found");
 
     const keywordToStyleTags = dag.getStyleBindings();
-    expect(keywordToStyleTags.get("x")).toEqual([["missingStyle"]]);
+    expect(keywordToStyleTags.get("x")).toEqual({
+      styleTags: [["missingStyle"]],
+      styleProperties: new Map(),
+    });
   });
   test("multiple missing style tags in same statement reports multiple errors", async () => {
     const recipe = new Recipe([
