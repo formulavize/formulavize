@@ -9,7 +9,6 @@ import {
   QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
   StyleTagTreeNode as StyleTag,
-  StyleTagListTreeNode as StyleTagList,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   NamespaceTreeNode as Namespace,
@@ -273,20 +272,22 @@ describe("style bindings", () => {
   test("empty style binding", () => {
     const input = "%x{}";
     expect(makeTree(input)).toEqual(
-      new Recipe([new StyleBinding("x", new StyleTagList([]))]),
+      new Recipe([new StyleBinding("x", new Style(new Map(), []))]),
     );
   });
-  test("style bind multiple styles", () => {
-    const input = "%x{#a #b #c}";
+  test("style binding with mixed types", () => {
+    const input = "%x{a:1;b:2\n#d #e}";
     expect(makeTree(input)).toEqual(
       new Recipe([
         new StyleBinding(
           "x",
-          new StyleTagList([
-            new StyleTag(["a"]),
-            new StyleTag(["b"]),
-            new StyleTag(["c"]),
-          ]),
+          new Style(
+            new Map([
+              ["a", "1"],
+              ["b", "2"],
+            ]),
+            [new StyleTag(["d"]), new StyleTag(["e"])],
+          ),
         ),
       ]),
     );
@@ -404,7 +405,7 @@ describe("incomplete statements", () => {
   test("incomplete style binding", () => {
     const input = "%x";
     expect(makeTree(input)).toEqual(
-      new Recipe([new StyleBinding("x", new StyleTagList([]))]),
+      new Recipe([new StyleBinding("x", new Style(new Map(), []))]),
     );
   });
   test("incomplete namespace", () => {

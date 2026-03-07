@@ -9,7 +9,6 @@ export enum NodeType {
   Recipe,
   Style,
   NamedStyle,
-  StyleTagList,
   StyleBinding,
   StyleTag,
   Namespace,
@@ -357,49 +356,22 @@ export class NamedStyleTreeNode extends BaseTreeNode {
   }
 }
 
-export class StyleTagListTreeNode extends BaseTreeNode {
-  private styleTags: StyleTagTreeNode[];
-
-  constructor(
-    styleTags: StyleTagTreeNode[] = [],
-    position: Position | null = null,
-  ) {
-    super(NodeType.StyleTagList, position);
-    this.styleTags = styleTags;
-  }
-
-  getChildren(): BaseTreeNode[] {
-    return this.styleTags;
-  }
-
-  debugDump(): string {
-    const styleTagListStr = this.styleTags
-      .map((tag) => tag.QualifiedTagName.join("."))
-      .join(", ");
-    return `StyleTagList: [${styleTagListStr}]`;
-  }
-
-  get StyleTags(): StyleTagTreeNode[] {
-    return this.styleTags;
-  }
-}
-
 export class StyleBindingTreeNode extends BaseTreeNode {
   private keyword: string;
-  private styleTagList: StyleTagListTreeNode | null;
+  private styleNode: StyleTreeNode;
 
   constructor(
     keyword: string = "",
-    styleTagList: StyleTagListTreeNode | null = null,
+    styleNode: StyleTreeNode = new StyleTreeNode(new Map(), [], null),
     position: Position | null = null,
   ) {
     super(NodeType.StyleBinding, position);
     this.keyword = keyword;
-    this.styleTagList = styleTagList;
+    this.styleNode = styleNode;
   }
 
   getChildren(): BaseTreeNode[] {
-    return this.styleTagList ? [this.styleTagList] : [];
+    return [this.styleNode];
   }
 
   debugDump(): string {
@@ -410,12 +382,8 @@ export class StyleBindingTreeNode extends BaseTreeNode {
     return this.keyword;
   }
 
-  get StyleTagList(): StyleTagListTreeNode | null {
-    return this.styleTagList;
-  }
-
-  get StyleTags(): StyleTagTreeNode[] {
-    return this.styleTagList ? this.styleTagList.StyleTags : [];
+  get StyleNode(): StyleTreeNode {
+    return this.styleNode;
   }
 }
 
