@@ -294,6 +294,22 @@ describe("makes cytoscape stylesheets", () => {
     ];
     expect(makeNameStyleSheets(testDag)).toEqual(expectedCyNameStyles);
   });
+  test("name style with scoped style tag resolves into child dag namespace", () => {
+    const testDag = new Dag("DagId");
+    const childDag = new Dag("childDag", testDag, "ns");
+    childDag.setStyle("s", new Map([["color", "red"]]));
+    testDag.addStyleBinding("x", {
+      styleTags: [["ns", "s"]],
+      styleProperties: new Map(),
+    });
+    const expectedCyNameStyles = [
+      {
+        selector: "[name='x']",
+        css: { color: "red" },
+      },
+    ];
+    expect(makeNameStyleSheets(testDag)).toEqual(expectedCyNameStyles);
+  });
   test("styles from sub dags", () => {
     const testDag = new Dag("DagId");
     const childDag = new Dag("childDag", testDag);
