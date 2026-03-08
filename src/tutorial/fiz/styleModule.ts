@@ -158,10 +158,9 @@ const stylePuzzlets: Puzzlet[] = [
   {
     name: "In a Bind",
     instructions: [
-      normal("Style bindings associate style tags with keywords.\n"),
+      normal("Style bindings associate styles with keywords.\n"),
       normal("Define a binding with a percent sign '%', keyword, and { }.\n"),
       normal("e.g. %my_keyword{ }\n"),
-      normal("Only style tags can be used in a binding's { }.\n"),
       normal("Functions and variables with the keyword as its name\n"),
       normal("will receive the keyword's bound styles.\n"),
       normal("Uncomment the function call to see the binding in action."),
@@ -176,14 +175,15 @@ const stylePuzzlets: Puzzlet[] = [
       const flattenedStyles = compilation.DAG.getFlattenedStyles();
       const nodes = compilation.DAG.getNodeList();
 
-      // Find bindings that have style tags with at least one property
-      return Array.from(bindings.entries()).some(([keyword, styleTags]) => {
-        // Check if at least one of this binding's style tags has properties
-        const bindingHasProperties = styleTags.some((styleTag) => {
-          const tagName = styleTag.join(".");
-          const properties = flattenedStyles.get(tagName);
-          return (properties?.size ?? 0) > 0;
-        });
+      // Find bindings that have style tags or inline properties
+      return Array.from(bindings.entries()).some(([keyword, dagStyle]) => {
+        const bindingHasProperties =
+          dagStyle.styleProperties.size > 0 ||
+          dagStyle.styleTags.some((styleTag) => {
+            const tagName = styleTag.join(".");
+            const properties = flattenedStyles.get(tagName);
+            return (properties?.size ?? 0) > 0;
+          });
         if (!bindingHasProperties) return false;
 
         // Check if any node uses this binding
@@ -216,7 +216,7 @@ const stylePuzzlets: Puzzlet[] = [
     instructions: [
       normal("It's time to mix things up!\n"),
       normal("Show that you've got style by refactoring the recipe below.\n"),
-      normal("Make keyword bindings for water, honey, seltzer, and serve.\n"),
+      normal("Make keyword bindings for water, seltzer, and serve.\n"),
       normal("Apply all existing style properties through these bindings."),
     ],
     examples: [
@@ -224,15 +224,15 @@ const stylePuzzlets: Puzzlet[] = [
       fast('#hot{ background-color: "red" }\n'),
       fast('#cold{ background-color: "blue" }\n'),
       fast('#watery{ background-color: "lightblue" }\n'),
-      fast('#wax{ shape: "hexagon"; background-color: "gold" }\n'),
       fast('#can{ shape: "barrel" }\n'),
       fast("\n"),
       fast("%heat{ #temperature #hot }\n"),
       fast("%cool{ #temperature #cold }\n"),
+      fast('%honey{ shape: "hexagon"; background-color: "gold" }\n'),
       fast("\n"),
       fast("w = water(){ #watery }\n"),
       fast("hot_water = heat(w)\n"),
-      fast("h = honey(){ #wax }\n"),
+      fast("h = honey()\n"),
       fast("honey_syrup = mix(hot_water, h)\n"),
       fast("buzz = cool(honey_syrup)\n"),
       fast("fizz = seltzer() { #watery #can }\n"),
@@ -246,7 +246,6 @@ const stylePuzzlets: Puzzlet[] = [
     successCondition: (compilation: Compilation) => {
       const expectedProperties = new Map([
         ["water", new Set(["background-color"])],
-        ["honey", new Set(["shape", "background-color"])],
         ["seltzer", new Set(["background-color", "shape"])],
         ["serve", new Set(["shape", "background-color"])],
       ]);
@@ -257,16 +256,18 @@ const stylePuzzlets: Puzzlet[] = [
       // Check that each required keyword has all expected properties
       return Array.from(expectedProperties.entries()).every(
         ([keyword, expectedProps]) => {
-          const styleTags = bindings.get(keyword);
-          if (!styleTags?.length) return false;
+          const dagStyle = bindings.get(keyword);
+          if (!dagStyle?.styleTags.length && !dagStyle?.styleProperties.size)
+            return false;
 
-          // Collect all properties from this keyword's style tags
-          const collectedProperties = new Set(
-            styleTags.flatMap((styleTag) => {
+          // Collect all properties from this keyword's style tags and inline properties
+          const collectedProperties = new Set([
+            ...Array.from(dagStyle.styleProperties.keys()),
+            ...dagStyle.styleTags.flatMap((styleTag) => {
               const properties = flattenedStyles.get(styleTag.join("."));
               return properties ? Array.from(properties.keys()) : [];
             }),
-          );
+          ]);
 
           // Check if all expected properties are present
           return expectedProps.isSubsetOf(collectedProperties);
