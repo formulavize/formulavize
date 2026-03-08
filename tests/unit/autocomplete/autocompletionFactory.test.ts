@@ -13,7 +13,6 @@ import {
   StyleTreeNode as Style,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
-  StyleTagListTreeNode as StyleTagList,
   NamespaceTreeNode as Namespace,
   ValueListTreeNode as ValueList,
   StatementListTreeNode as StatementList,
@@ -92,10 +91,10 @@ describe("makeCompletionIndex captures tokens", () => {
   });
 
   test("creates tokens from style binding statements", async () => {
-    const styleTagList = new StyleTagList([], pos(10, 20));
+    const styleArgList = new Style(new Map(), [], pos(10, 20));
     const styleBindingNode = new StyleBinding(
       "keyword",
-      styleTagList,
+      styleArgList,
       pos(0, 25),
     );
     const statements = [styleBindingNode];
@@ -190,10 +189,10 @@ describe("makeCompletionIndex captures context scenarios", () => {
   });
 
   test("creates context scenario for style binding", async () => {
-    const styleTagList = new StyleTagList([], pos(10, 20));
+    const styleArgList = new Style(new Map(), [], pos(10, 20));
     const styleBindingNode = new StyleBinding(
       "keyword",
-      styleTagList,
+      styleArgList,
       pos(0, 25),
     );
     const statements = [styleBindingNode];
@@ -203,8 +202,8 @@ describe("makeCompletionIndex captures context scenarios", () => {
     expect(index.contextScenarios).toHaveLength(1);
     expect(index.contextScenarios[0]).toEqual({
       type: ContextScenarioType.StyleArgList,
-      from: 11, // styleTagList.from + 1
-      to: 19, // styleTagList.to - 1
+      from: 11, // styleArgList.from + 1
+      to: 19, // styleArgList.to - 1
     });
   });
 
