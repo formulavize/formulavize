@@ -147,12 +147,12 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
     })
     .with(NodeType.StyleBinding, () => {
       const styleBindingNode = statement as StyleBindingTreeNode;
-      if (!styleBindingNode.StyleTagList?.Position) return [];
+      if (!styleBindingNode.StyleNode.Position) return [];
       return [
         {
           type: ContextScenarioType.StyleArgList,
-          from: styleBindingNode.StyleTagList.Position.from + 1,
-          to: styleBindingNode.StyleTagList.Position.to - 1,
+          from: styleBindingNode.StyleNode.Position.from + 1,
+          to: styleBindingNode.StyleNode.Position.to - 1,
         },
       ];
     })

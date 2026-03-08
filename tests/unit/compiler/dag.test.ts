@@ -247,25 +247,45 @@ describe("merge dag tests", () => {
   });
   test("merge dag style bindings with no conflicts", () => {
     const dag1 = new Dag("root1");
-    dag1.addStyleBinding("keyword1", [["tag1"]]);
+    const styleNode1 = {
+      styleTags: [["tag1"]],
+      styleProperties: new Map([["color", "red"]]),
+    };
+    dag1.addStyleBinding("keyword1", styleNode1);
+
     const dag2 = new Dag("root2");
-    dag2.addStyleBinding("keyword2", [["tag2"]]);
+    const styleNode2 = {
+      styleTags: [["tag2"]],
+      styleProperties: new Map([["color", "green"]]),
+    };
+    dag2.addStyleBinding("keyword2", styleNode2);
+
     dag1.mergeDag(dag2);
     expect(dag1.getStyleBindings()).toEqual(
       new Map([
-        ["keyword1", [["tag1"]]],
-        ["keyword2", [["tag2"]]],
+        ["keyword1", styleNode1],
+        ["keyword2", styleNode2],
       ]),
     );
   });
   test("merge dag style bindings with conflicting names", () => {
     const dag1 = new Dag("root1");
-    dag1.addStyleBinding("keyword1", [["tag1"]]);
+    const styleNode1 = {
+      styleTags: [["tag1"]],
+      styleProperties: new Map([["color", "red"]]),
+    };
+    dag1.addStyleBinding("keyword1", styleNode1);
+
     const dag2 = new Dag("root2");
-    dag2.addStyleBinding("keyword1", [["tag2"]]);
+    const styleNode2 = {
+      styleTags: [["tag2"]],
+      styleProperties: new Map([["color", "green"]]),
+    };
+    dag2.addStyleBinding("keyword1", styleNode2);
+
     dag1.mergeDag(dag2);
     expect(dag1.getStyleBindings()).toEqual(
-      new Map([["keyword1", [["tag2"]]]]),
+      new Map([["keyword1", styleNode2]]),
     );
   });
   test("merge dag var nodes with no conflicts", () => {

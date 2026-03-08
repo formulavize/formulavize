@@ -13,7 +13,6 @@ import {
   LocalVarTreeNode,
   StyleTreeNode,
   StyleTagTreeNode,
-  StyleTagListTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
   NamespaceTreeNode,
@@ -132,25 +131,16 @@ function makeNamedStyle(
   return new NamedStyleTreeNode(styleName, styleNode, getPosition(c));
 }
 
-function makeStyleTagList(
-  c: TreeCursor,
-  t: Text,
-  _e: Error[],
-): StyleTagListTreeNode {
-  const styleTags = getStyleTagNames(c, t);
-  return new StyleTagListTreeNode(styleTags, getPosition(c));
-}
-
 function makeStyleBinding(
   c: TreeCursor,
   t: Text,
   e: Error[],
 ): StyleBindingTreeNode {
   const keyword = getTextFromChild("Identifier", c, t);
-  const styleTagList =
-    makeNullableChild("StyleTagList", makeStyleTagList, c, t, e) ??
-    new StyleTagListTreeNode([], getPosition(c));
-  return new StyleBindingTreeNode(keyword, styleTagList, getPosition(c));
+  const styleArgList =
+    makeNullableChild("StyleArgList", makeStyle, c, t, e) ??
+    new StyleTreeNode(new Map(), [], getPosition(c));
+  return new StyleBindingTreeNode(keyword, styleArgList, getPosition(c));
 }
 
 function makeRhsVariable(c: TreeCursor, t: Text): QualifiedVarTreeNode {

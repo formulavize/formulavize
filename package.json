@@ -24,7 +24,7 @@
     "@codemirror/state": "^6.5.4",
     "@codemirror/view": "^6.39.16",
     "@floating-ui/dom": "^1.7.6",
-    "@formulavize/lang-fiz": "^1.0.0",
+    "@formulavize/lang-fiz": "^2.0.0",
     "@lezer/common": "^1.5.1",
     "@tsparticles/confetti": "^3.9.1",
     "cytoscape": "^3.33.1",
