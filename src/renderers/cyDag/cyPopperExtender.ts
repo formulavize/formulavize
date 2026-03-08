@@ -78,11 +78,12 @@ export function getNamesWithStyleDescriptions(
   const lineageSelector = makeDagLineageSelector(dag);
   const bindingEntries = Array.from(dag.getStyleBindings().entries());
   return Array.from(
-    bindingEntries.flatMap(([keyword, styleTags]) => {
-      const keywordSelector = `[name='${keyword}']${lineageSelector}`;
-      return styleTagsToDescriptionsList(dag, styleTags).map(
-        (descriptionData) => [keywordSelector, descriptionData],
-      );
+    bindingEntries.flatMap(([keyword, dagStyle]) => {
+      const selector = `[name='${keyword}']${lineageSelector}`;
+      const descList = styleTagsToDescriptionsList(dag, dagStyle.styleTags);
+      const inlineDesc = getDescriptionData(dagStyle.styleProperties);
+      if (inlineDesc) descList.push(inlineDesc);
+      return descList.map((descData) => [selector, descData]);
     }),
   ) as SelectorDescriptionPair[];
 }

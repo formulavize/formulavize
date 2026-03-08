@@ -100,24 +100,37 @@ export function makeClassStyleSheets(dag: Dag): StylesheetCSS[] {
 export function makeNameStyleSheets(dag: Dag): StylesheetCSS[] {
   const lineageSelector = makeDagLineageSelector(dag);
   const flatStyleMap = dag.getFlattenedStyles();
-  return Array.from(dag.getStyleBindings())
-    .flatMap(([keyword, styleTags]) =>
-      styleTags.map((styleTag) => {
+  return Array.from(dag.getStyleBindings()).flatMap(([keyword, dagStyle]) => {
+    const selector = `[name='${keyword}']${lineageSelector}`;
+
+    const styleSheetsList = dagStyle.styleTags
+      .map((styleTag) => {
         // temporarily get the last part to continue existing behavior
         const tempLastPart = styleTag.at(-1) ?? "";
         const styleProperties = flatStyleMap.get(tempLastPart);
         if (styleProperties) {
           return {
-            selector: `[name='${keyword}']${lineageSelector}`,
+            selector,
             css: Object.fromEntries(filterCytoscapeProperties(styleProperties)),
           };
         } else {
           console.warn(`keyword ${keyword} could not be bound to ${styleTag}`);
           return null;
         }
-      }),
-    )
-    .filter(Boolean) as StylesheetCSS[];
+      })
+      .filter(Boolean) as StylesheetCSS[];
+
+    if (dagStyle.styleProperties.size > 0) {
+      styleSheetsList.push({
+        selector,
+        css: Object.fromEntries(
+          filterCytoscapeProperties(dagStyle.styleProperties),
+        ),
+      });
+    }
+
+    return styleSheetsList;
+  });
 }
 
 export function getBaseStylesheet(): StylesheetCSS[] {

@@ -202,12 +202,18 @@ describe("makes cytoscape stylesheets", () => {
   });
   test("name style on undeclared styleTags", () => {
     const testDag = new Dag("DagId");
-    testDag.addStyleBinding("x", [["a"], ["b"]]);
+    testDag.addStyleBinding("x", {
+      styleTags: [["a"], ["b"]],
+      styleProperties: new Map(),
+    });
     expect(makeNameStyleSheets(testDag)).toEqual([]);
   });
   test("name styles", () => {
     const testDag = new Dag("DagId");
-    testDag.addStyleBinding("x", [["a"], ["b"]]);
+    testDag.addStyleBinding("x", {
+      styleTags: [["a"], ["b"]],
+      styleProperties: new Map(),
+    });
     testDag.setStyle("a", new Map([["i", "1"]]));
     testDag.setStyle(
       "b",
@@ -239,7 +245,10 @@ describe("makes cytoscape stylesheets", () => {
         ["k", "3"],
       ]),
     );
-    childDag.addStyleBinding("x", [["a"], ["b"]]);
+    childDag.addStyleBinding("x", {
+      styleTags: [["a"], ["b"]],
+      styleProperties: new Map(),
+    });
     const expectedCyNameStyles = [
       {
         selector: "[name='x'][lineagePath*='/childDag']",
@@ -252,11 +261,47 @@ describe("makes cytoscape stylesheets", () => {
     ];
     expect(makeNameStyleSheets(childDag)).toEqual(expectedCyNameStyles);
   });
+  test("style binding with style properties", () => {
+    const testDag = new Dag("DagId");
+    testDag.addStyleBinding("x", {
+      styleTags: [],
+      styleProperties: new Map([["color", "blue"]]),
+    });
+    const expectedCyNameStyles = [
+      {
+        selector: "[name='x']",
+        css: { color: "blue" },
+      },
+    ];
+    expect(makeNameStyleSheets(testDag)).toEqual(expectedCyNameStyles);
+  });
+  test("style binding with style tags and properties", () => {
+    const testDag = new Dag("DagId");
+    testDag.setStyle("s", new Map([["font-size", "12"]]));
+    testDag.addStyleBinding("x", {
+      styleTags: [["s"]],
+      styleProperties: new Map([["color", "blue"]]),
+    });
+    const expectedCyNameStyles = [
+      {
+        selector: "[name='x']",
+        css: { "font-size": "12" },
+      },
+      {
+        selector: "[name='x']",
+        css: { color: "blue" },
+      },
+    ];
+    expect(makeNameStyleSheets(testDag)).toEqual(expectedCyNameStyles);
+  });
   test("styles from sub dags", () => {
     const testDag = new Dag("DagId");
     const childDag = new Dag("childDag", testDag);
     childDag.setStyle("a", new Map([["background-color", "red"]]));
-    childDag.addStyleBinding("x", [["a"]]);
+    childDag.addStyleBinding("x", {
+      styleTags: [["a"]],
+      styleProperties: new Map(),
+    });
 
     const grandChildDag = new Dag("grandChildDag", childDag);
     grandChildDag.setStyle("b", new Map([["shape", "hexagon"]]));
@@ -313,7 +358,10 @@ describe("makes cytoscape stylesheets", () => {
     const rootDag = new Dag("DagId");
     const childDag = new Dag("x", rootDag);
     childDag.setStyle("b", new Map([["background-color", "red"]]));
-    childDag.addStyleBinding("y", [["b"]]);
+    childDag.addStyleBinding("y", {
+      styleTags: [["b"]],
+      styleProperties: new Map(),
+    });
     const grandChildDag = new Dag("y", childDag);
     grandChildDag.addNode({
       id: "idX",
