@@ -286,8 +286,14 @@ describe("DAG statistics", () => {
 
   test("style bindings", () => {
     const dag = new Dag("root");
-    dag.addStyleBinding("keyword1", [["style", "tag1"]]);
-    dag.addStyleBinding("keyword2", [["style", "tag2"]]);
+    dag.addStyleBinding("keyword1", {
+      styleTags: [["style", "tag1"]],
+      styleProperties: new Map(),
+    });
+    dag.addStyleBinding("keyword2", {
+      styleTags: [["style", "tag2"]],
+      styleProperties: new Map(),
+    });
 
     const stats = createDagStats(dag);
 
