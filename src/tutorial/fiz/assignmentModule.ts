@@ -137,7 +137,7 @@ const assignmentPuzzlets: Puzzlet[] = [
       ...dramatic("FUNCTION IS NODE"),
       ...dramatic("ARG IS EDGE"),
       ...dramatic("CODER IS YOU!"),
-      normal("Make a 4-node diamond DAG to continue."),
+      normal("Make a 4-node diamond-shaped DAG to continue."),
     ],
     examples: [],
     clearEditorOnStart: true,
