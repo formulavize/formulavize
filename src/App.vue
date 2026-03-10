@@ -45,6 +45,9 @@
             :content="curCompletionIndex.dumpCompletionIndex()"
           />
         </tab>
+        <tab name="Imports">
+          <TextDumpView title="Import Tree" :content="curImportDump" />
+        </tab>
       </tabs>
     </pane>
   </splitpanes>
@@ -93,6 +96,7 @@ import { CompilationError } from "./compiler/compilationErrors";
 import { errorToDiagnostic, ErrorReporter } from "./compiler/errorReporter";
 import { CompletionIndex } from "./autocomplete/autocompletion";
 import { createCompletionIndex } from "./autocomplete/autocompletionFactory";
+import { dumpImportTree } from "./compiler/importUtility";
 import { TutorialManager } from "./tutorial/tutorialManager";
 // @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
@@ -124,6 +128,7 @@ export default defineComponent({
       curDiagnostics: [] as Diagnostic[],
       curErrorReporter: new ErrorReporter(Text.empty),
       curCompletionIndex: new CompletionIndex(),
+      curImportDump: "(no imports)",
       showExportPopup: false,
       showOptionsPopup: false,
       tabToIndent: false,
@@ -163,6 +168,12 @@ export default defineComponent({
         async (path) =>
           (await this.compiler.ImportCacher.getCachedCompilation(path))?.AST,
       );
+      if (this.debugMode) {
+        this.curImportDump = await dumpImportTree(
+          this.compiler.ImportCacher,
+          curCompilation.AST,
+        );
+      }
       if (this.tutorialMode) {
         this.tutorialManager.onCompilation(curCompilation);
       }
