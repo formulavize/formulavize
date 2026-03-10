@@ -54,6 +54,7 @@
   <ToolBar
     id="toolbar"
     v-model:tutorial-mode="tutorialMode"
+    :class="{ 'toolbar-debug': debugMode }"
     @open-export="showExportPopup = true"
     @open-options="showOptionsPopup = true"
     @copy-source="copySourceToClipboard"
@@ -280,10 +281,9 @@ body,
   top: 0;
   right: 0;
   z-index: 1;
-  pointer-events: none;
 }
 
-#toolbar * {
-  pointer-events: auto;
+#toolbar.toolbar-debug {
+  top: 33px;
 }
 </style>
