@@ -41,6 +41,14 @@ export class ImportCacher {
             ),
           );
         }
+        const contentType = response.headers.get("content-type") ?? "";
+        if (contentType.includes("text/html")) {
+          return Promise.reject(
+            new Error(
+              `Expected a fiz file but received HTML from '${packageLocation}'`,
+            ),
+          );
+        }
         return response.text();
       })
       .then((source) => {

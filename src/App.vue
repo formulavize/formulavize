@@ -45,12 +45,16 @@
             :content="curCompletionIndex.dumpCompletionIndex()"
           />
         </tab>
+        <tab name="Imports">
+          <TextDumpView title="Import Tree" :content="curImportDump" />
+        </tab>
       </tabs>
     </pane>
   </splitpanes>
   <ToolBar
     id="toolbar"
     v-model:tutorial-mode="tutorialMode"
+    :class="{ 'toolbar-debug': debugMode }"
     @open-export="showExportPopup = true"
     @open-options="showOptionsPopup = true"
     @copy-source="copySourceToClipboard"
@@ -93,6 +97,7 @@ import { CompilationError } from "./compiler/compilationErrors";
 import { errorToDiagnostic, ErrorReporter } from "./compiler/errorReporter";
 import { CompletionIndex } from "./autocomplete/autocompletion";
 import { createCompletionIndex } from "./autocomplete/autocompletionFactory";
+import { dumpImportTree } from "./compiler/importUtility";
 import { TutorialManager } from "./tutorial/tutorialManager";
 // @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
@@ -124,6 +129,7 @@ export default defineComponent({
       curDiagnostics: [] as Diagnostic[],
       curErrorReporter: new ErrorReporter(Text.empty),
       curCompletionIndex: new CompletionIndex(),
+      curImportDump: "(no imports)",
       showExportPopup: false,
       showOptionsPopup: false,
       tabToIndent: false,
@@ -160,9 +166,17 @@ export default defineComponent({
       this.curErrorReporter = new ErrorReporter(newEditorState.doc);
       this.curCompletionIndex = await createCompletionIndex(
         curCompilation.AST,
-        async (path) =>
-          (await this.compiler.ImportCacher.getCachedCompilation(path))?.AST,
+        (path) =>
+          this.compiler.ImportCacher.getCachedCompilation(path)
+            .then((c) => c?.AST)
+            .catch(() => undefined),
       );
+      if (this.debugMode) {
+        this.curImportDump = await dumpImportTree(
+          this.compiler.ImportCacher,
+          curCompilation.AST,
+        );
+      }
       if (this.tutorialMode) {
         this.tutorialManager.onCompilation(curCompilation);
       }
@@ -267,10 +281,9 @@ body,
   top: 0;
   right: 0;
   z-index: 1;
-  pointer-events: none;
 }
 
-#toolbar * {
-  pointer-events: auto;
+#toolbar.toolbar-debug {
+  top: 33px;
 }
 </style>
