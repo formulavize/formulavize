@@ -38,7 +38,7 @@ async function dumpImportTreeHelper(
         newVisitedImports,
       );
 
-      return `${baseLine}\n${childLines}`;
+      return childLines ? `${baseLine}\n${childLines}` : baseLine;
     }),
   );
 
