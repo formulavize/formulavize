@@ -4,6 +4,16 @@ import { ImportCacher } from "src/compiler/importCacher";
 import { Compiler } from "src/compiler/driver";
 import { FIZ_FILE_EXTENSION } from "src/compiler/constants";
 
+function makeMockHeaderWithContentType(contentType: string) {
+  return {
+    get: (key: string) => (key === "content-type" ? contentType : null),
+  };
+}
+
+function makeDefaultMockHeader() {
+  return makeMockHeaderWithContentType("text/plain");
+}
+
 describe("import cacher", () => {
   const mockDag = {};
   const mockCompiler = {
@@ -21,6 +31,7 @@ describe("import cacher", () => {
   test("should fetch a package from a valid URL", async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
+      headers: makeDefaultMockHeader(),
       text: () => Promise.resolve("package source"),
     });
 
@@ -63,6 +74,7 @@ describe("import cacher", () => {
   test("should cache the fetched package", async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
+      headers: makeDefaultMockHeader(),
       text: () => Promise.resolve("package source"),
     });
 
@@ -84,10 +96,12 @@ describe("import cacher", () => {
       .fn()
       .mockResolvedValueOnce({
         ok: true,
+        headers: makeDefaultMockHeader(),
         text: () => Promise.resolve("package source 1"),
       })
       .mockResolvedValueOnce({
         ok: true,
+        headers: makeDefaultMockHeader(),
         text: () => Promise.resolve("package source 2"),
       });
 
@@ -119,11 +133,25 @@ describe("import cacher", () => {
       "Failed to fetch",
     );
   });
+
+  test("should throw an error if response is HTML", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeMockHeaderWithContentType("text/html; charset=utf-8"),
+      text: () => Promise.resolve("<html></html>"),
+    });
+    const importCacher = new ImportCacher(mockCompiler);
+
+    await expect(importCacher.getPackageDag(packageLocation)).rejects.toThrow(
+      `Expected a fiz file but received HTML from '${packageLocation}'`,
+    );
+  });
 });
 
 function makeMockResponse(recipe: string, valid: boolean = true) {
   return Promise.resolve({
     ok: valid,
+    headers: makeDefaultMockHeader(),
     text: () => Promise.resolve(recipe),
   });
 }
