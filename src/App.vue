@@ -165,8 +165,10 @@ export default defineComponent({
       this.curErrorReporter = new ErrorReporter(newEditorState.doc);
       this.curCompletionIndex = await createCompletionIndex(
         curCompilation.AST,
-        async (path) =>
-          (await this.compiler.ImportCacher.getCachedCompilation(path))?.AST,
+        (path) =>
+          this.compiler.ImportCacher.getCachedCompilation(path)
+            .then((c) => c?.AST)
+            .catch(() => undefined),
       );
       if (this.debugMode) {
         this.curImportDump = await dumpImportTree(
