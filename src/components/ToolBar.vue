@@ -3,12 +3,14 @@
     <img id="logo" src="/assets/formulavize_logo.svg" alt="Formulavize logo" />
     <h1>formulavize</h1>
     <v-btn-group density="comfortable">
-      <v-btn-toggle v-model="tutorialModeModel" density="comfortable">
-        <v-btn value="tutorial" icon>
-          <v-icon :icon="mdiSchoolOutline" />
-          <v-tooltip activator="parent" text="Tutorial" location="bottom" />
-        </v-btn>
-      </v-btn-toggle>
+      <v-btn
+        icon
+        :active="tutorialMode"
+        @click="$emit('update:tutorialMode', !tutorialMode)"
+      >
+        <v-icon :icon="mdiSchoolOutline" />
+        <v-tooltip activator="parent" text="Tutorial" location="bottom" />
+      </v-btn>
       <v-btn icon @click="$emit('copy-source')">
         <v-icon :icon="mdiContentCopy" />
         <v-tooltip
@@ -67,16 +69,6 @@ export default defineComponent({
       mdiCogOutline,
       mdiGithub,
     };
-  },
-  computed: {
-    tutorialModeModel: {
-      get(): string | undefined {
-        return this.tutorialMode ? "tutorial" : undefined;
-      },
-      set(value: string | undefined) {
-        this.$emit("update:tutorialMode", value === "tutorial");
-      },
-    },
   },
 });
 </script>
