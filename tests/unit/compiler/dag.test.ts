@@ -360,3 +360,139 @@ describe("merge dag tests", () => {
     expect(dag1.getVarNode(["n", "x"])).toEqual("node2");
   });
 });
+
+const makeSimpleNode = (id: string) => ({
+  id,
+  name: id,
+  styleTags: [],
+  styleProperties: new Map(),
+});
+
+describe("insertion order tests", () => {
+  test("addNode tracks insertion order", () => {
+    const dag = new Dag("root");
+    dag.addNode(makeSimpleNode("a"));
+    dag.addNode(makeSimpleNode("b"));
+    dag.addNode(makeSimpleNode("c"));
+    const order = dag.getElementInsertionOrder();
+    expect(order.get("a")).toBe(0);
+    expect(order.get("b")).toBe(1);
+    expect(order.get("c")).toBe(2);
+  });
+
+  test("addChildDag tracks insertion order", () => {
+    const dag = new Dag("root");
+    const child1 = new Dag("child1");
+    const child2 = new Dag("child2");
+    dag.addChildDag(child1);
+    dag.addChildDag(child2);
+    const order = dag.getElementInsertionOrder();
+    expect(order.get("child1")).toBe(0);
+    expect(order.get("child2")).toBe(1);
+  });
+
+  test("nodes and child dags share insertion counter", () => {
+    const dag = new Dag("root");
+    dag.addNode(makeSimpleNode("a"));
+    const child = new Dag("child1");
+    dag.addChildDag(child);
+    dag.addNode(makeSimpleNode("b"));
+    const order = dag.getElementInsertionOrder();
+    expect(order.get("a")).toBe(0);
+    expect(order.get("child1")).toBe(1);
+    expect(order.get("b")).toBe(2);
+  });
+
+  test("constructor with parent tracks insertion order", () => {
+    const dag = new Dag("root");
+    dag.addNode(makeSimpleNode("a"));
+    new Dag("child1", dag);
+    dag.addNode(makeSimpleNode("b"));
+    const order = dag.getElementInsertionOrder();
+    expect(order.get("a")).toBe(0);
+    expect(order.get("child1")).toBe(1);
+    expect(order.get("b")).toBe(2);
+  });
+
+  test("mergeDag preserves relative order with offset", () => {
+    const dag1 = new Dag("root1");
+    dag1.addNode(makeSimpleNode("a"));
+    dag1.addNode(makeSimpleNode("b"));
+
+    const dag2 = new Dag("root2");
+    dag2.addNode(makeSimpleNode("c"));
+    dag2.addNode(makeSimpleNode("d"));
+
+    dag1.mergeDag(dag2);
+    const order = dag1.getElementInsertionOrder();
+    expect(order.get("a")).toBe(0);
+    expect(order.get("b")).toBe(1);
+    expect(order.get("c")).toBe(2);
+    expect(order.get("d")).toBe(3);
+  });
+
+  test("mergeDag preserves child dag order with offset", () => {
+    const dag1 = new Dag("root1");
+    dag1.addNode(makeSimpleNode("a"));
+
+    const dag2 = new Dag("root2");
+    const child = new Dag("child1");
+    dag2.addChildDag(child);
+    dag2.addNode(makeSimpleNode("b"));
+
+    dag1.mergeDag(dag2);
+    const order = dag1.getElementInsertionOrder();
+    expect(order.get("a")).toBe(0);
+    expect(order.get("child1")).toBe(1);
+    expect(order.get("b")).toBe(2);
+  });
+
+  test("addNode after mergeDag continues from merged counter", () => {
+    const dag1 = new Dag("root1");
+    dag1.addNode(makeSimpleNode("a"));
+
+    const dag2 = new Dag("root2");
+    dag2.addNode(makeSimpleNode("b"));
+    dag2.addNode(makeSimpleNode("c"));
+
+    dag1.mergeDag(dag2);
+    dag1.addNode(makeSimpleNode("d"));
+
+    const order = dag1.getElementInsertionOrder();
+    expect(order.get("a")).toBe(0);
+    expect(order.get("b")).toBe(1);
+    expect(order.get("c")).toBe(2);
+    expect(order.get("d")).toBe(3);
+  });
+
+  test("edges and styles do not affect insertion order", () => {
+    const dag = new Dag("root");
+    dag.addNode(makeSimpleNode("a"));
+    dag.addNode(makeSimpleNode("b"));
+    dag.addEdge({
+      id: "e1",
+      name: "e1",
+      srcNodeId: "a",
+      destNodeId: "b",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+    const order = dag.getElementInsertionOrder();
+    expect(order.get("a")).toBe(0);
+    expect(order.get("b")).toBe(1);
+    expect(order.has("e1")).toBe(false);
+  });
+
+  test("empty dag merge does not advance counter", () => {
+    const dag1 = new Dag("root1");
+    dag1.addNode(makeSimpleNode("a"));
+
+    const dag2 = new Dag("root2");
+    dag1.mergeDag(dag2);
+
+    dag1.addNode(makeSimpleNode("b"));
+    const order = dag1.getElementInsertionOrder();
+    expect(order.get("a")).toBe(0);
+    expect(order.get("b")).toBe(1);
+  });
+});

@@ -42,6 +42,8 @@ export class Dag {
   private dagLineagePath: string;
   private dagStyleTags: StyleTag[];
   private dagStyleProperties: StyleProperties;
+  private elementInsertionOrder: Map<string, number> = new Map();
+  private insertionCounter: number = 0;
   private usedImports: Set<string>;
 
   constructor(
@@ -72,8 +74,13 @@ export class Dag {
     this.usedImports = new Set();
   }
 
-  addNode(node: DagNode): void {
+  private addNodeWithOrder(node: DagNode, insertionOrder: number): void {
     this.nodeMap.set(node.id, node);
+    this.elementInsertionOrder.set(node.id, insertionOrder);
+  }
+
+  addNode(node: DagNode): void {
+    this.addNodeWithOrder(node, this.insertionCounter++);
   }
 
   addEdge(edge: DagEdge): void {
@@ -84,12 +91,17 @@ export class Dag {
     this.styleBinding.set(keyword, dagStyle);
   }
 
-  addChildDag(childDag: Dag): void {
+  private addChildDagWithOrder(childDag: Dag, insertionOrder: number): void {
     this.childDags.set(childDag.id, childDag);
     if (childDag.name) {
       this.namespaceNameToDagId.set(childDag.name, childDag.id);
     }
     childDag.Parent = this;
+    this.elementInsertionOrder.set(childDag.id, insertionOrder);
+  }
+
+  addChildDag(childDag: Dag): void {
+    this.addChildDagWithOrder(childDag, this.insertionCounter++);
   }
 
   addUsedImport(usedImport: string): void {
@@ -282,6 +294,10 @@ export class Dag {
     return Array.from(this.childDags.values());
   }
 
+  getElementInsertionOrder(): Map<string, number> {
+    return this.elementInsertionOrder;
+  }
+
   getVarNameToNodeIdMap(): Map<string, NodeId> {
     return this.varNameToNodeId;
   }
@@ -328,8 +344,13 @@ export class Dag {
 
   mergeDag(dag: Dag): void {
     // Merge the input dag into the current dag
+    // Preserve relative insertion order from the source dag
+    const dagElementOrder = dag.getElementInsertionOrder();
+    const curOffset = this.insertionCounter;
+
     dag.getNodeList().forEach((node) => {
-      this.addNode(node);
+      const elementOrder = dagElementOrder.get(node.id) ?? 0;
+      this.addNodeWithOrder(node, curOffset + elementOrder);
     });
     dag.getEdgeList().forEach((edge) => {
       this.addEdge(edge);
@@ -347,11 +368,15 @@ export class Dag {
       this.setVarStyle(varName, styleNode);
     });
     dag.getChildDags().forEach((childDag) => {
-      this.addChildDag(childDag);
+      const elementOrder = dagElementOrder.get(childDag.id) ?? 0;
+      this.addChildDagWithOrder(childDag, curOffset + elementOrder);
     });
     dag.UsedImports.forEach((usedImport) => {
       this.addUsedImport(usedImport);
     });
+
+    // Update counter to account for all merged elements
+    this.insertionCounter += dag.insertionCounter;
   }
 
   debugDumpDag(level: number = 0): string {
