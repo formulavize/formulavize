@@ -5,7 +5,7 @@
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
 import { match } from "ts-pattern";
-import cytoscape, { Core } from "cytoscape";
+import cytoscape, { Core, LayoutOptions, NodeSingular } from "cytoscape";
 import dagre from "cytoscape-dagre";
 import cytoscapePopper, {
   PopperFactory,
@@ -62,6 +62,29 @@ const popperFactory: PopperFactory = (
 cytoscape.use(dagre);
 cytoscape.use(cytoscapePopper(popperFactory));
 cytoscape.use(svg);
+
+// Dagre layout options type - refer to dagre documentation and cytoscape-dagre typings
+// https://github.com/cytoscape/cytoscape.js-dagre?tab=readme-ov-file#api
+type DagreLayoutOptions = LayoutOptions & {
+  name: "dagre";
+  sort: (a: NodeSingular, b: NodeSingular) => number;
+};
+
+// We define a custom sort function to encourage the layout manager
+// to follow the insertion order of nodes in the DAG.
+// However, Dagre's crossing minimization may still rearrange nodes in a way
+// that doesn't preserve the insertion order.
+const layoutOptions = {
+  name: "dagre",
+  sort: (A: NodeSingular, B: NodeSingular) => {
+    const orderA: number[] = A.data("order") ?? [];
+    const orderB: number[] = B.data("order") ?? [];
+    for (let i = 0; i < Math.min(orderA.length, orderB.length); i++) {
+      if (orderA[i] !== orderB[i]) return orderA[i] - orderB[i];
+    }
+    return orderA.length - orderB.length;
+  },
+} satisfies DagreLayoutOptions;
 
 /**
  * CytoscapeRenderer - A renderer using Cytoscape.js for DAG visualization.
@@ -136,7 +159,7 @@ const CytoscapeRenderer = defineComponent({
 
       Promise.resolve().then(() => {
         if (this.cy) {
-          this.cy.layout({ name: "dagre" }).run(); // most expensive operation
+          this.cy.layout(layoutOptions).run(); // most expensive operation
         }
       });
     },

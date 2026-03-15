@@ -45,16 +45,44 @@ function makeCyCompoundNode(dag: Dag): NodeDefinition {
   };
 }
 
-export function makeCyElements(dag: Dag): ElementsDefinition {
-  const nodeList = makeCyNodes(dag);
+// order is a list of insertion-order indices from root to node, e.g. [2, 0, 1].
+// Lexicographic comparison preserves hierarchical ordering for dagre's sort.
+export function makeCyElements(
+  dag: Dag,
+  parentOrderPath: number[] = [],
+): ElementsDefinition {
+  const insertionOrder = dag.getElementInsertionOrder();
+
+  const nodeList: NodeDefinition[] = makeCyNodes(dag).map((node) => ({
+    ...node,
+    data: {
+      ...node.data,
+      order: [
+        ...parentOrderPath,
+        insertionOrder.get(node.data.id as string) ?? 0,
+      ],
+    },
+  }));
+
   const edgeList = makeCyEdges(dag);
 
-  const childElements = dag.getChildDags().map(makeCyElements);
-  nodeList.push(...childElements.flatMap((elementDefs) => elementDefs.nodes));
-  edgeList.push(...childElements.flatMap((elementDefs) => elementDefs.edges));
+  for (const childDag of dag.getChildDags()) {
+    const childPath = [
+      ...parentOrderPath,
+      insertionOrder.get(childDag.Id) ?? 0,
+    ];
+    const childElements = makeCyElements(childDag, childPath);
+    nodeList.push(...childElements.nodes);
+    edgeList.push(...childElements.edges);
+  }
 
   if (dag.Parent && nodeList.length > 0) {
-    nodeList.push(makeCyCompoundNode(dag));
+    const compoundNode = makeCyCompoundNode(dag);
+    compoundNode.data = {
+      ...compoundNode.data,
+      order: parentOrderPath,
+    };
+    nodeList.push(compoundNode);
   }
 
   return { nodes: nodeList, edges: edgeList };
