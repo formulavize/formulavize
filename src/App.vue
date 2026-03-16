@@ -99,6 +99,7 @@ import { CompletionIndex } from "./autocomplete/autocompletion";
 import { createCompletionIndex } from "./autocomplete/autocompletionFactory";
 import { dumpImportTree } from "./compiler/importUtility";
 import { TutorialManager } from "./tutorial/tutorialManager";
+import { defaultCubic } from "./tutorial/defaultExample";
 // @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
@@ -233,6 +234,7 @@ export default defineComponent({
       },
     );
     this.tutorialManager.setDisableAnimations(this.debugMode);
+    textEditor?.setEditorText(defaultCubic);
   },
   methods: {
     repaint() {
