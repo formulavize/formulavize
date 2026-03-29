@@ -9,6 +9,7 @@
         :completion-index="curCompletionIndex"
         :debug-mode="debugMode"
         :tutorial-mode="tutorialMode"
+        :selected-renderer="selectedRenderer"
         @update-editorstate="updateEditorState"
       />
     </pane>
