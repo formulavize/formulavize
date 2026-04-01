@@ -1,6 +1,7 @@
 import { Lesson, Puzzlet } from "./lesson";
 import { createFizLesson } from "./fiz/lessonPlan";
 import { Compilation } from "../compiler/compilation";
+import { TutorialProgressStore } from "./tutorialProgressStore";
 
 export class TutorialManager {
   private callbacks: {
@@ -23,6 +24,12 @@ export class TutorialManager {
   private isAdvancing: boolean = false;
   private tutorialActive: boolean = false;
   private disableAnimations: boolean = false;
+  private progressStore: TutorialProgressStore = new TutorialProgressStore();
+  public cachedHighestCompleted: number;
+
+  constructor() {
+    this.cachedHighestCompleted = this.progressStore.getHighestCompletedIndex();
+  }
 
   public setCallbacks(
     setEditorText: (text: string) => void,
@@ -56,7 +63,7 @@ export class TutorialManager {
     this.callbacks.setExamplesText?.(text);
   }
 
-  public startTutorial(): void {
+  public startTutorialAt(puzzletIndex: number): void {
     if (
       !this.callbacks.setEditorText ||
       !this.callbacks.setTutorialHeaderText ||
@@ -65,11 +72,10 @@ export class TutorialManager {
       console.warn("Text editor callbacks not set. Cannot start tutorial.");
       return;
     }
-    this.currentLesson.reset();
+    this.currentLesson.jumpTo(puzzletIndex);
     this.tutorialActive = true;
     this.setEditorText("");
-    const firstPuzzlet = this.currentLesson.getCurrentPuzzlet();
-    this.animatePuzzlet(firstPuzzlet);
+    this.animatePuzzlet(this.currentLesson.getCurrentPuzzlet());
   }
 
   public stopTutorial(): void {
@@ -84,6 +90,10 @@ export class TutorialManager {
     try {
       await this.delay(500); // Small delay before advancing to allow user to see the successful change
       if (!this.tutorialActive) return;
+      const completedIndex = this.currentLesson.getCurrentPuzzletIndex();
+      this.progressStore.markCompleted(completedIndex);
+      this.cachedHighestCompleted =
+        this.progressStore.getHighestCompletedIndex();
       this.currentLesson.advance();
       // Exit tutorial mode when the lesson is complete
       if (this.currentLesson.isComplete()) {
@@ -173,5 +183,22 @@ export class TutorialManager {
       clearTimeout(this.animationHandle);
       this.animationHandle = null;
     }
+  }
+
+  public hasProgress(): boolean {
+    return this.cachedHighestCompleted >= 0;
+  }
+
+  public getHighestCompletedIndex(): number {
+    return this.cachedHighestCompleted;
+  }
+
+  public getLesson(): Lesson {
+    return this.currentLesson;
+  }
+
+  public clearProgress(): void {
+    this.progressStore.clearProgress();
+    this.cachedHighestCompleted = -1;
   }
 }

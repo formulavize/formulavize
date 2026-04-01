@@ -54,8 +54,9 @@
   </splitpanes>
   <ToolBar
     id="toolbar"
-    v-model:tutorial-mode="tutorialMode"
+    :tutorial-mode="tutorialMode"
     :class="{ 'toolbar-debug': debugMode }"
+    @tutorial-clicked="onTutorialClicked"
     @open-export="showExportPopup = true"
     @open-options="showOptionsPopup = true"
     @copy-source="copySourceToClipboard"
@@ -71,6 +72,14 @@
     v-model:debug-mode="debugMode"
     v-model:selected-renderer="selectedRenderer"
     :renderer-options="rendererOptions"
+  />
+  <TutorialLevelSelect
+    v-model:show-dialog="showTutorialLevelSelect"
+    :modules="tutorialModules"
+    :highest-completed-index="tutorialHighestCompleted"
+    :module-start-indices="tutorialModuleStartIndices"
+    @select-puzzlet="onSelectPuzzlet"
+    @restart-tutorial="onRestartTutorial"
   />
   <ConfettiEffect ref="confettiEffect" />
 </template>
@@ -100,6 +109,7 @@ import { CompletionIndex } from "./autocomplete/autocompletion";
 import { createCompletionIndex } from "./autocomplete/autocompletionFactory";
 import { dumpImportTree } from "./compiler/importUtility";
 import { TutorialManager } from "./tutorial/tutorialManager";
+import TutorialLevelSelect from "./components/TutorialLevelSelect.vue";
 import { defaultCubic } from "./tutorial/defaultExample";
 // @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
@@ -118,6 +128,7 @@ export default defineComponent({
     ConfettiEffect,
     ExportOptionsPopup,
     OptionsPopup,
+    TutorialLevelSelect,
   },
   data() {
     return {
@@ -141,6 +152,8 @@ export default defineComponent({
       tutorialMode: false,
       savedEditorText: "",
       tutorialManager: new TutorialManager(),
+      showTutorialLevelSelect: false,
+      tutorialStartIndex: null as number | null,
     };
   },
   computed: {
@@ -149,6 +162,15 @@ export default defineComponent({
         id,
         name: renderer.displayName,
       }));
+    },
+    tutorialModules() {
+      return this.tutorialManager.getLesson().getModules();
+    },
+    tutorialHighestCompleted(): number {
+      return this.tutorialManager.cachedHighestCompleted;
+    },
+    tutorialModuleStartIndices(): number[] {
+      return this.tutorialManager.getLesson().getAllModuleStartIndices();
     },
     supportedExportFormats(): readonly ExportFormat[] {
       return (
@@ -200,7 +222,12 @@ export default defineComponent({
       try {
         if (newVal) {
           this.savedEditorText = this.curEditorState.doc.toString();
-          this.tutorialManager.startTutorial();
+          if (this.tutorialStartIndex !== null) {
+            this.tutorialManager.startTutorialAt(this.tutorialStartIndex);
+            this.tutorialStartIndex = null;
+          } else {
+            this.tutorialManager.startTutorialAt(0);
+          }
         } else {
           this.tutorialManager.stopTutorial();
           const textEditor = this.$refs.textEditor as typeof TextEditor;
@@ -255,6 +282,25 @@ export default defineComponent({
     }) {
       const graphView = this.$refs.graphView as typeof GraphView;
       graphView.export(exportOptions);
+    },
+    onTutorialClicked() {
+      if (this.tutorialMode) {
+        this.tutorialMode = false;
+      } else if (this.tutorialManager.hasProgress()) {
+        this.showTutorialLevelSelect = true;
+      } else {
+        this.tutorialMode = true;
+      }
+    },
+    onSelectPuzzlet(puzzletIndex: number) {
+      this.showTutorialLevelSelect = false;
+      this.tutorialStartIndex = puzzletIndex;
+      this.tutorialMode = true;
+    },
+    onRestartTutorial() {
+      this.showTutorialLevelSelect = false;
+      this.tutorialManager.clearProgress();
+      this.tutorialMode = true;
     },
     async copySourceToClipboard() {
       try {

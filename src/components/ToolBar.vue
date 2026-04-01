@@ -3,11 +3,7 @@
     <img id="logo" src="/assets/formulavize_logo.svg" alt="Formulavize logo" />
     <h1>formulavize</h1>
     <v-btn-group density="comfortable">
-      <v-btn
-        icon
-        :active="tutorialMode"
-        @click="$emit('update:tutorialMode', !tutorialMode)"
-      >
+      <v-btn icon :active="tutorialMode" @click="$emit('tutorial-clicked')">
         <v-icon :icon="mdiSchoolOutline" />
         <v-tooltip activator="parent" text="Tutorial" location="bottom" />
       </v-btn>
@@ -60,7 +56,7 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ["open-export", "open-options", "copy-source", "update:tutorialMode"],
+  emits: ["open-export", "open-options", "copy-source", "tutorial-clicked"],
   setup() {
     return {
       mdiSchoolOutline,

@@ -76,4 +76,25 @@ export class Lesson {
   public reset(): void {
     this.currentPuzzletIndex = 0;
   }
+
+  public jumpTo(puzzletIndex: number): void {
+    this.currentPuzzletIndex = Math.max(
+      0,
+      Math.min(puzzletIndex, this.flattenedPuzzlets.length - 1),
+    );
+  }
+
+  public getModules(): readonly LudicModule[] {
+    return this.modules;
+  }
+
+  public getAllModuleStartIndices(): number[] {
+    const startIndices: number[] = [];
+    let runningTotal = 0;
+    for (const module of this.modules) {
+      startIndices.push(runningTotal);
+      runningTotal += module.puzzlets.length;
+    }
+    return startIndices;
+  }
 }
