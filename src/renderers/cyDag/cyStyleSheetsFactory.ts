@@ -97,10 +97,17 @@ export function makeClassStyleSheets(dag: Dag): StylesheetCSS[] {
   );
 }
 
-export function makeNameStyleSheets(dag: Dag): StylesheetCSS[] {
+function makeBindingStyleSheets(
+  dag: Dag,
+  bindings: Map<
+    string,
+    { styleTags: StyleTag[]; styleProperties: StyleProperties }
+  >,
+  makeSelector: (keyword: string, lineageSelector: string) => string,
+): StylesheetCSS[] {
   const lineageSelector = makeDagLineageSelector(dag);
-  return Array.from(dag.getStyleBindings()).flatMap(([keyword, dagStyle]) => {
-    const selector = `[name='${keyword}']${lineageSelector}`;
+  return Array.from(bindings).flatMap(([keyword, dagStyle]) => {
+    const selector = makeSelector(keyword, lineageSelector);
 
     const styleSheetsList = dagStyle.styleTags
       .map((styleTag) => {
@@ -130,6 +137,14 @@ export function makeNameStyleSheets(dag: Dag): StylesheetCSS[] {
   });
 }
 
+export function makeNameStyleSheets(dag: Dag): StylesheetCSS[] {
+  return makeBindingStyleSheets(
+    dag,
+    dag.getStyleBindings(),
+    (keyword, lineageSelector) => `[name='${keyword}']${lineageSelector}`,
+  );
+}
+
 export function getBaseStylesheet(): StylesheetCSS[] {
   return [
     {
@@ -151,41 +166,10 @@ export function getBaseStylesheet(): StylesheetCSS[] {
 }
 
 export function makeGlobalStyleSheets(dag: Dag): StylesheetCSS[] {
-  const lineageSelector = makeDagLineageSelector(dag);
-  return Array.from(dag.getGlobalStyleBindings()).flatMap(
-    ([keyword, dagStyle]) => {
-      const selector = `${keyword}${lineageSelector}`;
-
-      const styleSheetsList = dagStyle.styleTags
-        .map((styleTag) => {
-          const styleProperties = dag.getStyle(styleTag);
-          if (styleProperties) {
-            return {
-              selector,
-              css: Object.fromEntries(
-                filterCytoscapeProperties(styleProperties),
-              ),
-            };
-          } else {
-            console.warn(
-              `global style keyword ${keyword} could not be bound to ${styleTag}`,
-            );
-            return null;
-          }
-        })
-        .filter(Boolean) as StylesheetCSS[];
-
-      if (dagStyle.styleProperties.size > 0) {
-        styleSheetsList.push({
-          selector,
-          css: Object.fromEntries(
-            filterCytoscapeProperties(dagStyle.styleProperties),
-          ),
-        });
-      }
-
-      return styleSheetsList;
-    },
+  return makeBindingStyleSheets(
+    dag,
+    dag.getGlobalStyleBindings(),
+    (keyword, lineageSelector) => `${keyword}${lineageSelector}`,
   );
 }
 
