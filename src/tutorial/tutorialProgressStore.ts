@@ -13,12 +13,6 @@ export class TutorialProgressStore extends VersionedStore<TutorialProgress> {
     super("formulavize-tutorial-progress", 1, DEFAULTS);
   }
 
-  protected extract(
-    parsed: { version: number } & TutorialProgress,
-  ): TutorialProgress {
-    return { highestCompleted: parsed.highestCompleted };
-  }
-
   getHighestCompletedIndex(): number {
     return this.load().highestCompleted;
   }

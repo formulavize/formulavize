@@ -1,21 +1,8 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import { TutorialManager } from "src/tutorial/tutorialManager";
+import { createMockLocalStorage } from "../versionedStoreTestHelpers";
 
 const STORAGE_KEY = "formulavize-tutorial-progress";
-
-function createMockLocalStorage(): Storage {
-  const store = new Map<string, string>();
-  return {
-    getItem: (key: string) => store.get(key) ?? null,
-    setItem: (key: string, value: string) => store.set(key, value),
-    removeItem: (key: string) => store.delete(key),
-    clear: () => store.clear(),
-    get length() {
-      return store.size;
-    },
-    key: (index: number) => [...store.keys()][index] ?? null,
-  };
-}
 
 function setupManager(): {
   manager: TutorialManager;
