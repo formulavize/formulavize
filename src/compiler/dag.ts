@@ -36,6 +36,7 @@ export class Dag {
   private varNameToStyleNode: Map<string, DagStyle | null>;
   private styleTagNameToFlatStyleMap: Map<string, StyleProperties>;
   private styleBinding: Map<Keyword, DagStyle>;
+  private globalStyleBinding: Map<Keyword, DagStyle>;
   private childDags: Map<DagId, Dag>;
   private namespaceNameToDagId: Map<string, DagId>;
   private lineagePath: string;
@@ -64,6 +65,7 @@ export class Dag {
     this.varNameToStyleNode = new Map();
     this.styleTagNameToFlatStyleMap = new Map();
     this.styleBinding = new Map();
+    this.globalStyleBinding = new Map();
     this.childDags = new Map();
     this.namespaceNameToDagId = new Map();
     if (parent !== null) {
@@ -89,6 +91,10 @@ export class Dag {
 
   addStyleBinding(keyword: Keyword, dagStyle: DagStyle): void {
     this.styleBinding.set(keyword, dagStyle);
+  }
+
+  addGlobalStyleBinding(keyword: Keyword, dagStyle: DagStyle): void {
+    this.globalStyleBinding.set(keyword, dagStyle);
   }
 
   private addChildDagWithOrder(childDag: Dag, insertionOrder: number): void {
@@ -290,6 +296,10 @@ export class Dag {
     return this.styleBinding;
   }
 
+  getGlobalStyleBindings(): Map<Keyword, DagStyle> {
+    return this.globalStyleBinding;
+  }
+
   getChildDags(): Dag[] {
     return Array.from(this.childDags.values());
   }
@@ -361,6 +371,9 @@ export class Dag {
     dag.getStyleBindings().forEach((styleTags, keyword) => {
       this.addStyleBinding(keyword, styleTags);
     });
+    dag.getGlobalStyleBindings().forEach((dagStyle, keyword) => {
+      this.addGlobalStyleBinding(keyword, dagStyle);
+    });
     dag.getVarNameToNodeIdMap().forEach((nodeId, varName) => {
       this.setVarNode(varName, nodeId);
     });
@@ -431,6 +444,15 @@ export class Dag {
       result +=
         childLeftPad +
         "StyleBinding: " +
+        keyword +
+        styleTagDump(dagStyle.styleTags) +
+        stylePropertiesDump(dagStyle.styleProperties) +
+        "\n";
+    });
+    this.globalStyleBinding.forEach((dagStyle, keyword) => {
+      result +=
+        childLeftPad +
+        "GlobalStyleBinding: " +
         keyword +
         styleTagDump(dagStyle.styleTags) +
         stylePropertiesDump(dagStyle.styleProperties) +

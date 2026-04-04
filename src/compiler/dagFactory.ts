@@ -11,6 +11,7 @@ import {
   StyleTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
+  GlobalStyleBindingTreeNode,
   NamespaceTreeNode,
   ValueTreeNode,
   ImportTreeNode,
@@ -418,6 +419,23 @@ export async function makeSubDag(
           styleBindingStmt.Keyword,
           makeDagStyle(styleNode),
         );
+      })
+      .with(NodeType.GlobalStyleBinding, () => {
+        const globalStyleBindingStmt = stmt as GlobalStyleBindingTreeNode;
+        const keyword = globalStyleBindingStmt.Keyword;
+        const validKeywords = new Set(["node", "edge"]);
+        if (!validKeywords.has(keyword)) {
+          const errMsg = makeSyntaxError(
+            globalStyleBindingStmt,
+            `Invalid global style binding keyword '${keyword}'`,
+          );
+          errors.push(errMsg);
+          console.debug(errMsg);
+          return;
+        }
+        const styleNode = globalStyleBindingStmt.StyleNode;
+        checkStyleTagsInStyleNode(styleNode, curLevelDag, errors);
+        curLevelDag.addGlobalStyleBinding(keyword, makeDagStyle(styleNode));
       })
       .with(NodeType.QualifiedVariable, () => null)
       .with(NodeType.Namespace, async () => {
