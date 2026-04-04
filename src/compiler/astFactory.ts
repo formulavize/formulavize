@@ -15,6 +15,7 @@ import {
   StyleTagTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
+  GlobalStyleBindingTreeNode,
   NamespaceTreeNode,
   ImportTreeNode,
   StatementListTreeNode,
@@ -143,6 +144,18 @@ function makeStyleBinding(
   return new StyleBindingTreeNode(keyword, styleArgList, getPosition(c));
 }
 
+function makeGlobalStyleBinding(
+  c: TreeCursor,
+  t: Text,
+  e: Error[],
+): GlobalStyleBindingTreeNode {
+  const keyword = getTextFromChild("Identifier", c, t);
+  const styleArgList =
+    makeNullableChild("StyleArgList", makeStyle, c, t, e) ??
+    new StyleTreeNode(new Map(), [], getPosition(c));
+  return new GlobalStyleBindingTreeNode(keyword, styleArgList, getPosition(c));
+}
+
 function makeRhsVariable(c: TreeCursor, t: Text): QualifiedVarTreeNode {
   const varQualifiedIdent = getQualifiableIdentifer(c, t);
   return new QualifiedVarTreeNode(varQualifiedIdent, getPosition(c));
@@ -262,6 +275,7 @@ function makeStatement(
     .with("Assignment", () => makeAssignment(c, t, e))
     .with("StyleTagDeclaration", () => makeNamedStyle(c, t, e))
     .with("StyleBinding", () => makeStyleBinding(c, t, e))
+    .with("GlobalStyleBinding", () => makeGlobalStyleBinding(c, t, e))
     .with("Namespace", () => makeNamespace(c, t, e))
     .with("Import", () => makeImport(c, t))
     .with("⚠", () => null) // Error token for incomplete trees
