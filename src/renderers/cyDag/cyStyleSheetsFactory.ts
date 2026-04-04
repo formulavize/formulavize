@@ -150,6 +150,45 @@ export function getBaseStylesheet(): StylesheetCSS[] {
   ];
 }
 
+export function makeGlobalStyleSheets(dag: Dag): StylesheetCSS[] {
+  const lineageSelector = makeDagLineageSelector(dag);
+  return Array.from(dag.getGlobalStyleBindings()).flatMap(
+    ([keyword, dagStyle]) => {
+      const selector = `${keyword}${lineageSelector}`;
+
+      const styleSheetsList = dagStyle.styleTags
+        .map((styleTag) => {
+          const styleProperties = dag.getStyle(styleTag);
+          if (styleProperties) {
+            return {
+              selector,
+              css: Object.fromEntries(
+                filterCytoscapeProperties(styleProperties),
+              ),
+            };
+          } else {
+            console.warn(
+              `global style keyword ${keyword} could not be bound to ${styleTag}`,
+            );
+            return null;
+          }
+        })
+        .filter(Boolean) as StylesheetCSS[];
+
+      if (dagStyle.styleProperties.size > 0) {
+        styleSheetsList.push({
+          selector,
+          css: Object.fromEntries(
+            filterCytoscapeProperties(dagStyle.styleProperties),
+          ),
+        });
+      }
+
+      return styleSheetsList;
+    },
+  );
+}
+
 export function makeCyStylesheets(dag: Dag): StylesheetCSS[] {
   function makeChildStyleSheets(curDag: Dag): StylesheetCSS[] {
     return curDag.getChildDags().flatMap(makeCyStylesheets);
@@ -157,6 +196,7 @@ export function makeCyStylesheets(dag: Dag): StylesheetCSS[] {
 
   const stylesheetsList: StylesheetCSS[][] = [
     !dag.Parent ? getBaseStylesheet() : [],
+    makeGlobalStyleSheets(dag),
     makeNodeStylesheets(dag),
     makeEdgeStyleSheets(dag),
     makeCompoundNodeStylesheet(dag),

@@ -8,6 +8,7 @@ import {
   makeEdgeStyleSheets,
   makeClassStyleSheets,
   makeNameStyleSheets,
+  makeGlobalStyleSheets,
   getBaseStylesheet,
   makeCyStylesheets,
 } from "src/renderers/cyDag/cyStyleSheetsFactory";
@@ -454,5 +455,71 @@ describe("makes cytoscape stylesheets", () => {
     });
     const expectedCyStyles = getBaseStylesheet();
     expect(makeCyStylesheets(rootDag)).toEqual(expectedCyStyles);
+  });
+  test("empty global style binding for node", () => {
+    const testDag = new Dag("DagId");
+    testDag.addGlobalStyleBinding("node", {
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+    expect(makeGlobalStyleSheets(testDag)).toEqual([]);
+  });
+  test("global style binding with inline properties for edge", () => {
+    const testDag = new Dag("DagId");
+    testDag.addGlobalStyleBinding("edge", {
+      styleTags: [],
+      styleProperties: new Map([["color", "blue"]]),
+    });
+    const expectedStyles = [
+      {
+        selector: "edge",
+        css: { color: "blue" },
+      },
+    ];
+    expect(makeGlobalStyleSheets(testDag)).toEqual(expectedStyles);
+  });
+  test("global style binding with style tags for node", () => {
+    const testDag = new Dag("DagId");
+    testDag.setStyle("a", new Map([["color", "red"]]));
+    testDag.addGlobalStyleBinding("node", {
+      styleTags: [["a"]],
+      styleProperties: new Map(),
+    });
+    const expectedStyles = [
+      {
+        selector: "node",
+        css: { color: "red" },
+      },
+    ];
+    expect(makeGlobalStyleSheets(testDag)).toEqual(expectedStyles);
+  });
+  test("global style binding scoped within namespace", () => {
+    const testDag = new Dag("DagId");
+    const childDag = new Dag("childDag", testDag);
+    childDag.addGlobalStyleBinding("node", {
+      styleTags: [],
+      styleProperties: new Map([["color", "green"]]),
+    });
+    const expectedStyles = [
+      {
+        selector: "node[lineagePath*='/childDag']",
+        css: { color: "green" },
+      },
+    ];
+    expect(makeGlobalStyleSheets(childDag)).toEqual(expectedStyles);
+  });
+  test("global style appears in makeCyStylesheets", () => {
+    const testDag = new Dag("DagId");
+    testDag.addGlobalStyleBinding("node", {
+      styleTags: [],
+      styleProperties: new Map([["color", "red"]]),
+    });
+    const expectedCyStyles = getBaseStylesheet().concat([
+      {
+        selector: "node",
+        css: { color: "red" },
+      },
+    ]);
+    expect(makeCyStylesheets(testDag)).toEqual(expectedCyStyles);
   });
 });
