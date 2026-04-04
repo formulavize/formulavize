@@ -10,6 +10,7 @@ import {
   ScenarioToTokenTypes,
   TokenType,
 } from "./autocompletion";
+import { GLOBAL_STYLE_KEYWORD_MAP } from "../compiler/constants";
 
 export function createCompletions(
   completionIndex: CompletionIndex,
@@ -394,6 +395,27 @@ export function createQualifiedStyleCompletionSource(
   };
 }
 
+export function createGlobalStyleKeywordCompletionSource(): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
+    const match = context.matchBefore(/\*\w*/);
+    if (!match || (match.from === match.to && !context.explicit)) {
+      return null;
+    }
+
+    const word = match.text.slice(1); // Remove the leading '*'
+    const from = match.from + 1;
+
+    const options = Array.from(GLOBAL_STYLE_KEYWORD_MAP.keys())
+      .filter((keyword) => keyword.startsWith(word))
+      .map((keyword) => ({
+        label: keyword,
+        type: "keyword",
+      }));
+
+    return { from, options };
+  };
+}
+
 export function getAllDynamicCompletionSources(
   completionIndex: CompletionIndex,
 ): CompletionSource[] {
@@ -404,6 +426,7 @@ export function getAllDynamicCompletionSources(
     createCallCompletionSource,
     createStyleCompletionSource,
     createStatementCompletionSource,
+    createGlobalStyleKeywordCompletionSource,
   ];
   return sources.map((sourceFn) => sourceFn(completionIndex));
 }
