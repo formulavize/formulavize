@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.10.0](https://github.com/formulavize/formulavize/compare/v1.9.0...v1.10.0) (2026-04-04)
+
+
+### Features
+
+* Add autocompletion for Cytoscape style properties ([#49](https://github.com/formulavize/formulavize/issues/49)) ([036a66e](https://github.com/formulavize/formulavize/commit/036a66e7979e2b6d6971ee6c60e625dced18bd4c))
+* add confetti effect at the end of the tutorial ([#41](https://github.com/formulavize/formulavize/issues/41)) ([f2585a4](https://github.com/formulavize/formulavize/commit/f2585a41fea1fcbf8eafaf4ae154e6ebe0c45dca))
+* add import view to debug mode ([#45](https://github.com/formulavize/formulavize/issues/45)) ([25b3fb7](https://github.com/formulavize/formulavize/commit/25b3fb742c4630ecdd700e30a75e6ae3aee9fe49))
+* add tutorial level selection menu ([#50](https://github.com/formulavize/formulavize/issues/50)) ([1e5954b](https://github.com/formulavize/formulavize/commit/1e5954bf51e176ce70ec1ad84c5a52e0a4b932f8))
+* **App:** show default cubic example on page load ([#48](https://github.com/formulavize/formulavize/issues/48)) ([c8abb2c](https://github.com/formulavize/formulavize/commit/c8abb2c89ab818e54f55afef208d855277f0a87b))
+* persist user selected options between sessions ([#51](https://github.com/formulavize/formulavize/issues/51)) ([e73bfe7](https://github.com/formulavize/formulavize/commit/e73bfe7f3dbdef691f3fa5b82863dcb157b5154a))
+* StyleBinding to accept inline style properties and StringLiterals ([#43](https://github.com/formulavize/formulavize/issues/43)) ([a85b084](https://github.com/formulavize/formulavize/commit/a85b084e9fb080eedd8e3a14a417af6a3bdbe951))
+
+
+### Bug Fixes
+
+* **cyStyleSheet:** StyleBinding resolves qualified style tags ([#44](https://github.com/formulavize/formulavize/issues/44)) ([6b5c5cf](https://github.com/formulavize/formulavize/commit/6b5c5cf0adcd4de7c547c79062bcc74e700527f3))
+* dag layout to loosely preserve insertion order ([#47](https://github.com/formulavize/formulavize/issues/47)) ([3b13ed8](https://github.com/formulavize/formulavize/commit/3b13ed81fb06569f2495bc4913e9d4a0e01dbeda))
+* **ToolBar:** tutorial button to conform with button group ([#46](https://github.com/formulavize/formulavize/issues/46)) ([753449c](https://github.com/formulavize/formulavize/commit/753449cf4b07a4dbd3ce405f567b5880c78f2a19))
+
 ## [1.9.0](https://github.com/formulavize/formulavize/compare/v1.8.0...v1.9.0) (2026-03-02)
 
 
