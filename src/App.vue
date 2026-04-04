@@ -108,6 +108,7 @@ import { errorToDiagnostic, ErrorReporter } from "./compiler/errorReporter";
 import { CompletionIndex } from "./autocomplete/autocompletion";
 import { createCompletionIndex } from "./autocomplete/autocompletionFactory";
 import { dumpImportTree } from "./compiler/importUtility";
+import { OptionsStore } from "./optionsStore";
 import { TutorialManager } from "./tutorial/tutorialManager";
 import TutorialLevelSelect from "./components/TutorialLevelSelect.vue";
 import { defaultCubic } from "./tutorial/defaultExample";
@@ -134,6 +135,7 @@ export default defineComponent({
     return {
       debugMode: false,
       editorDebounceDelay: 300, // ms
+      optionsStore: new OptionsStore(),
       compiler: new Compiler(),
       curEditorState: EditorState.create(),
       curAst: new RecipeTreeNode(),
@@ -205,9 +207,13 @@ export default defineComponent({
         this.tutorialManager.onCompilation(curCompilation);
       }
     },
+    tabToIndent() {
+      this.persistOptions();
+    },
     debugMode(newVal: boolean) {
       this.tutorialManager.setDisableAnimations(newVal);
       this.repaint(); // repaint the conditionally rendered GraphView
+      this.persistOptions();
     },
     selectedRenderer(newRendererId: string) {
       const renderer = this.registeredRenderers.get(newRendererId);
@@ -217,6 +223,7 @@ export default defineComponent({
       } else {
         console.error(`Renderer with id "${newRendererId}" not found`);
       }
+      this.persistOptions();
     },
     tutorialMode(newVal: boolean) {
       try {
@@ -248,6 +255,11 @@ export default defineComponent({
       "minimal",
       markRaw(MinimalExampleRenderer) as RendererComponent,
     );
+
+    const savedOptions = this.optionsStore.load();
+    this.tabToIndent = savedOptions.tabToIndent;
+    this.debugMode = savedOptions.debugMode;
+    this.selectedRenderer = savedOptions.selectedRenderer;
     const textEditor = this.$refs.textEditor as typeof TextEditor;
     const confettiEffect = this.$refs.confettiEffect as typeof ConfettiEffect;
     this.tutorialManager.setCallbacks(
@@ -265,6 +277,13 @@ export default defineComponent({
     textEditor?.setEditorText(defaultCubic);
   },
   methods: {
+    persistOptions() {
+      this.optionsStore.save({
+        tabToIndent: this.tabToIndent,
+        debugMode: this.debugMode,
+        selectedRenderer: this.selectedRenderer,
+      });
+    },
     repaint() {
       const existingEditorState = cloneDeep(this.curEditorState);
       this.updateEditorState(existingEditorState as EditorState);
