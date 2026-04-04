@@ -18,6 +18,7 @@ import {
   StatementListTreeNode,
 } from "./ast";
 import { Dag, NodeId, StyleProperties, DagId, DagStyle } from "./dag";
+import { GLOBAL_STYLE_KEYWORD_MAP } from "./constants";
 import { ImportCacher } from "./importCacher";
 import {
   CompilationError as Error,
@@ -423,8 +424,8 @@ export async function makeSubDag(
       .with(NodeType.GlobalStyleBinding, () => {
         const globalStyleBindingStmt = stmt as GlobalStyleBindingTreeNode;
         const keyword = globalStyleBindingStmt.Keyword;
-        const validKeywords = new Set(["node", "edge"]);
-        if (!validKeywords.has(keyword)) {
+        const canonicalKeyword = GLOBAL_STYLE_KEYWORD_MAP.get(keyword);
+        if (!canonicalKeyword) {
           const errMsg = makeSyntaxError(
             globalStyleBindingStmt,
             `Invalid global style binding keyword '${keyword}'`,
@@ -435,7 +436,10 @@ export async function makeSubDag(
         }
         const styleNode = globalStyleBindingStmt.StyleNode;
         checkStyleTagsInStyleNode(styleNode, curLevelDag, errors);
-        curLevelDag.addGlobalStyleBinding(keyword, makeDagStyle(styleNode));
+        curLevelDag.addGlobalStyleBinding(
+          canonicalKeyword,
+          makeDagStyle(styleNode),
+        );
       })
       .with(NodeType.QualifiedVariable, () => null)
       .with(NodeType.Namespace, async () => {
