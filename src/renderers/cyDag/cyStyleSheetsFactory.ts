@@ -190,8 +190,8 @@ export function makeCyStylesheets(dag: Dag): StylesheetCSS[] {
   const stylesheetsList: StylesheetCSS[][] = [
     !dag.Parent ? getBaseStylesheet() : [],
     makeGlobalStyleSheets(dag),
-    makeNameStyleSheets(dag),
     makeClassStyleSheets(dag),
+    makeNameStyleSheets(dag),
     makeNodeStylesheets(dag),
     makeEdgeStyleSheets(dag),
     makeCompoundNodeStylesheet(dag),
