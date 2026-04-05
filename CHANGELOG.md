@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.11.0](https://github.com/formulavize/formulavize/compare/v1.10.0...v1.11.0) (2026-04-05)
+
+
+### Features
+
+* add global style binding syntax ([#52](https://github.com/formulavize/formulavize/issues/52)) ([360cbc0](https://github.com/formulavize/formulavize/commit/360cbc02fe6892acbdf413632b4550e85875eb7b))
+
 ## [1.10.0](https://github.com/formulavize/formulavize/compare/v1.9.0...v1.10.0) (2026-04-04)
 
 
