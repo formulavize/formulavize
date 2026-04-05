@@ -924,6 +924,7 @@ describe("autocompleter", () => {
       expect(result!.from).toBe(1);
       expect(result!.options.map((o) => o.label)).toContain("node");
       expect(result!.options.map((o) => o.label)).toContain("edge");
+      expect(result!.options.map((o) => o.label)).toContain("subgraph");
     });
 
     test("filters keywords by prefix", async () => {
@@ -933,6 +934,7 @@ describe("autocompleter", () => {
       expect(result).toBeTruthy();
       expect(result!.options.map((o) => o.label)).toContain("edge");
       expect(result!.options.map((o) => o.label)).not.toContain("node");
+      expect(result!.options.map((o) => o.label)).not.toContain("subgraph");
     });
 
     test("returns null when no asterisk", async () => {
