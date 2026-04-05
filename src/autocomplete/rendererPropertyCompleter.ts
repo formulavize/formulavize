@@ -1,22 +1,35 @@
 import {
-  Completion,
   CompletionContext,
   CompletionResult,
   CompletionSource,
 } from "@codemirror/autocomplete";
 
 import { CompletionIndex, ContextScenarioType } from "./autocompletion";
+import {
+  getRendererPropertyCompletions,
+  getRendererPropertyCompletionsByElementType,
+} from "./rendererProperties";
 
 export function createRendererPropertyCompletionSource(
   completionIndex: CompletionIndex,
-  rendererProperties: Completion[],
+  rendererId: string,
 ): CompletionSource {
+  const rendererProperties = getRendererPropertyCompletions(rendererId);
+
   return (context: CompletionContext): CompletionResult | null => {
     if (rendererProperties.length === 0) return null;
 
     const contextScenario = completionIndex.getContextScenarioAt(context.pos);
     const isStyleContext =
       contextScenario?.type === ContextScenarioType.StyleArgList;
+
+    // Use element-specific properties when inside a global style binding
+    const activeProperties = contextScenario?.globalStyleKeyword
+      ? getRendererPropertyCompletionsByElementType(
+          rendererId,
+          contextScenario.globalStyleKeyword,
+        )
+      : rendererProperties;
 
     // Reject if cursor follows '#' (style tag position — handled by existing completers)
     const hashMatch = isStyleContext
@@ -53,7 +66,7 @@ export function createRendererPropertyCompletionSource(
       from = match.to - word.length;
     }
 
-    const filtered = rendererProperties.filter((c) => c.label.startsWith(word));
+    const filtered = activeProperties.filter((c) => c.label.startsWith(word));
 
     return {
       from,

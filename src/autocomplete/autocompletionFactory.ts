@@ -11,6 +11,7 @@ import {
   NamespaceTreeNode,
   ImportTreeNode,
 } from "../compiler/ast";
+import { GLOBAL_STYLE_KEYWORD_MAP } from "../compiler/constants";
 import {
   CompletionIndex,
   TokenInfo,
@@ -161,11 +162,15 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
     .with(NodeType.GlobalStyleBinding, () => {
       const globalStyleBindingNode = statement as GlobalStyleBindingTreeNode;
       if (!globalStyleBindingNode.StyleNode.Position) return [];
+      const canonicalKeyword = GLOBAL_STYLE_KEYWORD_MAP.get(
+        globalStyleBindingNode.Keyword,
+      );
       return [
         {
           type: ContextScenarioType.StyleArgList,
           from: globalStyleBindingNode.StyleNode.Position.from + 1,
           to: globalStyleBindingNode.StyleNode.Position.to - 1,
+          globalStyleKeyword: canonicalKeyword,
         },
       ];
     })

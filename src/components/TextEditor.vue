@@ -54,7 +54,6 @@ import {
 import { fizLanguage } from "@formulavize/lang-fiz";
 import { CompletionIndex } from "../autocomplete/autocompletion";
 import { getAllDynamicCompletionSources } from "../autocomplete/autocompleter";
-import { getRendererPropertyCompletions } from "../autocomplete/rendererProperties";
 import { createRendererPropertyCompletionSource } from "../autocomplete/rendererPropertyCompleter";
 
 // Tutorial header protection logic
@@ -169,9 +168,11 @@ export default defineComponent({
       }
       const sources = getAllDynamicCompletionSources(completionIndex);
       if (selectedRenderer) {
-        const properties = getRendererPropertyCompletions(selectedRenderer);
         sources.push(
-          createRendererPropertyCompletionSource(completionIndex, properties),
+          createRendererPropertyCompletionSource(
+            completionIndex,
+            selectedRenderer,
+          ),
         );
       }
       return autocompletion({ override: sources });

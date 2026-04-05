@@ -192,12 +192,54 @@ const cytoscapeCompletions = buildCompletions([
   ...CYTOSCAPE_EDGE_ARROW_PROPERTIES,
 ]);
 
-const rendererPropertyRegistry: Record<string, Completion[]> = {
-  cytoscape: cytoscapeCompletions,
+// Shared properties applicable to both nodes and edges
+const CYTOSCAPE_SHARED_PROPERTIES = [
+  ...CYTOSCAPE_LABEL_PROPERTIES,
+  ...CYTOSCAPE_LABEL_STYLE_PROPERTIES,
+  ...CYTOSCAPE_VISIBILITY_PROPERTIES,
+];
+
+const cytoscapeNodeCompletions = buildCompletions([
+  ...CYTOSCAPE_NODE_BODY_PROPERTIES,
+  ...CYTOSCAPE_NODE_BORDER_PROPERTIES,
+  ...CYTOSCAPE_NODE_OUTLINE_PROPERTIES,
+  ...CYTOSCAPE_BACKGROUND_IMAGE_PROPERTIES,
+  ...CYTOSCAPE_SHARED_PROPERTIES,
+]);
+
+const cytoscapeEdgeCompletions = buildCompletions([
+  ...CYTOSCAPE_EDGE_LINE_PROPERTIES,
+  ...CYTOSCAPE_EDGE_ARROW_PROPERTIES,
+  ...CYTOSCAPE_SHARED_PROPERTIES,
+]);
+
+interface RendererPropertyEntry {
+  all: Completion[];
+  byElementType: Record<string, Completion[]>;
+}
+
+const rendererPropertyRegistry: Record<string, RendererPropertyEntry> = {
+  cytoscape: {
+    all: cytoscapeCompletions,
+    byElementType: {
+      node: cytoscapeNodeCompletions,
+      edge: cytoscapeEdgeCompletions,
+      subgraph: cytoscapeNodeCompletions,
+    },
+  },
 };
 
 export function getRendererPropertyCompletions(
   rendererId: string,
 ): Completion[] {
-  return rendererPropertyRegistry[rendererId] ?? [];
+  return rendererPropertyRegistry[rendererId]?.all ?? [];
+}
+
+export function getRendererPropertyCompletionsByElementType(
+  rendererId: string,
+  elementType: string,
+): Completion[] {
+  const entry = rendererPropertyRegistry[rendererId];
+  if (!entry) return [];
+  return entry.byElementType[elementType] ?? entry.all;
 }
