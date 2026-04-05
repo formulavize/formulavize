@@ -9,6 +9,7 @@ import {
   getRendererPropertyCompletions,
   getRendererPropertyCompletionsByElementType,
 } from "./rendererProperties";
+import { GLOBAL_STYLE_KEYWORD_MAP } from "../compiler/constants";
 
 export function createRendererPropertyCompletionSource(
   completionIndex: CompletionIndex,
@@ -22,14 +23,6 @@ export function createRendererPropertyCompletionSource(
     const contextScenario = completionIndex.getContextScenarioAt(context.pos);
     const isStyleContext =
       contextScenario?.type === ContextScenarioType.StyleArgList;
-
-    // Use element-specific properties when inside a global style binding
-    const activeProperties = contextScenario?.globalStyleKeyword
-      ? getRendererPropertyCompletionsByElementType(
-          rendererId,
-          contextScenario.globalStyleKeyword,
-        )
-      : rendererProperties;
 
     // Reject if cursor follows '#' (style tag position — handled by existing completers)
     const hashMatch = isStyleContext
@@ -47,10 +40,32 @@ export function createRendererPropertyCompletionSource(
       match = context.matchBefore(/[\w-]*/);
     } else {
       // Fallback: inside braces but context not yet registered (debounce lag)
-      match = context.matchBefore(/\{[^{}]*?(?:^|;)\s*[\w-]*/);
+      match = context.matchBefore(/\*?\w*\{(?:[^{}]*[;{])?\s*[\w-]*/);
     }
 
     if (!match || (match.from === match.to && !context.explicit)) return null;
+
+    // Determine which properties to offer
+    let activeProperties = rendererProperties;
+    if (contextScenario?.globalStyleKeyword) {
+      // Context scenario registered — use its element keyword
+      activeProperties = getRendererPropertyCompletionsByElementType(
+        rendererId,
+        contextScenario.globalStyleKeyword,
+      );
+    } else if (!isStyleContext) {
+      // Fallback: detect *keyword{ pattern from matched text
+      const keywordMatch = /^\*(\w+)\{/.exec(match.text);
+      if (keywordMatch) {
+        const canonicalKeyword = GLOBAL_STYLE_KEYWORD_MAP.get(keywordMatch[1]);
+        if (canonicalKeyword) {
+          activeProperties = getRendererPropertyCompletionsByElementType(
+            rendererId,
+            canonicalKeyword,
+          );
+        }
+      }
+    }
 
     // Extract the property name prefix from the match
     let word: string;
@@ -59,8 +74,8 @@ export function createRendererPropertyCompletionSource(
       word = match.text;
       from = match.from;
     } else {
-      // Extract trailing word from fallback match
-      const wordMatch = /(?:^|;)\s*([\w-]*)$/.exec(match.text);
+      // Extract trailing word from fallback match (after { or ;)
+      const wordMatch = /(?:[{;])\s*([\w-]*)$/.exec(match.text);
       if (!wordMatch) return null;
       word = wordMatch[1];
       from = match.to - word.length;

@@ -146,6 +146,37 @@ describe("rendererPropertyCompleter", () => {
     expect(labels).not.toContain("curve-style");
   });
 
+  test("fallback: returns only node properties for *node{ without registered context", async () => {
+    const completionIndex = new CompletionIndex([], [], []);
+    const source = createRendererPropertyCompletionSource(
+      completionIndex,
+      "cytoscape",
+    );
+    const ctx = createMockContext(15, "*node{back", false);
+    const result = await runSource(source, ctx);
+    expect(result).not.toBeNull();
+    const labels = result!.options.map((o) => o.label);
+    expect(labels).toContain("background-color");
+    expect(labels).not.toContain("line-color");
+    expect(labels).not.toContain("curve-style");
+  });
+
+  test("fallback: returns only edge properties for *edge{ without registered context", async () => {
+    const completionIndex = new CompletionIndex([], [], []);
+    const source = createRendererPropertyCompletionSource(
+      completionIndex,
+      "cytoscape",
+    );
+    const ctx = createMockContext(15, "*edge{line-", false);
+    const result = await runSource(source, ctx);
+    expect(result).not.toBeNull();
+    const labels = result!.options.map((o) => o.label);
+    expect(labels).toContain("line-color");
+    expect(labels).toContain("line-style");
+    expect(labels).not.toContain("background-color");
+    expect(labels).not.toContain("shape");
+  });
+
   test("returns only edge properties in global style binding for edge", async () => {
     const completionIndex = new CompletionIndex(
       [],
