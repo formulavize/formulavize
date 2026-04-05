@@ -165,11 +165,20 @@ export function getBaseStylesheet(): StylesheetCSS[] {
   ];
 }
 
+const GLOBAL_STYLE_SELECTOR_MAP: Record<string, string> = {
+  node: "node:childless",
+  edge: "edge",
+  subgraph: "node:parent",
+};
+
 export function makeGlobalStyleSheets(dag: Dag): StylesheetCSS[] {
   return makeBindingStyleSheets(
     dag,
     dag.getGlobalStyleBindings(),
-    (keyword, lineageSelector) => `${keyword}${lineageSelector}`,
+    (keyword, lineageSelector) => {
+      const baseSelector = GLOBAL_STYLE_SELECTOR_MAP[keyword] ?? keyword;
+      return `${baseSelector}${lineageSelector}`;
+    },
   );
 }
 

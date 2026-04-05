@@ -850,6 +850,27 @@ describe("global style binding tests", () => {
     ]);
     expect(globalBindings).toEqual(expectedBinding);
   });
+  test("subgraph keyword stored with canonical keyword", async () => {
+    const recipe = new Recipe([
+      new GlobalStyleBinding(
+        "subgraph",
+        new Style(new Map([["background-color", "grey"]]), []),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+    expect(errors).toHaveLength(0);
+    const globalBindings = dag.getGlobalStyleBindings();
+    const expectedBinding = new Map<Keyword, DagStyle>([
+      [
+        "subgraph",
+        {
+          styleTags: [],
+          styleProperties: new Map([["background-color", "grey"]]),
+        },
+      ],
+    ]);
+    expect(globalBindings).toEqual(expectedBinding);
+  });
   test("invalid keyword produces error", async () => {
     const recipe = new Recipe([
       new GlobalStyleBinding("foo", new Style(new Map(), [])),

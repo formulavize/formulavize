@@ -6,10 +6,11 @@ export const DESCRIPTION_PREFIX: string = DESCRIPTION_PROPERTY + "-";
 export const FIZ_FILE_EXTENSION: string = ".fiz";
 
 // Global style binding keywords
-// Maps multilingual keywords to canonical element types ("node" or "edge")
+// Maps multilingual keywords to canonical element types ("node", "edge", or "subgraph")
 export const GLOBAL_STYLE_KEYWORD_MAP: Map<string, string> = new Map([
   ["node", "node"],
   ["edge", "edge"],
+  ["subgraph", "subgraph"],
 ]);
 
 // Image export formats

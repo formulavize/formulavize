@@ -487,7 +487,7 @@ describe("makes cytoscape stylesheets", () => {
     });
     const expectedStyles = [
       {
-        selector: "node",
+        selector: "node:childless",
         css: { color: "red" },
       },
     ];
@@ -502,8 +502,37 @@ describe("makes cytoscape stylesheets", () => {
     });
     const expectedStyles = [
       {
-        selector: "node[lineagePath*='/childDag']",
+        selector: "node:childless[lineagePath*='/childDag']",
         css: { color: "green" },
+      },
+    ];
+    expect(makeGlobalStyleSheets(childDag)).toEqual(expectedStyles);
+  });
+  test("global style binding for subgraph targets compound nodes", () => {
+    const testDag = new Dag("DagId");
+    testDag.addGlobalStyleBinding("subgraph", {
+      styleTags: [],
+      styleProperties: new Map([["background-color", "grey"]]),
+    });
+    const expectedStyles = [
+      {
+        selector: "node:parent",
+        css: { "background-color": "grey" },
+      },
+    ];
+    expect(makeGlobalStyleSheets(testDag)).toEqual(expectedStyles);
+  });
+  test("global style binding for subgraph scoped within subgraph", () => {
+    const testDag = new Dag("DagId");
+    const childDag = new Dag("childDag", testDag);
+    childDag.addGlobalStyleBinding("subgraph", {
+      styleTags: [],
+      styleProperties: new Map([["background-color", "grey"]]),
+    });
+    const expectedStyles = [
+      {
+        selector: "node:parent[lineagePath*='/childDag']",
+        css: { "background-color": "grey" },
       },
     ];
     expect(makeGlobalStyleSheets(childDag)).toEqual(expectedStyles);
@@ -516,7 +545,7 @@ describe("makes cytoscape stylesheets", () => {
     });
     const expectedCyStyles = getBaseStylesheet().concat([
       {
-        selector: "node",
+        selector: "node:childless",
         css: { color: "red" },
       },
     ]);
