@@ -11,6 +11,7 @@ import {
   StyleTagTreeNode as StyleTag,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
+  GlobalStyleBindingTreeNode as GlobalStyleBinding,
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
   BaseTreeNode,
@@ -290,6 +291,38 @@ describe("style bindings", () => {
           ),
         ),
       ]),
+    );
+  });
+});
+
+describe("global style bindings", () => {
+  test("empty global style binding", () => {
+    const input = "*node{}";
+    expect(makeTree(input)).toEqual(
+      new Recipe([new GlobalStyleBinding("node", new Style(new Map(), []))]),
+    );
+  });
+  test("global style binding with mixed types", () => {
+    const input = "*edge{a:1;b:2\n#d #e}";
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new GlobalStyleBinding(
+          "edge",
+          new Style(
+            new Map([
+              ["a", "1"],
+              ["b", "2"],
+            ]),
+            [new StyleTag(["d"]), new StyleTag(["e"])],
+          ),
+        ),
+      ]),
+    );
+  });
+  test("incomplete global style binding", () => {
+    const input = "*node{";
+    expect(makeTree(input)).toEqual(
+      new Recipe([new GlobalStyleBinding("node", new Style(new Map(), []))]),
     );
   });
 });

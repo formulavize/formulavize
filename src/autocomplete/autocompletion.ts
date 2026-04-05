@@ -19,6 +19,9 @@ export interface ContextScenario {
   type: ContextScenarioType;
   from: number;
   to: number;
+  // Used only by rendererPropertyCompleter to filter Cytoscape properties
+  // by element type (node/edge/subgraph) inside global style bindings.
+  globalStyleKeyword?: string;
 }
 
 // An autocompletion token definition

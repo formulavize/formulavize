@@ -170,6 +170,7 @@ const stylePuzzlets: Puzzlet[] = [
       fast("%star { #starry }\n\n"),
       fast("// star()\n"),
     ],
+    clearEditorOnStart: true,
     successCondition: (compilation: Compilation) => {
       const bindings = compilation.DAG.getStyleBindings();
       const flattenedStyles = compilation.DAG.getFlattenedStyles();
@@ -188,6 +189,40 @@ const stylePuzzlets: Puzzlet[] = [
 
         // Check if any node uses this binding
         return nodes.some((node) => node.name === keyword);
+      });
+    },
+  },
+  {
+    name: "The All-Stars",
+    instructions: [
+      normal("Global style bindings apply styles to a graph element type.\n"),
+      normal("node, edge, and subgraph are graph element types.\n"),
+      normal("Define this binding with an asterisk '*', keyword, and { }\n"),
+      normal("where keyword is the graph element type.\n"),
+      normal("Uncomment the global style binding to see the changes."),
+    ],
+    examples: [
+      fast('//*node{ text-valign: "center" }\n'),
+      fast('//*edge{ line-style: "dotted" }\n'),
+      fast('//*subgraph{ border-style: "dashed" }\n'),
+      fast("y[seventh(sixth())]"),
+    ],
+    successCondition: (compilation: Compilation) => {
+      const bindings = compilation.DAG.getGlobalStyleBindings();
+      const flattenedStyles = compilation.DAG.getFlattenedStyles();
+
+      // Check that node, edge, and subgraph bindings exist and have properties
+      return ["node", "edge", "subgraph"].every((elementType) => {
+        const binding = bindings.get(elementType);
+        if (!binding) return false;
+
+        return (
+          binding.styleProperties.size > 0 ||
+          binding.styleTags.some((styleTag) => {
+            const properties = flattenedStyles.get(styleTag.join("."));
+            return (properties?.size ?? 0) > 0;
+          })
+        );
       });
     },
   },

@@ -10,6 +10,7 @@ export enum NodeType {
   Style,
   NamedStyle,
   StyleBinding,
+  GlobalStyleBinding,
   StyleTag,
   Namespace,
   Import,
@@ -66,6 +67,7 @@ export type StatementTreeNode =
   | AssignmentTreeNode
   | NamedStyleTreeNode
   | StyleBindingTreeNode
+  | GlobalStyleBindingTreeNode
   | NamespaceTreeNode
   | ImportTreeNode;
 
@@ -376,6 +378,37 @@ export class StyleBindingTreeNode extends BaseTreeNode {
 
   debugDump(): string {
     return "StyleBinding: " + this.keyword;
+  }
+
+  get Keyword(): string {
+    return this.keyword;
+  }
+
+  get StyleNode(): StyleTreeNode {
+    return this.styleNode;
+  }
+}
+
+export class GlobalStyleBindingTreeNode extends BaseTreeNode {
+  private keyword: string;
+  private styleNode: StyleTreeNode;
+
+  constructor(
+    keyword: string = "",
+    styleNode: StyleTreeNode = new StyleTreeNode(new Map(), [], null),
+    position: Position | null = null,
+  ) {
+    super(NodeType.GlobalStyleBinding, position);
+    this.keyword = keyword;
+    this.styleNode = styleNode;
+  }
+
+  getChildren(): BaseTreeNode[] {
+    return [this.styleNode];
+  }
+
+  debugDump(): string {
+    return "GlobalStyleBinding: " + this.keyword;
   }
 
   get Keyword(): string {

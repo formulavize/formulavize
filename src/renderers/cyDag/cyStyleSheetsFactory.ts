@@ -97,10 +97,17 @@ export function makeClassStyleSheets(dag: Dag): StylesheetCSS[] {
   );
 }
 
-export function makeNameStyleSheets(dag: Dag): StylesheetCSS[] {
+function makeBindingStyleSheets(
+  dag: Dag,
+  bindings: Map<
+    string,
+    { styleTags: StyleTag[]; styleProperties: StyleProperties }
+  >,
+  makeSelector: (keyword: string, lineageSelector: string) => string,
+): StylesheetCSS[] {
   const lineageSelector = makeDagLineageSelector(dag);
-  return Array.from(dag.getStyleBindings()).flatMap(([keyword, dagStyle]) => {
-    const selector = `[name='${keyword}']${lineageSelector}`;
+  return Array.from(bindings).flatMap(([keyword, dagStyle]) => {
+    const selector = makeSelector(keyword, lineageSelector);
 
     const styleSheetsList = dagStyle.styleTags
       .map((styleTag) => {
@@ -130,6 +137,14 @@ export function makeNameStyleSheets(dag: Dag): StylesheetCSS[] {
   });
 }
 
+export function makeNameStyleSheets(dag: Dag): StylesheetCSS[] {
+  return makeBindingStyleSheets(
+    dag,
+    dag.getStyleBindings(),
+    (keyword, lineageSelector) => `[name='${keyword}']${lineageSelector}`,
+  );
+}
+
 export function getBaseStylesheet(): StylesheetCSS[] {
   return [
     {
@@ -150,6 +165,23 @@ export function getBaseStylesheet(): StylesheetCSS[] {
   ];
 }
 
+const GLOBAL_STYLE_SELECTOR_MAP: Record<string, string> = {
+  node: "node:childless",
+  edge: "edge",
+  subgraph: "node:parent",
+};
+
+export function makeGlobalStyleSheets(dag: Dag): StylesheetCSS[] {
+  return makeBindingStyleSheets(
+    dag,
+    dag.getGlobalStyleBindings(),
+    (keyword, lineageSelector) => {
+      const baseSelector = GLOBAL_STYLE_SELECTOR_MAP[keyword] ?? keyword;
+      return `${baseSelector}${lineageSelector}`;
+    },
+  );
+}
+
 export function makeCyStylesheets(dag: Dag): StylesheetCSS[] {
   function makeChildStyleSheets(curDag: Dag): StylesheetCSS[] {
     return curDag.getChildDags().flatMap(makeCyStylesheets);
@@ -157,11 +189,12 @@ export function makeCyStylesheets(dag: Dag): StylesheetCSS[] {
 
   const stylesheetsList: StylesheetCSS[][] = [
     !dag.Parent ? getBaseStylesheet() : [],
+    makeGlobalStyleSheets(dag),
+    makeClassStyleSheets(dag),
+    makeNameStyleSheets(dag),
     makeNodeStylesheets(dag),
     makeEdgeStyleSheets(dag),
     makeCompoundNodeStylesheet(dag),
-    makeClassStyleSheets(dag),
-    makeNameStyleSheets(dag),
     makeChildStyleSheets(dag),
   ];
 

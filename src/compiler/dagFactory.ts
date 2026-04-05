@@ -11,12 +11,14 @@ import {
   StyleTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
+  GlobalStyleBindingTreeNode,
   NamespaceTreeNode,
   ValueTreeNode,
   ImportTreeNode,
   StatementListTreeNode,
 } from "./ast";
 import { Dag, NodeId, StyleProperties, DagId, DagStyle } from "./dag";
+import { GLOBAL_STYLE_KEYWORD_MAP } from "./constants";
 import { ImportCacher } from "./importCacher";
 import {
   CompilationError as Error,
@@ -416,6 +418,26 @@ export async function makeSubDag(
         checkStyleTagsInStyleNode(styleNode, curLevelDag, errors);
         curLevelDag.addStyleBinding(
           styleBindingStmt.Keyword,
+          makeDagStyle(styleNode),
+        );
+      })
+      .with(NodeType.GlobalStyleBinding, () => {
+        const globalStyleBindingStmt = stmt as GlobalStyleBindingTreeNode;
+        const keyword = globalStyleBindingStmt.Keyword;
+        const canonicalKeyword = GLOBAL_STYLE_KEYWORD_MAP.get(keyword);
+        if (!canonicalKeyword) {
+          const errMsg = makeSyntaxError(
+            globalStyleBindingStmt,
+            `Invalid global style binding keyword '${keyword}'`,
+          );
+          errors.push(errMsg);
+          console.debug(errMsg);
+          return;
+        }
+        const styleNode = globalStyleBindingStmt.StyleNode;
+        checkStyleTagsInStyleNode(styleNode, curLevelDag, errors);
+        curLevelDag.addGlobalStyleBinding(
+          canonicalKeyword,
           makeDagStyle(styleNode),
         );
       })

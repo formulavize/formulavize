@@ -11,6 +11,7 @@ import {
   resolveEndNamespace,
   createQualifiedVariableCompletionSource,
   createQualifiedStyleCompletionSource,
+  createGlobalStyleKeywordCompletionSource,
   getAllDynamicCompletionSources,
 } from "src/autocomplete/autocompleter";
 import {
@@ -892,6 +893,54 @@ describe("autocompleter", () => {
     test("returns null when style namespace cannot be resolved (fallback)", async () => {
       const context = createMockContext(120, "{#unknown.re");
       const result = await runSource(source, context);
+      expect(result).toBeNull();
+    });
+  });
+
+  describe("createGlobalStyleKeywordCompletionSource", () => {
+    let source: CompletionSource;
+
+    beforeEach(() => {
+      source = createGlobalStyleKeywordCompletionSource();
+    });
+
+    test("completes keywords after asterisk", async () => {
+      const context = createMockContext(3, "*no");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.from).toBe(1);
+      expect(result!.options).toContainEqual({
+        label: "node",
+        type: "keyword",
+      });
+    });
+
+    test("completes with empty prefix after asterisk", async () => {
+      const context = createMockContext(1, "*");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.from).toBe(1);
+      expect(result!.options.map((o) => o.label)).toContain("node");
+      expect(result!.options.map((o) => o.label)).toContain("edge");
+      expect(result!.options.map((o) => o.label)).toContain("subgraph");
+    });
+
+    test("filters keywords by prefix", async () => {
+      const context = createMockContext(2, "*e");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.options.map((o) => o.label)).toContain("edge");
+      expect(result!.options.map((o) => o.label)).not.toContain("node");
+      expect(result!.options.map((o) => o.label)).not.toContain("subgraph");
+    });
+
+    test("returns null when no asterisk", async () => {
+      const context = createMockContext(4, "node");
+      const result = await runSource(source, context);
+
       expect(result).toBeNull();
     });
   });

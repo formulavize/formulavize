@@ -9,6 +9,7 @@ import {
   StyleTagTreeNode as StyleTagNode,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
+  GlobalStyleBindingTreeNode as GlobalStyleBinding,
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
   ValueListTreeNode as ValueList,
@@ -799,6 +800,86 @@ describe("style binding tests", () => {
       ],
     ]);
     expect(styleBindings).toEqual(expectedBinding);
+  });
+});
+
+describe("global style binding tests", () => {
+  test("no global style binding", async () => {
+    const recipe = new Recipe([]);
+    const { dag } = await makeDag(recipe, dummyImporter);
+    const defaultBindings = dag.getGlobalStyleBindings();
+    expect(defaultBindings).toEqual(new Map<Keyword, DagStyle>());
+  });
+  test("empty global style binding", async () => {
+    const recipe = new Recipe([
+      new GlobalStyleBinding("node", new Style(new Map(), [])),
+    ]);
+    const { dag } = await makeDag(recipe, dummyImporter);
+    const globalBindings = dag.getGlobalStyleBindings();
+    const expectedBinding = new Map<Keyword, DagStyle>([
+      ["node", { styleTags: [], styleProperties: new Map() }],
+    ]);
+    expect(globalBindings).toEqual(expectedBinding);
+  });
+  test("global style binding with style tags", async () => {
+    const recipe = new Recipe([
+      new NamedStyle("a", new Style(new Map([["color", "red"]]))),
+      new GlobalStyleBinding(
+        "node",
+        new Style(new Map(), [new StyleTagNode(["a"])]),
+      ),
+    ]);
+    const { dag } = await makeDag(recipe, dummyImporter);
+    const globalBindings = dag.getGlobalStyleBindings();
+    const expectedBinding = new Map<Keyword, DagStyle>([
+      ["node", { styleTags: [["a"]], styleProperties: new Map() }],
+    ]);
+    expect(globalBindings).toEqual(expectedBinding);
+  });
+  test("global style binding with inline properties", async () => {
+    const recipe = new Recipe([
+      new GlobalStyleBinding(
+        "edge",
+        new Style(new Map([["color", "red"]]), []),
+      ),
+    ]);
+    const { dag } = await makeDag(recipe, dummyImporter);
+    const globalBindings = dag.getGlobalStyleBindings();
+    const expectedBinding = new Map<Keyword, DagStyle>([
+      ["edge", { styleTags: [], styleProperties: new Map([["color", "red"]]) }],
+    ]);
+    expect(globalBindings).toEqual(expectedBinding);
+  });
+  test("subgraph keyword stored with canonical keyword", async () => {
+    const recipe = new Recipe([
+      new GlobalStyleBinding(
+        "subgraph",
+        new Style(new Map([["background-color", "grey"]]), []),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+    expect(errors).toHaveLength(0);
+    const globalBindings = dag.getGlobalStyleBindings();
+    const expectedBinding = new Map<Keyword, DagStyle>([
+      [
+        "subgraph",
+        {
+          styleTags: [],
+          styleProperties: new Map([["background-color", "grey"]]),
+        },
+      ],
+    ]);
+    expect(globalBindings).toEqual(expectedBinding);
+  });
+  test("invalid keyword produces error", async () => {
+    const recipe = new Recipe([
+      new GlobalStyleBinding("foo", new Style(new Map(), [])),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+    expect(dag.getGlobalStyleBindings()).toEqual(new Map<Keyword, DagStyle>());
+    expect(errors).toHaveLength(1);
+    expect(errors[0].message).toContain("Invalid global style binding keyword");
+    expect(errors[0].message).toContain("foo");
   });
 });
 

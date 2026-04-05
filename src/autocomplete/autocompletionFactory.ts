@@ -7,9 +7,11 @@ import {
   CallTreeNode,
   NamedStyleTreeNode,
   StyleBindingTreeNode,
+  GlobalStyleBindingTreeNode,
   NamespaceTreeNode,
   ImportTreeNode,
 } from "../compiler/ast";
+import { GLOBAL_STYLE_KEYWORD_MAP } from "../compiler/constants";
 import {
   CompletionIndex,
   TokenInfo,
@@ -49,6 +51,7 @@ function makeTokenRecords(statement: StatementTreeNode): TokenInfo[] {
         },
       ];
     })
+    .with(NodeType.GlobalStyleBinding, () => [])
     .with(NodeType.Namespace, () => {
       const namespaceNode = statement as NamespaceTreeNode;
       return [
@@ -153,6 +156,21 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
           type: ContextScenarioType.StyleArgList,
           from: styleBindingNode.StyleNode.Position.from + 1,
           to: styleBindingNode.StyleNode.Position.to - 1,
+        },
+      ];
+    })
+    .with(NodeType.GlobalStyleBinding, () => {
+      const globalStyleBindingNode = statement as GlobalStyleBindingTreeNode;
+      if (!globalStyleBindingNode.StyleNode.Position) return [];
+      const canonicalKeyword = GLOBAL_STYLE_KEYWORD_MAP.get(
+        globalStyleBindingNode.Keyword,
+      );
+      return [
+        {
+          type: ContextScenarioType.StyleArgList,
+          from: globalStyleBindingNode.StyleNode.Position.from + 1,
+          to: globalStyleBindingNode.StyleNode.Position.to - 1,
+          globalStyleKeyword: canonicalKeyword,
         },
       ];
     })
