@@ -7,12 +7,13 @@
         <v-icon :icon="mdiSchoolOutline" />
         <v-tooltip activator="parent" text="Tutorial" location="bottom" />
       </v-btn>
-      <v-btn icon @click="$emit('copy-source')">
+      <v-btn icon @click="handleCopySource">
         <v-icon :icon="mdiContentCopy" />
         <v-tooltip
           activator="parent"
-          text="Copy Code to Clipboard"
+          :text="copied ? 'Copied!' : 'Copy Fiz'"
           location="bottom"
+          :model-value="copied || undefined"
         />
       </v-btn>
       <v-btn icon @click="$emit('open-export')">
@@ -40,7 +41,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent, ref } from "vue";
 import {
   mdiSchoolOutline,
   mdiContentCopy,
@@ -57,13 +58,27 @@ export default defineComponent({
     },
   },
   emits: ["open-export", "open-options", "copy-source", "tutorial-clicked"],
-  setup() {
+  setup(_, { emit }) {
+    const copied = ref(false);
+    let copyTimer: ReturnType<typeof setTimeout> | undefined;
+
+    function handleCopySource() {
+      emit("copy-source");
+      copied.value = true;
+      clearTimeout(copyTimer);
+      copyTimer = setTimeout(() => {
+        copied.value = false;
+      }, 2000);
+    }
+
     return {
       mdiSchoolOutline,
       mdiContentCopy,
       mdiExport,
       mdiCogOutline,
       mdiGithub,
+      copied,
+      handleCopySource,
     };
   },
 });
