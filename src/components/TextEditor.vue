@@ -277,7 +277,6 @@ export default defineComponent({
         linter(() => {
           return this.codeDiagnostics;
         }),
-        EditorView.lineWrapping,
         EditorView.updateListener.of((v: ViewUpdate): void => {
           if (v.docChanged) emitEditorState(v.state);
         }),
