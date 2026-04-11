@@ -10,57 +10,51 @@
         <v-icon :icon="mdiCogOutline" class="mr-1" />
         <span>Options</span>
       </v-card-title>
-      <v-card-text class="py-2">
-        <v-row>
-          <v-col cols="12" class="py-1">
-            <v-checkbox
-              label="Tab to Indent"
-              :messages="
-                tabToIndent ? 'Press Esc to ignore next Tab indent' : ''
-              "
-              :model-value="tabToIndent"
-              @update:model-value="$emit('update:tabToIndent', $event)"
-            />
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col cols="12" class="py-1">
-            <v-checkbox
-              label="Debug Mode"
-              :model-value="debugMode"
-              @update:model-value="$emit('update:debugMode', $event)"
-            />
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col cols="12" class="py-1">
-            <v-select
-              label="Theme"
-              :model-value="themeMode"
-              :items="[
-                { title: 'Light', value: 'light' },
-                { title: 'Dark', value: 'dark' },
-                { title: 'System', value: 'system' },
-              ]"
-              @update:model-value="$emit('update:themeMode', $event)"
-            />
-          </v-col>
-        </v-row>
-        <v-row>
-          <v-col cols="12" class="py-1">
-            <v-select
-              label="Renderer"
-              :model-value="selectedRenderer"
-              :items="
-                rendererOptions.map((opt) => ({
-                  title: opt.name,
-                  value: opt.id,
-                }))
-              "
-              @update:model-value="$emit('update:selectedRenderer', $event)"
-            />
-          </v-col>
-        </v-row>
+      <v-card-text class="py-1">
+        <div>
+          <v-checkbox
+            label="Tab to Indent"
+            hide-details
+            :model-value="tabToIndent"
+            @update:model-value="$emit('update:tabToIndent', $event)"
+          />
+          <v-tooltip
+            activator="parent"
+            :model-value="tabToIndent"
+            :open-on-hover="false"
+            location="start"
+            text="Press Esc to ignore next Tab indent"
+          />
+        </div>
+        <v-checkbox
+          label="Debug Mode"
+          hide-details="auto"
+          :model-value="debugMode"
+          @update:model-value="$emit('update:debugMode', $event)"
+        />
+        <v-select
+          label="Theme"
+          hide-details="auto"
+          :model-value="themeMode"
+          :items="[
+            { title: 'Light', value: 'light' },
+            { title: 'Dark', value: 'dark' },
+            { title: 'System', value: 'system' },
+          ]"
+          @update:model-value="$emit('update:themeMode', $event)"
+        />
+        <v-select
+          label="Renderer"
+          hide-details="auto"
+          :model-value="selectedRenderer"
+          :items="
+            rendererOptions.map((opt) => ({
+              title: opt.name,
+              value: opt.id,
+            }))
+          "
+          @update:model-value="$emit('update:selectedRenderer', $event)"
+        />
       </v-card-text>
       <v-card-actions>
         <v-btn @click="$emit('update:showOptions', false)">
