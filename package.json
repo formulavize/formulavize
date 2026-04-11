@@ -22,6 +22,7 @@
     "@codemirror/lint": "^6.9.5",
     "@codemirror/search": "^6.6.0",
     "@codemirror/state": "^6.6.0",
+    "@codemirror/theme-one-dark": "^6.1.2",
     "@codemirror/view": "^6.41.0",
     "@floating-ui/dom": "^1.7.6",
     "@formulavize/lang-fiz": "^2.1.0",

@@ -226,8 +226,8 @@ export default Object.assign(CytoscapeRenderer, {
 .cytoscape-renderer {
   height: 100%;
   width: 100%;
-  background-color: #fff;
-  border: solid 1px #eee;
+  background-color: var(--fviz-bg);
+  border: solid 1px var(--fviz-border);
   box-sizing: border-box;
 }
 </style>

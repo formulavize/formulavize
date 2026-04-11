@@ -51,6 +51,10 @@ import {
   showTooltip,
 } from "@codemirror/view";
 
+import {
+  oneDarkTheme,
+  oneDarkHighlightStyle,
+} from "@codemirror/theme-one-dark";
 import { fizLanguage } from "@formulavize/lang-fiz";
 import { CompletionIndex } from "../autocomplete/autocompletion";
 import { getAllDynamicCompletionSources } from "../autocomplete/autocompleter";
@@ -145,6 +149,10 @@ export default defineComponent({
     selectedRenderer: {
       type: String,
       default: "",
+    },
+    isDark: {
+      type: Boolean,
+      default: false,
     },
   },
   emits: ["update-editorstate"],
@@ -258,6 +266,13 @@ export default defineComponent({
     const autocompletionCompartment = new Compartment();
     const cursorTooltipCompartment = new Compartment();
     const tutorialHeaderCompartment = new Compartment();
+    const themeCompartment = new Compartment();
+
+    const getThemeExtensions = (isDark: boolean): Extension[] => {
+      return isDark
+        ? [oneDarkTheme, syntaxHighlighting(oneDarkHighlightStyle)]
+        : [syntaxHighlighting(defaultHighlightStyle)];
+    };
 
     const editorState = EditorState.create({
       extensions: [
@@ -272,7 +287,7 @@ export default defineComponent({
         highlightSelectionMatches(),
         foldGutter(),
         closeBrackets(),
-        syntaxHighlighting(defaultHighlightStyle),
+        themeCompartment.of(getThemeExtensions(this.isDark)),
         highlightSpecialChars(),
         linter(() => {
           return this.codeDiagnostics;
@@ -357,6 +372,15 @@ export default defineComponent({
           effects: cursorTooltipCompartment.reconfigure(
             createCursorTooltip(isDebugMode),
           ),
+        });
+      },
+    );
+
+    watch(
+      () => this.isDark,
+      (isDark) => {
+        view.dispatch({
+          effects: themeCompartment.reconfigure(getThemeExtensions(isDark)),
         });
       },
     );

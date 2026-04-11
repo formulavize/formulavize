@@ -35,6 +35,20 @@
         <v-row>
           <v-col cols="12" class="py-1">
             <v-select
+              label="Theme"
+              :model-value="themeMode"
+              :items="[
+                { title: 'Light', value: 'light' },
+                { title: 'Dark', value: 'dark' },
+                { title: 'System', value: 'system' },
+              ]"
+              @update:model-value="$emit('update:themeMode', $event)"
+            />
+          </v-col>
+        </v-row>
+        <v-row>
+          <v-col cols="12" class="py-1">
+            <v-select
               label="Renderer"
               :model-value="selectedRenderer"
               :items="
@@ -76,6 +90,10 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
+    themeMode: {
+      type: String,
+      required: true,
+    },
     selectedRenderer: {
       type: String,
       required: true,
@@ -89,6 +107,7 @@ export default defineComponent({
     "update:showOptions",
     "update:tabToIndent",
     "update:debugMode",
+    "update:themeMode",
     "update:selectedRenderer",
   ],
   setup() {

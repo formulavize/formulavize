@@ -1,9 +1,12 @@
 import { VersionedStore } from "./versionedStore";
 
+export type ThemeMode = "light" | "dark" | "system";
+
 export interface Options {
   tabToIndent: boolean;
   debugMode: boolean;
   selectedRenderer: string;
+  themeMode?: ThemeMode;
 }
 
 const DEFAULTS: Options = {
