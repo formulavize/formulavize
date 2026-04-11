@@ -1,6 +1,11 @@
 <template>
   <div id="canvas" ref="canvas">
-    <component :is="rendererComponent" ref="renderer" :dag="curDag" />
+    <component
+      :is="rendererComponent"
+      ref="renderer"
+      :dag="curDag"
+      :is-dark="isDark"
+    />
   </div>
 </template>
 
@@ -26,6 +31,10 @@ export default defineComponent({
     rendererComponent: {
       type: Object as PropType<RendererComponent>,
       required: true,
+    },
+    isDark: {
+      type: Boolean,
+      default: false,
     },
   },
   methods: {

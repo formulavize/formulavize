@@ -20,6 +20,7 @@
         ref="graphView"
         :cur-dag="curDag as Dag"
         :renderer-component="rendererComponent"
+        :is-dark="resolvedTheme === 'dark'"
       />
       <tabs v-else :options="{ useUrlFragment: false }">
         <tab name="Output">
@@ -27,6 +28,7 @@
             ref="graphView"
             :cur-dag="curDag as Dag"
             :renderer-component="rendererComponent"
+            :is-dark="resolvedTheme === 'dark'"
           />
         </tab>
         <tab name="AST">
