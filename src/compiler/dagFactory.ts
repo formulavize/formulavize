@@ -23,6 +23,7 @@ import { ImportCacher } from "./importCacher";
 import {
   CompilationError as Error,
   DEFAULT_POSITION,
+  ErrorCode,
 } from "./compilationErrors";
 
 function makeDagStyle(styleNode: StyleTreeNode): DagStyle {
@@ -42,29 +43,47 @@ function makeError(
   node: BaseTreeNode,
   message: string,
   source: "Internal" | "Syntax" | "Reference" | "Import",
+  code?: ErrorCode,
 ): Error {
   return {
     position: node.Position ?? DEFAULT_POSITION,
     message,
     severity: "error",
     source,
+    code,
   };
 }
 
-function makeInternalError(node: BaseTreeNode, errorMsg: string): Error {
-  return makeError(node, errorMsg, "Internal");
+function makeInternalError(
+  node: BaseTreeNode,
+  errorMsg: string,
+  code?: ErrorCode,
+): Error {
+  return makeError(node, errorMsg, "Internal", code);
 }
 
-function makeSyntaxError(node: BaseTreeNode, message: string): Error {
-  return makeError(node, message, "Syntax");
+function makeSyntaxError(
+  node: BaseTreeNode,
+  message: string,
+  code?: ErrorCode,
+): Error {
+  return makeError(node, message, "Syntax", code);
 }
 
-function makeRefError(node: BaseTreeNode, message: string): Error {
-  return makeError(node, message, "Reference");
+function makeRefError(
+  node: BaseTreeNode,
+  message: string,
+  code?: ErrorCode,
+): Error {
+  return makeError(node, message, "Reference", code);
 }
 
-function makeImportError(node: BaseTreeNode, message: string): Error {
-  return makeError(node, message, "Import");
+function makeImportError(
+  node: BaseTreeNode,
+  message: string,
+  code?: ErrorCode,
+): Error {
+  return makeError(node, message, "Import", code);
 }
 
 function checkStyleTagsInStyleNode(
@@ -79,6 +98,7 @@ function checkStyleTagsInStyleNode(
       const errMsg = makeRefError(
         styleTag,
         `Style tag '${styleTagName.join(".")}' not found`,
+        ErrorCode.StyleTagNotFound,
       );
       errors.push(errMsg);
       console.debug(errMsg);
@@ -108,7 +128,11 @@ function argListToEdgeInfo(
           const varStyle = workingDag.getVarStyle(varName) ?? null;
           const candidateSrcNodeId = workingDag.getVarNode(varName);
           if (!candidateSrcNodeId) {
-            const errMsg = makeRefError(arg, `Variable '${varName}' not found`);
+            const errMsg = makeRefError(
+              arg,
+              `Variable '${varName}' not found`,
+              ErrorCode.VariableNotFound,
+            );
             errors.push(errMsg);
             console.debug(errMsg);
             return null;
@@ -123,6 +147,7 @@ function argListToEdgeInfo(
           const errMsg = makeInternalError(
             arg,
             `Unknown argument type '${arg.Type}'`,
+            ErrorCode.UnknownArgumentType,
           );
           errors.push(errMsg);
           console.error(errMsg);
@@ -220,7 +245,11 @@ async function getImportedDag(
   return importer
     .getPackageDag(importStmt.ImportLocation, seenImports)
     .catch((err) => {
-      const errMsg = makeImportError(importStmt, err.message);
+      const errMsg = makeImportError(
+        importStmt,
+        err.message,
+        ErrorCode.ImportFetchFailed,
+      );
       errors.push(errMsg);
       console.debug(errMsg);
       return Promise.reject(err);
@@ -290,7 +319,11 @@ async function processAssignmentRhs(
       const candidateSrcNodeId = workingDag.getVarNode(varName);
       if (!candidateSrcNodeId) {
         const errDescription = `Variable '${varName}' not found`;
-        const errMsg = makeRefError(rhsNode, errDescription);
+        const errMsg = makeRefError(
+          rhsNode,
+          errDescription,
+          ErrorCode.VariableNotFound,
+        );
         errors.push(errMsg);
         console.debug(errMsg);
         return Promise.reject(errDescription);
@@ -322,10 +355,172 @@ async function processAssignmentRhs(
       const errMsg = makeInternalError(
         rhsNode,
         `Invalid right hand side type '${rhsNode.Type}'`,
+        ErrorCode.InvalidRhsType,
       );
       errors.push(errMsg);
       console.error(errMsg);
       return Promise.reject(`Invalid right hand side type '${rhsNode.Type}'`);
+    });
+}
+
+async function processAssignment(
+  assignmentStmt: AssignmentTreeNode,
+  workingDag: Dag,
+  errors: Error[],
+  importer: ImportCacher,
+  seenImports: Set<string>,
+): Promise<void> {
+  const lhsIsEmpty = assignmentStmt.Lhs.length === 0;
+  if (lhsIsEmpty) {
+    const errMsg = makeSyntaxError(
+      assignmentStmt,
+      "Left hand side is missing",
+      ErrorCode.MissingLhs,
+    );
+    errors.push(errMsg);
+    console.debug(errMsg);
+  }
+  const rhsIsEmpty = !assignmentStmt.Rhs;
+  if (rhsIsEmpty) {
+    const errMsg = makeSyntaxError(
+      assignmentStmt,
+      "Right hand side is missing",
+      ErrorCode.MissingRhs,
+    );
+    errors.push(errMsg);
+    console.debug(errMsg);
+  }
+  if (lhsIsEmpty || rhsIsEmpty) return;
+
+  const thisNodeId = await processAssignmentRhs(
+    assignmentStmt.Rhs,
+    workingDag,
+    errors,
+    importer,
+    seenImports,
+  ).catch((err) => {
+    console.debug("Assignment failure:", err);
+    return null;
+  });
+  if (!thisNodeId) return;
+  for (const lhsVar of assignmentStmt.Lhs) {
+    workingDag.setVarNode(lhsVar.VarName, thisNodeId);
+    checkStyleTagsInStyleNode(lhsVar.Styling, workingDag, errors);
+    const varStyle = lhsVar.Styling ? makeDagStyle(lhsVar.Styling) : null;
+    workingDag.setVarStyle(lhsVar.VarName, varStyle);
+  }
+}
+
+function processNamedStyle(
+  namedStyleStmt: NamedStyleTreeNode,
+  workingDag: Dag,
+  errors: Error[],
+): void {
+  const styleNode = namedStyleStmt.StyleNode;
+  checkStyleTagsInStyleNode(styleNode, workingDag, errors);
+  const workingStyleProperties: StyleProperties = styleNode.StyleTags.map(
+    (tag) => workingDag.getStyle(tag.QualifiedTagName) ?? new Map(),
+  ).reduce((acc, props) => new Map([...acc, ...props]), new Map());
+  styleNode.KeyValueMap.forEach((value, key) => {
+    workingStyleProperties.set(key, value);
+  });
+  workingDag.setStyle(namedStyleStmt.StyleName, workingStyleProperties);
+}
+
+function processStyleBinding(
+  styleBindingStmt: StyleBindingTreeNode,
+  workingDag: Dag,
+  errors: Error[],
+): void {
+  const styleNode = styleBindingStmt.StyleNode;
+  checkStyleTagsInStyleNode(styleNode, workingDag, errors);
+  workingDag.addStyleBinding(styleBindingStmt.Keyword, makeDagStyle(styleNode));
+}
+
+function processGlobalStyleBinding(
+  globalStyleBindingStmt: GlobalStyleBindingTreeNode,
+  workingDag: Dag,
+  errors: Error[],
+): void {
+  const keyword = globalStyleBindingStmt.Keyword;
+  const canonicalKeyword = GLOBAL_STYLE_KEYWORD_MAP.get(keyword);
+  if (!canonicalKeyword) {
+    const errMsg = makeSyntaxError(
+      globalStyleBindingStmt,
+      `Invalid global style binding keyword '${keyword}'`,
+      ErrorCode.InvalidGlobalStyleKeyword,
+    );
+    errors.push(errMsg);
+    console.debug(errMsg);
+    return;
+  }
+  const styleNode = globalStyleBindingStmt.StyleNode;
+  checkStyleTagsInStyleNode(styleNode, workingDag, errors);
+  workingDag.addGlobalStyleBinding(canonicalKeyword, makeDagStyle(styleNode));
+}
+
+async function processStatement(
+  stmt: BaseTreeNode,
+  workingDag: Dag,
+  errors: Error[],
+  importer: ImportCacher,
+  seenImports: Set<string>,
+): Promise<void> {
+  await match(stmt.Type)
+    .with(NodeType.Call, () => {
+      processCall(stmt as CallTreeNode, workingDag, errors);
+    })
+    .with(NodeType.Assignment, async () => {
+      await processAssignment(
+        stmt as AssignmentTreeNode,
+        workingDag,
+        errors,
+        importer,
+        seenImports,
+      );
+    })
+    .with(NodeType.NamedStyle, () => {
+      processNamedStyle(stmt as NamedStyleTreeNode, workingDag, errors);
+    })
+    .with(NodeType.StyleBinding, () => {
+      processStyleBinding(stmt as StyleBindingTreeNode, workingDag, errors);
+    })
+    .with(NodeType.GlobalStyleBinding, () => {
+      processGlobalStyleBinding(
+        stmt as GlobalStyleBindingTreeNode,
+        workingDag,
+        errors,
+      );
+    })
+    .with(NodeType.QualifiedVariable, () => null)
+    .with(NodeType.Namespace, async () => {
+      await processNamespace(
+        stmt as NamespaceTreeNode,
+        workingDag,
+        errors,
+        importer,
+        seenImports,
+      );
+    })
+    .with(NodeType.Import, async () => {
+      await processUnassignedImport(
+        stmt as ImportTreeNode,
+        workingDag,
+        errors,
+        importer,
+        seenImports,
+      ).catch((err) => {
+        console.debug(err);
+      });
+    })
+    .otherwise(() => {
+      const errMsg = makeInternalError(
+        stmt,
+        `Unknown statement type '${stmt.Type}'`,
+        ErrorCode.UnknownStatementType,
+      );
+      errors.push(errMsg);
+      console.error(errMsg);
     });
 }
 
@@ -351,127 +546,7 @@ export async function makeSubDag(
   );
 
   for (const stmt of dagNamespaceStmt.Statements) {
-    await match(stmt.Type)
-      .with(NodeType.Call, () => {
-        const callStmt = stmt as CallTreeNode;
-        processCall(callStmt, curLevelDag, errors);
-      })
-      .with(NodeType.Assignment, async () => {
-        const assignmentStmt = stmt as AssignmentTreeNode;
-        const lhsIsEmpty = assignmentStmt.Lhs.length === 0;
-        if (lhsIsEmpty) {
-          const errMsg = makeSyntaxError(
-            assignmentStmt,
-            "Left hand side is missing",
-          );
-          errors.push(errMsg);
-          console.debug(errMsg);
-        }
-        const rhsIsEmpty = !assignmentStmt.Rhs;
-        if (rhsIsEmpty) {
-          const errMsg = makeSyntaxError(
-            assignmentStmt,
-            "Right hand side is missing",
-          );
-          errors.push(errMsg);
-          console.debug(errMsg);
-        }
-        if (lhsIsEmpty || rhsIsEmpty) {
-          // skip processing if either side is empty
-          return;
-        }
-        const thisNodeId = await processAssignmentRhs(
-          assignmentStmt.Rhs,
-          curLevelDag,
-          errors,
-          importer,
-          seenImports,
-        ).catch((err) => {
-          console.debug("Assignment failure:", err);
-          return null;
-        });
-        if (!thisNodeId) return;
-        for (const lhsVar of assignmentStmt.Lhs) {
-          curLevelDag.setVarNode(lhsVar.VarName, thisNodeId);
-          checkStyleTagsInStyleNode(lhsVar.Styling, curLevelDag, errors);
-          const varStyle = lhsVar.Styling ? makeDagStyle(lhsVar.Styling) : null;
-          curLevelDag.setVarStyle(lhsVar.VarName, varStyle);
-        }
-      })
-      .with(NodeType.NamedStyle, () => {
-        const namedStyleStmt = stmt as NamedStyleTreeNode;
-        const styleNode = namedStyleStmt.StyleNode;
-        checkStyleTagsInStyleNode(styleNode, curLevelDag, errors);
-        const workingStyleProperties: StyleProperties = styleNode.StyleTags.map(
-          (tag) => curLevelDag.getStyle(tag.QualifiedTagName) ?? new Map(),
-        ).reduce((acc, props) => new Map([...acc, ...props]), new Map());
-        // any locally defined properties will overwrite referenced styles
-        styleNode.KeyValueMap.forEach((value, key) => {
-          workingStyleProperties.set(key, value);
-        });
-        const thisStyleTag = namedStyleStmt.StyleName;
-        curLevelDag.setStyle(thisStyleTag, workingStyleProperties);
-      })
-      .with(NodeType.StyleBinding, () => {
-        const styleBindingStmt = stmt as StyleBindingTreeNode;
-        const styleNode = styleBindingStmt.StyleNode;
-        checkStyleTagsInStyleNode(styleNode, curLevelDag, errors);
-        curLevelDag.addStyleBinding(
-          styleBindingStmt.Keyword,
-          makeDagStyle(styleNode),
-        );
-      })
-      .with(NodeType.GlobalStyleBinding, () => {
-        const globalStyleBindingStmt = stmt as GlobalStyleBindingTreeNode;
-        const keyword = globalStyleBindingStmt.Keyword;
-        const canonicalKeyword = GLOBAL_STYLE_KEYWORD_MAP.get(keyword);
-        if (!canonicalKeyword) {
-          const errMsg = makeSyntaxError(
-            globalStyleBindingStmt,
-            `Invalid global style binding keyword '${keyword}'`,
-          );
-          errors.push(errMsg);
-          console.debug(errMsg);
-          return;
-        }
-        const styleNode = globalStyleBindingStmt.StyleNode;
-        checkStyleTagsInStyleNode(styleNode, curLevelDag, errors);
-        curLevelDag.addGlobalStyleBinding(
-          canonicalKeyword,
-          makeDagStyle(styleNode),
-        );
-      })
-      .with(NodeType.QualifiedVariable, () => null)
-      .with(NodeType.Namespace, async () => {
-        const namespaceStmt = stmt as NamespaceTreeNode;
-        await processNamespace(
-          namespaceStmt,
-          curLevelDag,
-          errors,
-          importer,
-          seenImports,
-        );
-      })
-      .with(NodeType.Import, async () => {
-        const importStmt = stmt as ImportTreeNode;
-        await processUnassignedImport(
-          importStmt,
-          curLevelDag,
-          errors,
-          importer,
-          seenImports,
-        ).catch((err) => {
-          console.debug(err);
-        });
-      })
-      .otherwise(() => {
-        const errMsg = makeInternalError(
-          stmt,
-          `Unknown statement type '${stmt.Type}'`,
-        );
-        errors.push(errMsg);
-        console.error(errMsg);
-      });
+    await processStatement(stmt, curLevelDag, errors, importer, seenImports);
   }
   return curLevelDag;
 }
