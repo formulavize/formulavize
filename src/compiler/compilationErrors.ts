@@ -5,6 +5,13 @@ export interface Position {
 
 export const DEFAULT_POSITION: Position = { from: 0, to: 0 };
 
+export enum ErrorSource {
+  Internal = "Internal",
+  Syntax = "Syntax",
+  Reference = "Reference",
+  Import = "Import",
+}
+
 export enum ErrorCode {
   // Reference errors
   VariableNotFound = "REF_VAR_NOT_FOUND",
@@ -31,6 +38,6 @@ export interface CompilationError {
   position: Position;
   message: string;
   severity: "error" | "warning" | "info" | "hint";
-  source: string;
+  source: ErrorSource;
   code?: ErrorCode;
 }

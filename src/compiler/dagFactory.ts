@@ -24,6 +24,7 @@ import {
   CompilationError as Error,
   DEFAULT_POSITION,
   ErrorCode,
+  ErrorSource,
 } from "./compilationErrors";
 
 function makeDagStyle(styleNode: StyleTreeNode): DagStyle {
@@ -42,7 +43,7 @@ type IncomingEdgeInfo = {
 function makeError(
   node: BaseTreeNode,
   message: string,
-  source: "Internal" | "Syntax" | "Reference" | "Import",
+  source: ErrorSource,
   code?: ErrorCode,
 ): Error {
   return {
@@ -54,38 +55,6 @@ function makeError(
   };
 }
 
-function makeInternalError(
-  node: BaseTreeNode,
-  errorMsg: string,
-  code?: ErrorCode,
-): Error {
-  return makeError(node, errorMsg, "Internal", code);
-}
-
-function makeSyntaxError(
-  node: BaseTreeNode,
-  message: string,
-  code?: ErrorCode,
-): Error {
-  return makeError(node, message, "Syntax", code);
-}
-
-function makeRefError(
-  node: BaseTreeNode,
-  message: string,
-  code?: ErrorCode,
-): Error {
-  return makeError(node, message, "Reference", code);
-}
-
-function makeImportError(
-  node: BaseTreeNode,
-  message: string,
-  code?: ErrorCode,
-): Error {
-  return makeError(node, message, "Import", code);
-}
-
 function checkStyleTagsInStyleNode(
   styleNode: StyleTreeNode | null,
   workingDag: Dag | undefined,
@@ -95,9 +64,10 @@ function checkStyleTagsInStyleNode(
   styleNode.StyleTags.forEach((styleTag) => {
     const styleTagName = styleTag.QualifiedTagName;
     if (!workingDag?.getStyle(styleTagName)) {
-      const errMsg = makeRefError(
+      const errMsg = makeError(
         styleTag,
         `Style tag '${styleTagName.join(".")}' not found`,
+        ErrorSource.Reference,
         ErrorCode.StyleTagNotFound,
       );
       errors.push(errMsg);
@@ -128,9 +98,10 @@ function argListToEdgeInfo(
           const varStyle = workingDag.getVarStyle(varName) ?? null;
           const candidateSrcNodeId = workingDag.getVarNode(varName);
           if (!candidateSrcNodeId) {
-            const errMsg = makeRefError(
+            const errMsg = makeError(
               arg,
               `Variable '${varName}' not found`,
+              ErrorSource.Reference,
               ErrorCode.VariableNotFound,
             );
             errors.push(errMsg);
@@ -144,9 +115,10 @@ function argListToEdgeInfo(
           };
         })
         .otherwise(() => {
-          const errMsg = makeInternalError(
+          const errMsg = makeError(
             arg,
             `Unknown argument type '${arg.Type}'`,
+            ErrorSource.Internal,
             ErrorCode.UnknownArgumentType,
           );
           errors.push(errMsg);
@@ -245,9 +217,10 @@ async function getImportedDag(
   return importer
     .getPackageDag(importStmt.ImportLocation, seenImports)
     .catch((err) => {
-      const errMsg = makeImportError(
+      const errMsg = makeError(
         importStmt,
         err.message,
+        ErrorSource.Import,
         ErrorCode.ImportFetchFailed,
       );
       errors.push(errMsg);
@@ -319,9 +292,10 @@ async function processAssignmentRhs(
       const candidateSrcNodeId = workingDag.getVarNode(varName);
       if (!candidateSrcNodeId) {
         const errDescription = `Variable '${varName}' not found`;
-        const errMsg = makeRefError(
+        const errMsg = makeError(
           rhsNode,
           errDescription,
+          ErrorSource.Reference,
           ErrorCode.VariableNotFound,
         );
         errors.push(errMsg);
@@ -352,9 +326,10 @@ async function processAssignmentRhs(
       );
     })
     .otherwise(() => {
-      const errMsg = makeInternalError(
+      const errMsg = makeError(
         rhsNode,
         `Invalid right hand side type '${rhsNode.Type}'`,
+        ErrorSource.Internal,
         ErrorCode.InvalidRhsType,
       );
       errors.push(errMsg);
@@ -372,9 +347,10 @@ async function processAssignment(
 ): Promise<void> {
   const lhsIsEmpty = assignmentStmt.Lhs.length === 0;
   if (lhsIsEmpty) {
-    const errMsg = makeSyntaxError(
+    const errMsg = makeError(
       assignmentStmt,
       "Left hand side is missing",
+      ErrorSource.Syntax,
       ErrorCode.MissingLhs,
     );
     errors.push(errMsg);
@@ -382,9 +358,10 @@ async function processAssignment(
   }
   const rhsIsEmpty = !assignmentStmt.Rhs;
   if (rhsIsEmpty) {
-    const errMsg = makeSyntaxError(
+    const errMsg = makeError(
       assignmentStmt,
       "Right hand side is missing",
+      ErrorSource.Syntax,
       ErrorCode.MissingRhs,
     );
     errors.push(errMsg);
@@ -445,9 +422,10 @@ function processGlobalStyleBinding(
   const keyword = globalStyleBindingStmt.Keyword;
   const canonicalKeyword = GLOBAL_STYLE_KEYWORD_MAP.get(keyword);
   if (!canonicalKeyword) {
-    const errMsg = makeSyntaxError(
+    const errMsg = makeError(
       globalStyleBindingStmt,
       `Invalid global style binding keyword '${keyword}'`,
+      ErrorSource.Syntax,
       ErrorCode.InvalidGlobalStyleKeyword,
     );
     errors.push(errMsg);
@@ -514,9 +492,10 @@ async function processStatement(
       });
     })
     .otherwise(() => {
-      const errMsg = makeInternalError(
+      const errMsg = makeError(
         stmt,
         `Unknown statement type '${stmt.Type}'`,
+        ErrorSource.Internal,
         ErrorCode.UnknownStatementType,
       );
       errors.push(errMsg);
