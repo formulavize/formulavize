@@ -10,6 +10,7 @@
         :debug-mode="debugMode"
         :tutorial-mode="tutorialMode"
         :selected-renderer="selectedRenderer"
+        :is-dark="resolvedTheme === 'dark'"
         @update-editorstate="updateEditorState"
       />
     </pane>
@@ -19,6 +20,7 @@
         ref="graphView"
         :cur-dag="curDag as Dag"
         :renderer-component="rendererComponent"
+        :is-dark="resolvedTheme === 'dark'"
       />
       <tabs v-else :options="{ useUrlFragment: false }">
         <tab name="Output">
@@ -26,6 +28,7 @@
             ref="graphView"
             :cur-dag="curDag as Dag"
             :renderer-component="rendererComponent"
+            :is-dark="resolvedTheme === 'dark'"
           />
         </tab>
         <tab name="AST">
@@ -70,6 +73,7 @@
     v-model:show-options="showOptionsPopup"
     v-model:tab-to-indent="tabToIndent"
     v-model:debug-mode="debugMode"
+    v-model:theme-mode="themeMode"
     v-model:selected-renderer="selectedRenderer"
     :renderer-options="rendererOptions"
   />
@@ -85,7 +89,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, markRaw } from "vue";
+import { defineComponent, markRaw, onBeforeUnmount } from "vue";
 import { cloneDeep } from "lodash";
 import { EditorState, Text } from "@codemirror/state";
 import { Diagnostic } from "@codemirror/lint";
@@ -108,7 +112,7 @@ import { errorToDiagnostic, ErrorReporter } from "./compiler/errorReporter";
 import { CompletionIndex } from "./autocomplete/autocompletion";
 import { createCompletionIndex } from "./autocomplete/autocompletionFactory";
 import { dumpImportTree } from "./compiler/importUtility";
-import { OptionsStore } from "./optionsStore";
+import { OptionsStore, ThemeMode } from "./optionsStore";
 import { TutorialManager } from "./tutorial/tutorialManager";
 import TutorialLevelSelect from "./components/TutorialLevelSelect.vue";
 import { defaultCubic } from "./tutorial/defaultExample";
@@ -156,6 +160,8 @@ export default defineComponent({
       tutorialManager: new TutorialManager(),
       showTutorialLevelSelect: false,
       tutorialStartIndex: null as number | null,
+      themeMode: "system" as ThemeMode,
+      systemPrefersDark: false,
     };
   },
   computed: {
@@ -173,6 +179,12 @@ export default defineComponent({
     },
     tutorialModuleStartIndices(): number[] {
       return this.tutorialManager.getLesson().getAllModuleStartIndices();
+    },
+    resolvedTheme(): "light" | "dark" {
+      if (this.themeMode === "system") {
+        return this.systemPrefersDark ? "dark" : "light";
+      }
+      return this.themeMode;
     },
     supportedExportFormats(): readonly ExportFormat[] {
       return (
@@ -213,6 +225,12 @@ export default defineComponent({
     debugMode(newVal: boolean) {
       this.tutorialManager.setDisableAnimations(newVal);
       this.repaint(); // repaint the conditionally rendered GraphView
+      this.persistOptions();
+    },
+    resolvedTheme(newTheme: "light" | "dark") {
+      this.applyTheme(newTheme);
+    },
+    themeMode() {
       this.persistOptions();
     },
     selectedRenderer(newRendererId: string) {
@@ -260,6 +278,18 @@ export default defineComponent({
     this.tabToIndent = savedOptions.tabToIndent;
     this.debugMode = savedOptions.debugMode;
     this.selectedRenderer = savedOptions.selectedRenderer;
+    this.themeMode = savedOptions.themeMode ?? "system";
+
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    this.systemPrefersDark = mediaQuery.matches;
+    const handler = (e: MediaQueryListEvent) => {
+      this.systemPrefersDark = e.matches;
+    };
+    mediaQuery.addEventListener("change", handler);
+    onBeforeUnmount(() => {
+      mediaQuery.removeEventListener("change", handler);
+    });
+    this.applyTheme(this.resolvedTheme);
     const textEditor = this.$refs.textEditor as typeof TextEditor;
     const confettiEffect = this.$refs.confettiEffect as typeof ConfettiEffect;
     this.tutorialManager.setCallbacks(
@@ -277,11 +307,16 @@ export default defineComponent({
     textEditor?.setEditorText(defaultCubic);
   },
   methods: {
+    applyTheme(theme: "light" | "dark") {
+      this.$vuetify.theme.change(theme);
+      document.documentElement.classList.toggle("dark", theme === "dark");
+    },
     persistOptions() {
       this.optionsStore.save({
         tabToIndent: this.tabToIndent,
         debugMode: this.debugMode,
         selectedRenderer: this.selectedRenderer,
+        themeMode: this.themeMode,
       });
     },
     repaint() {
@@ -340,6 +375,35 @@ body,
   height: 100%;
   width: 100%;
   margin: 0;
+}
+
+:root {
+  --fviz-bg: #fff;
+  --fviz-bg-secondary: #f5f5f5;
+  --fviz-border: #eee;
+  --fviz-border-strong: #ddd;
+  --fviz-text: #000;
+  --fviz-text-muted: #999;
+  --fviz-text-hover: #666;
+}
+
+html.dark {
+  --fviz-bg: #121212;
+  --fviz-bg-secondary: #1e1e1e;
+  --fviz-border: #333;
+  --fviz-border-strong: #444;
+  --fviz-text: #e0e0e0;
+  --fviz-text-muted: #888;
+  --fviz-text-hover: #bbb;
+}
+
+html.dark .splitpanes.default-theme .splitpanes__splitter {
+  background-color: #333;
+}
+
+html.dark .splitpanes.default-theme .splitpanes__splitter:before,
+html.dark .splitpanes.default-theme .splitpanes__splitter:after {
+  background-color: #888;
 }
 </style>
 

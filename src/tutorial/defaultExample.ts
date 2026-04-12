@@ -6,6 +6,7 @@ export const defaultCubic = `\
   text-valign: "center"
   text-halign: "center"
   font-family: "math"
+  color: "black"
 }
 *edge{
   line-color: "silver"

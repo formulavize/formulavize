@@ -100,6 +100,10 @@ const CytoscapeRenderer = defineComponent({
       type: Boolean,
       default: true,
     },
+    isDark: {
+      type: Boolean,
+      default: false,
+    },
   },
   data() {
     return {
@@ -109,6 +113,9 @@ const CytoscapeRenderer = defineComponent({
   watch: {
     dag() {
       this.updateDag(this.dag);
+    },
+    isDark() {
+      this.applyThemeStyles();
     },
     lockPositions(newValue: boolean) {
       if (this.cy) {
@@ -143,6 +150,12 @@ const CytoscapeRenderer = defineComponent({
      * graph with just one added node has better performance than running on an
      * entirely new graph but still has a noticeable delay.
      */
+    applyThemeStyles(): void {
+      if (!this.cy) return;
+      const newStylesheets = makeCyStylesheets(this.dag, this.isDark);
+      this.cy.style(newStylesheets);
+    },
+
     updateDag(dag: Dag): void {
       if (!this.cy) return;
 
@@ -152,7 +165,7 @@ const CytoscapeRenderer = defineComponent({
       const newElements = makeCyElements(dag);
       this.cy.add(newElements);
 
-      const newStylesheets = makeCyStylesheets(dag);
+      const newStylesheets = makeCyStylesheets(dag, this.isDark);
       this.cy.style(newStylesheets);
 
       extendCyPopperElements(this.cy, dag, this.$refs.container as HTMLElement);
@@ -226,8 +239,8 @@ export default Object.assign(CytoscapeRenderer, {
 .cytoscape-renderer {
   height: 100%;
   width: 100%;
-  background-color: #fff;
-  border: solid 1px #eee;
+  background-color: var(--fviz-bg);
+  border: solid 1px var(--fviz-border);
   box-sizing: border-box;
 }
 </style>

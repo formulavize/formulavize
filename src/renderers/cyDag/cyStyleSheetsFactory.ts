@@ -145,12 +145,15 @@ export function makeNameStyleSheets(dag: Dag): StylesheetCSS[] {
   );
 }
 
-export function getBaseStylesheet(): StylesheetCSS[] {
+export function getBaseStylesheet(isDark = false): StylesheetCSS[] {
+  const labelColor = isDark ? "#e0e0e0" : "#000";
+  const edgeColor = isDark ? "#aaa" : "#999";
   return [
     {
       selector: "node",
       css: {
         label: "data(name)",
+        color: labelColor,
         "text-valign": "bottom",
         "text-wrap": "wrap",
       },
@@ -160,6 +163,8 @@ export function getBaseStylesheet(): StylesheetCSS[] {
       css: {
         "curve-style": "bezier",
         "target-arrow-shape": "triangle",
+        "line-color": edgeColor,
+        "target-arrow-color": edgeColor,
       },
     },
   ];
@@ -182,13 +187,15 @@ export function makeGlobalStyleSheets(dag: Dag): StylesheetCSS[] {
   );
 }
 
-export function makeCyStylesheets(dag: Dag): StylesheetCSS[] {
+export function makeCyStylesheets(dag: Dag, isDark = false): StylesheetCSS[] {
   function makeChildStyleSheets(curDag: Dag): StylesheetCSS[] {
-    return curDag.getChildDags().flatMap(makeCyStylesheets);
+    return curDag
+      .getChildDags()
+      .flatMap((child) => makeCyStylesheets(child, isDark));
   }
 
   const stylesheetsList: StylesheetCSS[][] = [
-    !dag.Parent ? getBaseStylesheet() : [],
+    !dag.Parent ? getBaseStylesheet(isDark) : [],
     makeGlobalStyleSheets(dag),
     makeClassStyleSheets(dag),
     makeNameStyleSheets(dag),

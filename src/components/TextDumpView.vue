@@ -29,5 +29,7 @@ export default defineComponent({
   width: 100%;
   overflow-x: scroll;
   overflow-y: scroll;
+  color: var(--fviz-text);
+  background-color: var(--fviz-bg-secondary);
 }
 </style>
