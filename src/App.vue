@@ -107,7 +107,7 @@ import OptionsPopup from "./components/OptionsPopup.vue";
 import { RecipeTreeNode } from "./compiler/ast";
 import { Dag } from "./compiler/dag";
 import { Compiler } from "./compiler/driver";
-import { CompilationError } from "./compiler/compilationErrors";
+import { CompilationError, ErrorSource } from "./compiler/compilationErrors";
 import { errorToDiagnostic, ErrorReporter } from "./compiler/errorReporter";
 import { CompletionIndex } from "./autocomplete/autocompletion";
 import { createCompletionIndex } from "./autocomplete/autocompletionFactory";
@@ -195,28 +195,43 @@ export default defineComponent({
   },
   watch: {
     async curEditorState(newEditorState: EditorState) {
-      const curCompilation =
-        await this.compiler.compileFromEditor(newEditorState);
-      this.curAst = curCompilation.AST;
-      this.curDag = curCompilation.DAG;
-      this.curErrors = curCompilation.Errors;
-      this.curDiagnostics = curCompilation.Errors.map(errorToDiagnostic);
-      this.curErrorReporter = new ErrorReporter(newEditorState.doc);
-      this.curCompletionIndex = await createCompletionIndex(
-        curCompilation.AST,
-        (path) =>
-          this.compiler.ImportCacher.getCachedCompilation(path)
-            .then((c) => c?.AST)
-            .catch(() => undefined),
-      );
-      if (this.debugMode) {
-        this.curImportDump = await dumpImportTree(
-          this.compiler.ImportCacher,
+      try {
+        const curCompilation =
+          await this.compiler.compileFromEditor(newEditorState);
+        this.curAst = curCompilation.AST;
+        this.curDag = curCompilation.DAG;
+        this.curErrors = curCompilation.Errors;
+        this.curDiagnostics = curCompilation.Errors.map(errorToDiagnostic);
+        this.curErrorReporter = new ErrorReporter(newEditorState.doc);
+        this.curCompletionIndex = await createCompletionIndex(
           curCompilation.AST,
+          (path) =>
+            this.compiler.ImportCacher.getCachedCompilation(path)
+              .then((c) => c?.AST)
+              .catch(() => undefined),
         );
-      }
-      if (this.tutorialMode) {
-        this.tutorialManager.onCompilation(curCompilation);
+        if (this.debugMode) {
+          this.curImportDump = await dumpImportTree(
+            this.compiler.ImportCacher,
+            curCompilation.AST,
+          );
+        }
+        if (this.tutorialMode) {
+          this.tutorialManager.onCompilation(curCompilation);
+        }
+      } catch (err) {
+        console.error("Unexpected compilation error:", err);
+        const message =
+          err instanceof Error ? err.message : "An unexpected error occurred";
+        this.curErrors = [
+          {
+            position: { from: 0, to: 0 },
+            message: `Internal error: ${message}`,
+            severity: "error",
+            source: ErrorSource.Internal,
+          },
+        ];
+        this.curDiagnostics = this.curErrors.map(errorToDiagnostic);
       }
     },
     tabToIndent() {
