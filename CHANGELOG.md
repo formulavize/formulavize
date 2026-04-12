@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.0](https://github.com/formulavize/formulavize/compare/v1.11.0...v1.12.0) (2026-04-12)
+
+
+### Features
+
+* add dark mode and improve UI components ([#54](https://github.com/formulavize/formulavize/issues/54)) ([01ed737](https://github.com/formulavize/formulavize/commit/01ed737ec362b7d5c6bd17f9ee01a23692ec5738))
+
 ## [1.11.0](https://github.com/formulavize/formulavize/compare/v1.10.0...v1.11.0) (2026-04-05)
 
 
