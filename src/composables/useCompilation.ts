@@ -25,6 +25,7 @@ export function useCompilation(
   const curErrorReporter = shallowRef(new ErrorReporter(Text.empty));
   const curCompletionIndex = shallowRef(new CompletionIndex());
   const curImportDump = shallowRef("(no imports)");
+  let prevAstDump = "";
 
   watch(curEditorState, async (newEditorState: EditorState) => {
     try {
@@ -34,13 +35,17 @@ export function useCompilation(
       curErrors.value = curCompilation.Errors;
       curDiagnostics.value = curCompilation.Errors.map(errorToDiagnostic);
       curErrorReporter.value = new ErrorReporter(newEditorState.doc);
-      curCompletionIndex.value = await createCompletionIndex(
-        curCompilation.AST,
-        (path) =>
-          compiler.ImportCacher.getCachedCompilation(path)
-            .then((c) => c?.AST)
-            .catch(() => undefined),
-      );
+      const newAstDump = curCompilation.AST.debugDumpTree();
+      if (newAstDump !== prevAstDump) {
+        prevAstDump = newAstDump;
+        curCompletionIndex.value = await createCompletionIndex(
+          curCompilation.AST,
+          (path) =>
+            compiler.ImportCacher.getCachedCompilation(path)
+              .then((c) => c?.AST)
+              .catch(() => undefined),
+        );
+      }
       if (shouldDumpImports()) {
         curImportDump.value = await dumpImportTree(
           compiler.ImportCacher,

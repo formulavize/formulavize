@@ -188,6 +188,56 @@ describe("useCompilation", () => {
     scope.stop();
   });
 
+  test("completion index is reused when AST structure is unchanged", async () => {
+    await scope.run(async () => {
+      const { updateEditorState, curCompletionIndex } = useCompilation(
+        () => false,
+      );
+
+      // First compilation
+      const editorState1 = createEditorStateFromSource("f()");
+      updateEditorState(editorState1);
+      await nextTick();
+      await flushPromises();
+
+      const firstIndex = curCompletionIndex.value;
+
+      // Second compilation with trailing space — same AST structure
+      const editorState2 = createEditorStateFromSource("f() ");
+      updateEditorState(editorState2);
+      await nextTick();
+      await flushPromises();
+
+      // Reference identity should be preserved (no rebuild)
+      expect(curCompletionIndex.value).toBe(firstIndex);
+    });
+    scope.stop();
+  });
+
+  test("completion index is rebuilt when AST structure changes", async () => {
+    await scope.run(async () => {
+      const { updateEditorState, curCompletionIndex } = useCompilation(
+        () => false,
+      );
+
+      const editorState1 = createEditorStateFromSource("f()");
+      updateEditorState(editorState1);
+      await nextTick();
+      await flushPromises();
+
+      const firstIndex = curCompletionIndex.value;
+
+      // Different AST structure — new node added
+      const editorState2 = createEditorStateFromSource("f(); g()");
+      updateEditorState(editorState2);
+      await nextTick();
+      await flushPromises();
+
+      expect(curCompletionIndex.value).not.toBe(firstIndex);
+    });
+    scope.stop();
+  });
+
   test("empty source compiles without errors", async () => {
     await scope.run(async () => {
       const { updateEditorState, curErrors, curDag } = useCompilation(
