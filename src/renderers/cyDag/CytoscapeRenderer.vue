@@ -5,7 +5,12 @@
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
 import { match } from "ts-pattern";
-import cytoscape, { Core, LayoutOptions, NodeSingular } from "cytoscape";
+import cytoscape, {
+  Core,
+  ElementsDefinition,
+  LayoutOptions,
+  NodeSingular,
+} from "cytoscape";
 import dagre from "cytoscape-dagre";
 import cytoscapePopper, {
   PopperFactory,
@@ -22,6 +27,8 @@ import svg from "cytoscape-svg";
 import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
 import { extendCyPopperElements } from "./cyPopperExtender";
+import { diffCyElements } from "./cyDiffer";
+import { applyDiff } from "./cyUpdateHelpers";
 import { Dag } from "../../compiler/dag";
 import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
@@ -108,6 +115,7 @@ const CytoscapeRenderer = defineComponent({
   data() {
     return {
       cy: null as Core | null,
+      previousElements: null as ElementsDefinition | null,
     };
   },
   watch: {
@@ -150,6 +158,14 @@ const CytoscapeRenderer = defineComponent({
      * graph with just one added node has better performance than running on an
      * entirely new graph but still has a noticeable delay.
      */
+    runLayout(): void {
+      Promise.resolve().then(() => {
+        if (this.cy) {
+          this.cy.layout(layoutOptions).run();
+        }
+      });
+    },
+
     applyThemeStyles(): void {
       if (!this.cy) return;
       const newStylesheets = makeCyStylesheets(this.dag, this.isDark);
@@ -159,22 +175,36 @@ const CytoscapeRenderer = defineComponent({
     updateDag(dag: Dag): void {
       if (!this.cy) return;
 
-      this.cy.elements().remove();
-      this.cy.removeAllListeners();
-
       const newElements = makeCyElements(dag);
-      this.cy.add(newElements);
-
       const newStylesheets = makeCyStylesheets(dag, this.isDark);
-      this.cy.style(newStylesheets);
 
-      extendCyPopperElements(this.cy, dag, this.$refs.container as HTMLElement);
+      if (!this.previousElements) {
+        // First render: full build
+        this.cy.add(newElements);
+        this.cy.style(newStylesheets);
+        extendCyPopperElements(
+          this.cy,
+          dag,
+          this.$refs.container as HTMLElement,
+        );
+        this.runLayout();
+      } else {
+        const diff = diffCyElements(this.previousElements, newElements);
+        applyDiff(this.cy, diff);
 
-      Promise.resolve().then(() => {
-        if (this.cy) {
-          this.cy.layout(layoutOptions).run(); // most expensive operation
+        this.cy.style(newStylesheets);
+        extendCyPopperElements(
+          this.cy,
+          dag,
+          this.$refs.container as HTMLElement,
+        );
+
+        if (diff.topologyChanged) {
+          this.runLayout();
         }
-      });
+      }
+
+      this.previousElements = newElements;
     },
 
     export(exportOptions: FileExportOptions): void {

@@ -130,7 +130,7 @@ describe("makes cytoscape stylesheets", () => {
     });
     const expectedCyNodeStyles = [
       {
-        selector: "node#idY",
+        selector: "node[id = 'idY']",
         css: { a: "1" },
       },
     ];
@@ -160,7 +160,7 @@ describe("makes cytoscape stylesheets", () => {
     });
     const expectedCyEdgeStyles = [
       {
-        selector: "edge#idZ",
+        selector: "edge[id = 'idZ']",
         css: { a: "1" },
       },
     ];
@@ -345,7 +345,7 @@ describe("makes cytoscape stylesheets", () => {
 
     const expectedCyStyles = getBaseStylesheet().concat([
       {
-        selector: "node#x",
+        selector: "node[id = 'x']",
         css: { "background-color": "blue" },
       },
     ]);
@@ -411,7 +411,7 @@ describe("makes cytoscape stylesheets", () => {
     });
     const expectedCyStyles = getBaseStylesheet().concat([
       {
-        selector: "node#idX",
+        selector: "node[id = 'idX']",
         css: { "background-color": "red" },
       },
       {
@@ -438,7 +438,7 @@ describe("makes cytoscape stylesheets", () => {
         css: { "background-color": "red" },
       },
       {
-        selector: "node#idX",
+        selector: "node[id = 'idX']",
         css: { "background-color": "red" },
       },
     ]);

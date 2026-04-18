@@ -196,7 +196,10 @@ describe("makes element descriptions", () => {
     });
 
     const expectedDescs: SelectorDescriptionPair[] = [
-      ["node#idX", makeDescriptionData("d1", new Map([["color", "red"]]))],
+      [
+        "node[id = 'idX']",
+        makeDescriptionData("d1", new Map([["color", "red"]])),
+      ],
     ];
     expect(getNodeDescriptions(testDag)).toEqual(expectedDescs);
   });
@@ -216,8 +219,8 @@ describe("makes element descriptions", () => {
     });
 
     const expectedDescs: SelectorDescriptionPair[] = [
-      ["node#idX", makeDescriptionData("d1")],
-      ["node#idY", makeDescriptionData("d2")],
+      ["node[id = 'idX']", makeDescriptionData("d1")],
+      ["node[id = 'idY']", makeDescriptionData("d2")],
     ];
     expect(getNodeDescriptions(testDag)).toEqual(expectedDescs);
   });
@@ -274,7 +277,10 @@ describe("makes element descriptions", () => {
     });
 
     const expectedDescs: SelectorDescriptionPair[] = [
-      ["edge#id1", makeDescriptionData("d1", new Map([["color", "red"]]))],
+      [
+        "edge[id = 'id1']",
+        makeDescriptionData("d1", new Map([["color", "red"]])),
+      ],
     ];
     expect(getEdgeDescriptions(testDag)).toEqual(expectedDescs);
   });
@@ -316,8 +322,8 @@ describe("makes element descriptions", () => {
     });
 
     const expectedDescs: SelectorDescriptionPair[] = [
-      ["edge#id1", makeDescriptionData("d1")],
-      ["edge#id2", makeDescriptionData("d2")],
+      ["edge[id = 'id1']", makeDescriptionData("d1")],
+      ["edge[id = 'id2']", makeDescriptionData("d2")],
     ];
     expect(getEdgeDescriptions(testDag)).toEqual(expectedDescs);
   });
@@ -326,7 +332,9 @@ describe("makes element descriptions", () => {
     const stylePropMap = new Map([[DESCRIPTION_PROPERTY, "d1"]]);
     const subdag = new Dag("subDagId", testDag, "subdag", [], stylePropMap);
 
-    const expectedDescs = [["node#subDagId", makeDescriptionData("d1")]];
+    const expectedDescs = [
+      ["node[id = 'subDagId']", makeDescriptionData("d1")],
+    ];
     expect(getCompoundNodeDescriptions(subdag)).toEqual(expectedDescs);
   });
 });
@@ -352,7 +360,7 @@ describe("subdag descriptions", () => {
     });
 
     const mockCoreSpy = addCyPoppersAndReturnMockCyCore(testDag);
-    expect(mockCoreSpy).toHaveBeenCalledWith("node#idX");
+    expect(mockCoreSpy).toHaveBeenCalledWith("node[id = 'idX']");
   });
   test("description on child dag", () => {
     const testDag = new Dag("DagId");
@@ -360,7 +368,7 @@ describe("subdag descriptions", () => {
     new Dag("childIdX", testDag, "child", [], descStyle);
 
     const mock = addCyPoppersAndReturnMockCyCore(testDag);
-    expect(mock).toHaveBeenCalledWith("node#childIdX");
+    expect(mock).toHaveBeenCalledWith("node[id = 'childIdX']");
   });
   test("description in root dag style", () => {
     const testDag = new Dag("DagId");
@@ -446,13 +454,13 @@ describe("subdag descriptions", () => {
 
     const mock = addCyPoppersAndReturnMockCyCore(testDag);
     expect(mock).toHaveBeenCalledWith(".childStyle1[lineagePath*='/childId1']");
-    expect(mock).toHaveBeenCalledWith("node#childId2");
+    expect(mock).toHaveBeenCalledWith("node[id = 'childId2']");
 
     // like name bindings, conflicting descriptions are likely impractical
     // except as a defensive measure for styles not intended to be reused
     const expectedDescs: SelectorDescriptionPair[] = [
-      ["node#childId2", makeDescriptionData("d2")],
-      ["node#childId2", makeDescriptionData("d1")],
+      ["node[id = 'childId2']", makeDescriptionData("d2")],
+      ["node[id = 'childId2']", makeDescriptionData("d1")],
     ];
     expect(getNodeDescriptions(childDag2)).toEqual(expectedDescs);
   });
