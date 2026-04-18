@@ -2,7 +2,7 @@ export const defaultCubic = `\
 /* Welcome to Formulavize! */
 
 // The Default Cubic:
-*node {
+*node{
   text-valign: "center"
   text-halign: "center"
   font-family: "math"

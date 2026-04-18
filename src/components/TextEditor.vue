@@ -351,7 +351,6 @@ export default defineComponent({
           ),
         });
       },
-      { deep: true },
     );
 
     watch(

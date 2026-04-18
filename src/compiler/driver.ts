@@ -30,7 +30,9 @@ export class Compiler {
   private importCacher: ImportCacher;
 
   constructor() {
-    this.importCacher = new ImportCacher(this);
+    this.importCacher = new ImportCacher((source, seenImports) =>
+      this.compileFromSource(source, seenImports),
+    );
   }
 
   get ImportCacher(): ImportCacher {

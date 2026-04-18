@@ -1,6 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { Dag } from "src/compiler/dag";
-import { ImportCacher } from "src/compiler/importCacher";
+import { ImportCacher, CompileFromSourceFn } from "src/compiler/importCacher";
 import { Compiler } from "src/compiler/driver";
 import { FIZ_FILE_EXTENSION } from "src/compiler/constants";
 
@@ -16,9 +16,9 @@ function makeDefaultMockHeader() {
 
 describe("import cacher", () => {
   const mockDag = {};
-  const mockCompiler = {
-    compileFromSource: vi.fn().mockReturnValue({ DAG: mockDag }),
-  } as unknown as Compiler;
+  const mockCompileSourceFn: CompileFromSourceFn = vi
+    .fn()
+    .mockReturnValue({ DAG: mockDag });
 
   const packageLocation = `test-package${FIZ_FILE_EXTENSION}`;
   const nonFizPackageLocation = "test-package.txt";
@@ -35,11 +35,11 @@ describe("import cacher", () => {
       text: () => Promise.resolve("package source"),
     });
 
-    const importCacher = new ImportCacher(mockCompiler);
+    const importCacher = new ImportCacher(mockCompileSourceFn);
     const result = await importCacher.getPackageDag(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledWith(packageLocation);
-    expect(mockCompiler.compileFromSource).toHaveBeenCalledWith(
+    expect(mockCompileSourceFn).toHaveBeenCalledWith(
       "package source",
       new Set([packageLocation]),
     );
@@ -52,7 +52,7 @@ describe("import cacher", () => {
       text: () => Promise.resolve("failure"),
     });
 
-    const importCacher = new ImportCacher(mockCompiler);
+    const importCacher = new ImportCacher(mockCompileSourceFn);
     await expect(
       importCacher.getPackageDag(invalidPackageLocation),
     ).rejects.toThrow(
@@ -62,7 +62,7 @@ describe("import cacher", () => {
   });
 
   test("should return error for a non-fiz package location", async () => {
-    const importCacher = new ImportCacher(mockCompiler);
+    const importCacher = new ImportCacher(mockCompileSourceFn);
     await expect(
       importCacher.getPackageDag(nonFizPackageLocation),
     ).rejects.toThrow(
@@ -78,7 +78,7 @@ describe("import cacher", () => {
       text: () => Promise.resolve("package source"),
     });
 
-    const importCacher = new ImportCacher(mockCompiler);
+    const importCacher = new ImportCacher(mockCompileSourceFn);
     await importCacher.getPackageDag(packageLocation);
     const result = await importCacher.getPackageDag(packageLocation);
 
@@ -105,7 +105,7 @@ describe("import cacher", () => {
         text: () => Promise.resolve("package source 2"),
       });
 
-    const importCacher = new ImportCacher(mockCompiler);
+    const importCacher = new ImportCacher(mockCompileSourceFn);
     await importCacher.getPackageDag(packageLocation);
     importCacher.clearCache();
     await importCacher.getPackageDag(packageLocation);
@@ -118,7 +118,7 @@ describe("import cacher", () => {
       ok: false,
       statusText: "Not Found",
     });
-    const importCacher = new ImportCacher(mockCompiler);
+    const importCacher = new ImportCacher(mockCompileSourceFn);
 
     await expect(importCacher.getPackageDag(packageLocation)).rejects.toThrow(
       "Failed to fetch package from 'test-package.fiz': Not Found",
@@ -127,7 +127,7 @@ describe("import cacher", () => {
 
   test("should throw an error if fetch fails", async () => {
     global.fetch = vi.fn().mockRejectedValueOnce(new Error("Failed to fetch"));
-    const importCacher = new ImportCacher(mockCompiler);
+    const importCacher = new ImportCacher(mockCompileSourceFn);
 
     await expect(importCacher.getPackageDag(packageLocation)).rejects.toThrow(
       "Failed to fetch",
@@ -140,7 +140,7 @@ describe("import cacher", () => {
       headers: makeMockHeaderWithContentType("text/html; charset=utf-8"),
       text: () => Promise.resolve("<html></html>"),
     });
-    const importCacher = new ImportCacher(mockCompiler);
+    const importCacher = new ImportCacher(mockCompileSourceFn);
 
     await expect(importCacher.getPackageDag(packageLocation)).rejects.toThrow(
       `Expected a fiz file but received HTML from '${packageLocation}'`,

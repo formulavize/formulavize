@@ -24,6 +24,7 @@ import {
   CompilationError as Error,
   Position,
   DEFAULT_POSITION,
+  ErrorSource,
 } from "./compilationErrors";
 
 function getPosition(c: TreeCursor): Position {
@@ -35,7 +36,7 @@ function makeInternalError(c: TreeCursor, errorMsg: string): Error {
     position: getPosition(c),
     message: errorMsg,
     severity: "error",
-    source: "Internal",
+    source: ErrorSource.Internal,
   };
 }
 

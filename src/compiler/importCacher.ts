@@ -1,8 +1,12 @@
 import { FIZ_FILE_EXTENSION } from "./constants";
 import { Dag } from "./dag";
-import { Compiler } from "./driver";
 import { Compilation } from "./compilation";
 import { getImportsFromRecipe } from "./astUtility";
+
+export type CompileFromSourceFn = (
+  source: string,
+  seenImports: Set<string>,
+) => Promise<Compilation>;
 
 interface PackageCache {
   [key: string]: Promise<Compilation>;
@@ -10,22 +14,11 @@ interface PackageCache {
 
 export class ImportCacher {
   private cache: PackageCache;
-  private compiler: Compiler;
+  private compileSourceFn: CompileFromSourceFn;
 
-  constructor(compiler: Compiler) {
+  constructor(compileSourceFn: CompileFromSourceFn) {
     this.cache = {};
-    this.compiler = compiler;
-  }
-
-  private async compilePackageSource(
-    source: string,
-    seenImports: Set<string>,
-  ): Promise<Compilation> {
-    const compilation = await this.compiler.compileFromSource(
-      source,
-      seenImports,
-    );
-    return compilation;
+    this.compileSourceFn = compileSourceFn;
   }
 
   private async makePackagePromise(
@@ -52,7 +45,7 @@ export class ImportCacher {
         return response.text();
       })
       .then((source) => {
-        return this.compilePackageSource(source, seenImports);
+        return this.compileSourceFn(source, seenImports);
       });
   }
 
