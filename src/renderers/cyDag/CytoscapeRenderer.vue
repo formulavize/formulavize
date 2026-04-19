@@ -148,16 +148,7 @@ const CytoscapeRenderer = defineComponent({
       this.updateDag(this.dag);
     },
 
-    /**
-     * Re-painting the entire graph is an expensive operation.
-     * We could slightly optimize it by creating an AST/DAG in a way
-     * that allows us to diff across graph copies and only update
-     * the affected elements. Doing so for unlabelled DAGs is difficult.
-     * https://stackoverflow.com/questions/16553343/diff-for-directed-acyclic-graphs
-     * Moreover, layout is the fundamental bottleneck. Running layout on a large
-     * graph with just one added node has better performance than running on an
-     * entirely new graph but still has a noticeable delay.
-     */
+    // Layout is an expensive operation regardless of a change's size.
     runLayout(): void {
       Promise.resolve().then(() => {
         if (this.cy) {
@@ -199,6 +190,7 @@ const CytoscapeRenderer = defineComponent({
           this.$refs.container as HTMLElement,
         );
 
+        // Avoid unnecessary layout runs by checking if the topology has changed
         if (diff.topologyChanged) {
           this.runLayout();
         }

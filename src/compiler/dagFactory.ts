@@ -31,6 +31,16 @@ export enum ScopeKind {
   Import = "i",
 }
 
+// Stable Ids enable consistent node and edge IDs across compilations,
+// which allows the renderer to preserve element positions and styles
+// when the underlying DAG structure hasn't changed.
+// Ids are generated based on the path to the current scope
+// (e.g. root-n-a-0 for the first call to 'a' at the root level)
+// and a count of how many times that scope has been entered
+// (e.g. root-ns-a-0-n-a-0 for the first call to 'a' inside a namespace 'a').
+// DagFactory previously had a simpler, less stateful approach of generating UUIDs,
+// but that caused the entire graph to be treated as new on every compilation,
+// which made it impossible to preserve element positions and styles across compilations.
 export class StableIdContext {
   private scopePath: string;
   private nodeCounts = new Map<string, number>();
