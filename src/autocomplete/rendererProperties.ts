@@ -1,4 +1,9 @@
 import { Completion } from "@codemirror/autocomplete";
+import { all as allCssProperties } from "known-css-properties";
+import {
+  DESCRIPTION_PREFIX,
+  DESCRIPTION_PROPERTY,
+} from "../compiler/constants";
 
 // Cytoscape properties sourced from https://js.cytoscape.org/#style
 
@@ -175,6 +180,14 @@ const CYTOSCAPE_EDGE_ARROW_PROPERTIES = [
   "mid-target-arrow-width",
 ];
 
+// Description style properties (description + description-* variants)
+const DESCRIPTION_PROPERTIES = [
+  DESCRIPTION_PROPERTY,
+  ...allCssProperties
+    .filter((p) => !p.startsWith("-"))
+    .map((p) => DESCRIPTION_PREFIX + p),
+];
+
 function buildCompletions(properties: string[]): Completion[] {
   const unique = [...new Set(properties)].sort();
   return unique.map((label) => ({ label, type: "property" }));
@@ -190,6 +203,7 @@ const cytoscapeCompletions = buildCompletions([
   ...CYTOSCAPE_VISIBILITY_PROPERTIES,
   ...CYTOSCAPE_EDGE_LINE_PROPERTIES,
   ...CYTOSCAPE_EDGE_ARROW_PROPERTIES,
+  ...DESCRIPTION_PROPERTIES,
 ]);
 
 // Shared properties applicable to both nodes and edges
@@ -197,6 +211,7 @@ const CYTOSCAPE_SHARED_PROPERTIES = [
   ...CYTOSCAPE_LABEL_PROPERTIES,
   ...CYTOSCAPE_LABEL_STYLE_PROPERTIES,
   ...CYTOSCAPE_VISIBILITY_PROPERTIES,
+  ...DESCRIPTION_PROPERTIES,
 ];
 
 const cytoscapeNodeCompletions = buildCompletions([

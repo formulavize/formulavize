@@ -33,6 +33,7 @@
     "cytoscape-popper": "^4.0.1",
     "cytoscape-svg": "^0.4.0",
     "file-saver": "^2.0.5",
+    "known-css-properties": "^0.37.0",
     "lodash": "^4.18.1",
     "splitpanes": "^4.0.4",
     "ts-pattern": "^5.9.0",
