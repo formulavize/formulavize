@@ -161,10 +161,7 @@ function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
   innerDiv.classList.add(POPPER_INNER_DIV_CLASS);
   // add custom description styles to inner div
   descriptionData.descriptionStyleProperties.forEach((value, property) => {
-    // Bare numbers are invalid CSS for length properties like font-size;
-    // append "px" to match how Cytoscape interprets unitless numbers.
-    const cssValue = /^\d+(\.\d+)?$/.test(value) ? value + "px" : value;
-    innerDiv.style.setProperty(property, cssValue);
+    innerDiv.style.setProperty(property, value);
   });
 
   const text = document.createElement("p");

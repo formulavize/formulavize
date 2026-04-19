@@ -36,7 +36,7 @@ import {
   PopperCleanup,
 } from "./cyPopperExtender";
 import { diffCyElements } from "./cyDiffer";
-import { applyDiff, makeGhostNodeSpecs } from "./cyUpdateHelpers";
+import { applyDiff } from "./cyUpdateHelpers";
 import { Dag } from "../../compiler/dag";
 import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
@@ -234,17 +234,19 @@ const CytoscapeRenderer = defineComponent({
         const eleBB = ele.boundingBox({ includeLabels: true });
         const centerX = (eleBB.x1 + eleBB.x2) / 2;
         let nextY = eleBB.y2;
-        const specs = makeGhostNodeSpecs(id, descriptions);
 
-        for (const spec of specs) {
-          const ghostNode = this.cy.add(spec.definition);
-          ghostNode.style(spec.style);
+        for (let i = 0; i < descriptions.length; i++) {
+          const ghostId = `__ghost_desc_${id}_${i}`;
+          const ghostNode = this.cy.add({
+            group: "nodes",
+            data: { id: ghostId },
+          });
           // Position after adding so Cytoscape computes the label dimensions
           const labelHeight = ghostNode.boundingBox({ includeLabels: true }).h;
           nextY += labelHeight / 2;
           ghostNode.position({ x: centerX, y: nextY });
           nextY += labelHeight / 2;
-          ghostIds.push(spec.id);
+          ghostIds.push(ghostId);
         }
       }
 
