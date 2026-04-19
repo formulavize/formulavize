@@ -35,8 +35,7 @@ import {
   collectDescriptions,
   PopperCleanup,
 } from "./cyPopperExtender";
-import { diffCyElements } from "./cyDiffer";
-import { applyDiff } from "./cyUpdateHelpers";
+import { diffCyElements, applyDiff } from "./cyDiffer";
 import { Dag } from "../../compiler/dag";
 import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
