@@ -26,7 +26,7 @@ import {
 import svg from "cytoscape-svg";
 import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
-import { extendCyPopperElements } from "./cyPopperExtender";
+import { setupCyPoppers, PopperCleanup } from "./cyPopperExtender";
 import { diffCyElements } from "./cyDiffer";
 import { applyDiff } from "./cyUpdateHelpers";
 import { Dag } from "../../compiler/dag";
@@ -116,6 +116,7 @@ const CytoscapeRenderer = defineComponent({
     return {
       cy: null as Core | null,
       previousElements: null as ElementsDefinition | null,
+      popperCleanup: null as PopperCleanup | null,
     };
   },
   watch: {
@@ -173,7 +174,8 @@ const CytoscapeRenderer = defineComponent({
         // First render: full build
         this.cy.add(newElements);
         this.cy.style(newStylesheets);
-        extendCyPopperElements(
+        this.popperCleanup?.();
+        this.popperCleanup = setupCyPoppers(
           this.cy,
           dag,
           this.$refs.container as HTMLElement,
@@ -184,7 +186,8 @@ const CytoscapeRenderer = defineComponent({
         applyDiff(this.cy, diff);
 
         this.cy.style(newStylesheets);
-        extendCyPopperElements(
+        this.popperCleanup?.();
+        this.popperCleanup = setupCyPoppers(
           this.cy,
           dag,
           this.$refs.container as HTMLElement,

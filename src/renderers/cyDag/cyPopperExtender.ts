@@ -1,4 +1,5 @@
-import cytoscape, { Selector } from "cytoscape";
+import cytoscape, { EventHandler, Selector } from "cytoscape";
+import { PopperInstance } from "cytoscape-popper";
 import {
   DESCRIPTION_PROPERTY,
   DESCRIPTION_PREFIX,
@@ -13,6 +14,8 @@ import {
 
 const POPPER_OUTER_DIV_CLASS: string = "popper-outer-div";
 const POPPER_INNER_DIV_CLASS: string = "popper-inner-div";
+
+export type PopperCleanup = () => void;
 
 export interface DescriptionData {
   description: string;
@@ -180,13 +183,13 @@ function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
   return outerDiv;
 }
 
-function addDescriptionPopper(
+function makeDescriptionPoppers(
   cy: cytoscape.Core,
   canvasElement: HTMLElement,
   cySelection: Selector,
   descriptionData: DescriptionData,
-) {
-  cy.elements(cySelection).forEach((cyElement) => {
+): [string, PopperInstance][] {
+  return cy.elements(cySelection).map((cyElement) => {
     const popperElement = cyElement.popper({
       content: () => {
         const popperDiv = makePopperDiv(descriptionData);
@@ -194,20 +197,15 @@ function addDescriptionPopper(
         return popperDiv;
       },
     });
-    cyElement.on("position", () => {
-      popperElement.update();
-    });
-    cy.on("pan zoom resize", () => {
-      popperElement.update();
-    });
+    return [cyElement.id(), popperElement] as [string, PopperInstance];
   });
 }
 
-export function addCyPopperElementsFromDag(
+export function makeCyPopperMapFromDag(
   cy: cytoscape.Core,
   canvasElement: HTMLElement,
   dag: Dag,
-) {
+): Map<string, PopperInstance[]> {
   const selectorDescriptionPairs: SelectorDescriptionPair[][] = [
     getNodeDescriptions(dag),
     getEdgeDescriptions(dag),
@@ -215,26 +213,60 @@ export function addCyPopperElementsFromDag(
     getNamesWithStyleDescriptions(dag),
     getCompoundNodeDescriptions(dag),
   ];
-  selectorDescriptionPairs.flat().forEach(([selector, descriptionData]) => {
-    addDescriptionPopper(cy, canvasElement, selector, descriptionData);
-  });
 
-  dag.getChildDags().forEach((childDag) => {
-    addCyPopperElementsFromDag(cy, canvasElement, childDag);
-  });
+  const popperMap = new Map<string, PopperInstance[]>();
+  const idElementPairs = selectorDescriptionPairs
+    .flat()
+    .flatMap(([selector, descriptionData]) =>
+      makeDescriptionPoppers(cy, canvasElement, selector, descriptionData),
+    );
+
+  for (const [elementId, popper] of idElementPairs) {
+    if (!popperMap.has(elementId)) popperMap.set(elementId, []);
+    popperMap.get(elementId)!.push(popper);
+  }
+
+  for (const childDag of dag.getChildDags()) {
+    const childMap = makeCyPopperMapFromDag(cy, canvasElement, childDag);
+    for (const [id, poppers] of childMap.entries()) {
+      const existing = popperMap.get(id);
+      if (existing) {
+        existing.push(...poppers);
+      } else {
+        popperMap.set(id, poppers);
+      }
+    }
+  }
+
+  return popperMap;
 }
 
-export function extendCyPopperElements(
+export function setupCyPoppers(
   cy: cytoscape.Core,
   dag: Dag,
   canvasElement: HTMLElement,
-) {
-  clearAllPopperDivs(canvasElement);
-  cy.removeAllListeners();
+): PopperCleanup {
+  const popperMap = makeCyPopperMapFromDag(cy, canvasElement, dag);
+  const allPoppers = Array.from(popperMap.values()).flat();
 
-  addCyPopperElementsFromDag(cy, canvasElement, dag);
+  // Single core listener for pan/zoom/resize — updates all poppers
+  const coreUpdateHandler: EventHandler = () => {
+    allPoppers.forEach((popper) => popper.update());
+  };
+  cy.on("pan zoom resize", coreUpdateHandler);
 
-  function applyZoomScale() {
+  // Single delegated listener for position changes — updates only the moved element's poppers
+  const positionHandler: EventHandler = (event) => {
+    const elementId = event.target.id();
+    const elementPoppers = popperMap.get(elementId);
+    if (elementPoppers) {
+      elementPoppers.forEach((popper) => popper.update());
+    }
+  };
+  cy.on("position", "node, edge", positionHandler);
+
+  // Zoom scale handler for CSS transform on popper divs
+  const zoomScaleHandler: EventHandler = () => {
     const zoomLevel = cy.zoom();
     const popperInnerDivArray = Array.from(
       canvasElement.getElementsByClassName(POPPER_INNER_DIV_CLASS),
@@ -243,9 +275,17 @@ export function extendCyPopperElements(
       const popperDivElement = popperInnerDiv as HTMLElement;
       popperDivElement.style.transform = `scale(${zoomLevel})`;
     });
-  }
+  };
 
   // Apply current zoom scale immediately, then track future changes
-  applyZoomScale();
-  cy.on("zoom", applyZoomScale);
+  zoomScaleHandler({} as cytoscape.EventObject);
+  cy.on("zoom", zoomScaleHandler);
+
+  // Cleanup function to remove listeners and popper divs created by this setup
+  return () => {
+    cy.off("pan zoom resize", coreUpdateHandler);
+    cy.off("position", "node, edge", positionHandler);
+    cy.off("zoom", zoomScaleHandler);
+    clearAllPopperDivs(canvasElement);
+  };
 }
