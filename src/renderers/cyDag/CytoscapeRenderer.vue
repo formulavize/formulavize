@@ -30,9 +30,13 @@ import {
 import svg from "cytoscape-svg";
 import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
-import { setupCyPoppers, PopperCleanup } from "./cyPopperExtender";
+import {
+  setupCyPoppers,
+  collectDescriptions,
+  PopperCleanup,
+} from "./cyPopperExtender";
 import { diffCyElements } from "./cyDiffer";
-import { applyDiff } from "./cyUpdateHelpers";
+import { applyDiff, makeGhostNodeSpecs } from "./cyUpdateHelpers";
 import { Dag } from "../../compiler/dag";
 import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
@@ -217,11 +221,52 @@ const CytoscapeRenderer = defineComponent({
       this.previousElements = newElements;
     },
 
+    addDescriptionGhostNodes(): string[] {
+      if (!this.cy) return [];
+
+      const descriptionMap = collectDescriptions(this.cy, this.dag);
+      const ghostIds: string[] = [];
+
+      for (const [id, descriptions] of descriptionMap) {
+        const ele = this.cy.getElementById(id);
+        if (ele.empty()) continue;
+
+        const eleBB = ele.boundingBox({ includeLabels: true });
+        const centerX = (eleBB.x1 + eleBB.x2) / 2;
+        let nextY = eleBB.y2;
+        const specs = makeGhostNodeSpecs(id, descriptions);
+
+        for (const spec of specs) {
+          const ghostNode = this.cy.add(spec.definition);
+          ghostNode.style(spec.style);
+          // Position after adding so Cytoscape computes the label dimensions
+          const labelHeight = ghostNode.boundingBox({ includeLabels: true }).h;
+          nextY += labelHeight / 2;
+          ghostNode.position({ x: centerX, y: nextY });
+          nextY += labelHeight / 2;
+          ghostIds.push(spec.id);
+        }
+      }
+
+      return ghostIds;
+    },
+
+    removeGhostNodes(ghostIds: string[]): void {
+      if (!this.cy) return;
+      for (const id of ghostIds) {
+        this.cy.getElementById(id).remove();
+      }
+    },
+
     export(exportOptions: FileExportOptions): void {
       if (!this.cy) {
         console.error("Cytoscape instance not initialized");
         return;
       }
+
+      // Create invisible ghost nodes with description text and styling
+      // so Cytoscape's canvas-based exporters capture them natively.
+      const ghostIds = this.addDescriptionGhostNodes();
 
       // Issue: the svg exporter rasterizes images in the graph.
       // The workaround for exporting large images is to export a scaled up
@@ -257,6 +302,8 @@ const CytoscapeRenderer = defineComponent({
           console.error(`Unsupported export format: ${format}`);
           return null;
         });
+
+      this.removeGhostNodes(ghostIds);
 
       if (!imgBlob) return;
       const fileName = exportOptions.fileName + "." + exportOptions.fileType;

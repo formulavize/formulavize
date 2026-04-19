@@ -161,7 +161,10 @@ function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
   innerDiv.classList.add(POPPER_INNER_DIV_CLASS);
   // add custom description styles to inner div
   descriptionData.descriptionStyleProperties.forEach((value, property) => {
-    innerDiv.style.setProperty(property, value);
+    // Bare numbers are invalid CSS for length properties like font-size;
+    // append "px" to match how Cytoscape interprets unitless numbers.
+    const cssValue = /^\d+(\.\d+)?$/.test(value) ? value + "px" : value;
+    innerDiv.style.setProperty(property, cssValue);
   });
 
   const text = document.createElement("p");
@@ -170,7 +173,8 @@ function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
     /(?:\r\n|\r|\n)/g,
     "<br />",
   );
-  text.style.margin = "1em";
+  // default margin on p elements adds unwanted spacing between description poppers
+  text.style.margin = "0";
 
   innerDiv.appendChild(text);
 
@@ -196,31 +200,44 @@ function makeDescriptionPoppers(
         canvasElement.appendChild(popperDiv);
         return popperDiv;
       },
+      // Shift the reference point down so descriptions position below the
+      // label rather than overlapping it.
+      renderedPosition: (el) => {
+        const ele = el as unknown as cytoscape.SingularElementReturnValue;
+        const withLabels = ele.renderedBoundingBox({ includeLabels: true });
+        const withoutLabels = ele.renderedBoundingBox({ includeLabels: false });
+        // The label extends below the node body; shift the reference
+        // point down by that overhang so the popper clears the label.
+        const labelOverhang = withLabels.y2 - withoutLabels.y2;
+        return {
+          x: withoutLabels.x1,
+          y: withoutLabels.y1 + labelOverhang,
+        };
+      },
     });
     return [cyElement.id(), popperElement] as [string, PopperInstance];
   });
 }
+
+const DESCRIPTION_GETTERS: ((dag: Dag) => SelectorDescriptionPair[])[] = [
+  getNodeDescriptions,
+  getEdgeDescriptions,
+  getStyleDescriptions,
+  getNamesWithStyleDescriptions,
+  getCompoundNodeDescriptions,
+];
 
 export function makeCyPopperMapFromDag(
   cy: cytoscape.Core,
   canvasElement: HTMLElement,
   dag: Dag,
 ): Map<string, PopperInstance[]> {
-  const selectorDescriptionPairs: SelectorDescriptionPair[][] = [
-    getNodeDescriptions(dag),
-    getEdgeDescriptions(dag),
-    getStyleDescriptions(dag),
-    getNamesWithStyleDescriptions(dag),
-    getCompoundNodeDescriptions(dag),
-  ];
-
   const popperMap = new Map<string, PopperInstance[]>();
-  const idElementPairs = selectorDescriptionPairs
-    .flat()
-    .flatMap(([selector, descriptionData]) =>
-      makeDescriptionPoppers(cy, canvasElement, selector, descriptionData),
-    );
 
+  const selectorDescPairs = DESCRIPTION_GETTERS.flatMap((fn) => fn(dag));
+  const idElementPairs = selectorDescPairs.flatMap(([selector, descData]) =>
+    makeDescriptionPoppers(cy, canvasElement, selector, descData),
+  );
   for (const [elementId, popper] of idElementPairs) {
     if (!popperMap.has(elementId)) popperMap.set(elementId, []);
     popperMap.get(elementId)!.push(popper);
@@ -239,6 +256,31 @@ export function makeCyPopperMapFromDag(
   }
 
   return popperMap;
+}
+
+export function collectDescriptions(
+  cy: cytoscape.Core,
+  dag: Dag,
+): Map<string, DescriptionData[]> {
+  const result = new Map<string, DescriptionData[]>();
+  const selectorDescPairs = DESCRIPTION_GETTERS.flatMap((fn) => fn(dag));
+  for (const [selector, descData] of selectorDescPairs) {
+    cy.elements(selector).forEach((ele) => {
+      const id = ele.id();
+      if (!result.has(id)) result.set(id, []);
+      result.get(id)!.push(descData);
+    });
+  }
+
+  for (const childDag of dag.getChildDags()) {
+    const childMap = collectDescriptions(cy, childDag);
+    for (const [id, descriptions] of childMap) {
+      if (!result.has(id)) result.set(id, []);
+      result.get(id)!.push(...descriptions);
+    }
+  }
+
+  return result;
 }
 
 export function setupCyPoppers(
