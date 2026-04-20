@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.1](https://github.com/formulavize/formulavize/compare/v1.12.0...v1.12.1) (2026-04-20)
+
+
+### Performance Improvements
+
+* Implement stable ID system for graph diffing to detect topological changes to trigger re-layout ([#57](https://github.com/formulavize/formulavize/issues/57)) ([44ad719](https://github.com/formulavize/formulavize/commit/44ad719d595c257f06ecfa1655d317728fe7e27a))
+
 ## [1.12.0](https://github.com/formulavize/formulavize/compare/v1.11.0...v1.12.0) (2026-04-12)
 
 
