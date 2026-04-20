@@ -1,5 +1,4 @@
 import { match } from "ts-pattern";
-import { v4 as uuidv4 } from "uuid";
 
 import {
   BaseTreeNode,
@@ -26,6 +25,56 @@ import {
   ErrorCode,
   ErrorSource,
 } from "./compilationErrors";
+
+export enum ScopeKind {
+  Namespace = "ns",
+  Import = "i",
+}
+
+// Stable Ids enable consistent node and edge IDs across compilations,
+// which allows the renderer to preserve element positions and styles
+// when the underlying DAG structure hasn't changed.
+// Ids are generated based on the path to the current scope
+// (e.g. root-n-a-0 for the first call to 'a' at the root level)
+// and a count of how many times that scope has been entered
+// (e.g. root-ns-a-0-n-a-0 for the first call to 'a' inside a namespace 'a').
+// DagFactory previously had a simpler, less stateful approach of generating UUIDs,
+// but that caused the entire graph to be treated as new on every compilation,
+// which made it impossible to preserve element positions and styles across compilations.
+export class StableIdContext {
+  private scopePath: string;
+  private nodeCounts = new Map<string, number>();
+  private edgeCounts = new Map<string, number>();
+  private childScopeCounts = new Map<string, number>();
+
+  constructor(scopePath: string) {
+    this.scopePath = scopePath;
+  }
+
+  get ScopePath(): string {
+    return this.scopePath;
+  }
+
+  nextNodeId(callName: string): string {
+    const count = this.nodeCounts.get(callName) ?? 0;
+    this.nodeCounts.set(callName, count + 1);
+    return `${this.scopePath}-n-${callName}-${count}`;
+  }
+
+  nextEdgeId(srcNodeId: string, destNodeId: string): string {
+    const key = `${srcNodeId}>${destNodeId}`;
+    const count = this.edgeCounts.get(key) ?? 0;
+    this.edgeCounts.set(key, count + 1);
+    return `${this.scopePath}-e-${key}-${count}`;
+  }
+
+  childScope(kind: ScopeKind, name: string): StableIdContext {
+    const key = `${kind}-${name}`;
+    const count = this.childScopeCounts.get(key) ?? 0;
+    this.childScopeCounts.set(key, count + 1);
+    return new StableIdContext(`${this.scopePath}-${key}-${count}`);
+  }
+}
 
 function makeDagStyle(styleNode: StyleTreeNode): DagStyle {
   return {
@@ -80,6 +129,7 @@ function argListToEdgeInfo(
   argList: ValueTreeNode[],
   workingDag: Dag,
   errors: Error[],
+  ctx: StableIdContext,
 ): IncomingEdgeInfo[] {
   return argList
     .map((arg) =>
@@ -89,6 +139,7 @@ function argListToEdgeInfo(
             arg as CallTreeNode,
             workingDag,
             errors,
+            ctx,
           );
           return { nodeId: argNodeId, varName: "", varStyle: null };
         })
@@ -133,9 +184,10 @@ function addIncomingEdgesToDag(
   incomingEdges: IncomingEdgeInfo[],
   destNodeId: NodeId,
   workingDag: Dag,
+  ctx: StableIdContext,
 ): void {
   incomingEdges.forEach((incomingEdge) => {
-    const edgeId = uuidv4();
+    const edgeId = ctx.nextEdgeId(incomingEdge.nodeId, destNodeId);
     const thisEdge = {
       id: edgeId,
       name: incomingEdge.varName,
@@ -153,8 +205,9 @@ function processCall(
   callStmt: CallTreeNode,
   workingDag: Dag,
   errors: Error[],
+  ctx: StableIdContext,
 ): NodeId {
-  const thisNodeId = uuidv4();
+  const thisNodeId = ctx.nextNodeId(callStmt.Name);
   checkStyleTagsInStyleNode(callStmt.Styling, workingDag, errors);
   const thisNode = {
     id: thisNodeId,
@@ -169,8 +222,9 @@ function processCall(
     callStmt.Args,
     workingDag,
     errors,
+    ctx,
   );
-  addIncomingEdgesToDag(incomingEdgeInfoList, thisNodeId, workingDag);
+  addIncomingEdgesToDag(incomingEdgeInfoList, thisNodeId, workingDag, ctx);
 
   return thisNodeId;
 }
@@ -181,8 +235,10 @@ async function processNamespace(
   errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string>,
+  ctx: StableIdContext,
 ): Promise<NodeId> {
-  const subDagId = uuidv4();
+  const childCtx = ctx.childScope(ScopeKind.Namespace, namespaceStmt.Name);
+  const subDagId = childCtx.ScopePath;
   const childDag = makeSubDag(
     subDagId,
     namespaceStmt,
@@ -190,6 +246,7 @@ async function processNamespace(
     importer,
     seenImports,
     workingDag,
+    childCtx,
   );
   workingDag.addChildDag(await childDag);
 
@@ -197,8 +254,9 @@ async function processNamespace(
     namespaceStmt.Args,
     workingDag,
     errors,
+    ctx,
   );
-  addIncomingEdgesToDag(dagIncomingEdges, subDagId, workingDag);
+  addIncomingEdgesToDag(dagIncomingEdges, subDagId, workingDag, ctx);
 
   return subDagId;
 }
@@ -235,6 +293,7 @@ async function processImport(
   errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string>,
+  ctx: StableIdContext,
 ): Promise<NodeId> {
   // Process imports referenced by a variable, always returning a node id
   const importedDag = await getImportedDag(
@@ -244,7 +303,8 @@ async function processImport(
     workingDag,
     seenImports,
   );
-  importedDag.Id = uuidv4();
+  const importName = importStmt.ImportName ?? importStmt.ImportLocation;
+  importedDag.Id = ctx.childScope(ScopeKind.Import, importName).ScopePath;
   importedDag.Name = importStmt.ImportName ?? "";
   workingDag.addChildDag(importedDag);
   return importedDag.Id;
@@ -256,6 +316,7 @@ async function processUnassignedImport(
   errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string>,
+  ctx: StableIdContext,
 ) {
   // Process imports not referenced by a variable
   const importedDag = await getImportedDag(
@@ -266,7 +327,10 @@ async function processUnassignedImport(
     seenImports,
   );
   if (importStmt.ImportName) {
-    importedDag.Id = uuidv4();
+    importedDag.Id = ctx.childScope(
+      ScopeKind.Import,
+      importStmt.ImportName,
+    ).ScopePath;
     importedDag.Name = importStmt.ImportName;
     workingDag.addChildDag(importedDag);
   } else {
@@ -284,6 +348,7 @@ async function processAssignmentRhs(
   errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string>,
+  ctx: StableIdContext,
 ): Promise<NodeId> {
   return match(rhsNode.Type)
     .with(NodeType.QualifiedVariable, () => {
@@ -305,7 +370,7 @@ async function processAssignmentRhs(
       return candidateSrcNodeId;
     })
     .with(NodeType.Call, () => {
-      return processCall(rhsNode as CallTreeNode, workingDag, errors);
+      return processCall(rhsNode as CallTreeNode, workingDag, errors, ctx);
     })
     .with(NodeType.Namespace, () => {
       return processNamespace(
@@ -314,6 +379,7 @@ async function processAssignmentRhs(
         errors,
         importer,
         seenImports,
+        ctx,
       );
     })
     .with(NodeType.Import, async () => {
@@ -323,6 +389,7 @@ async function processAssignmentRhs(
         errors,
         importer,
         seenImports,
+        ctx,
       );
     })
     .otherwise(() => {
@@ -344,6 +411,7 @@ async function processAssignment(
   errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string>,
+  ctx: StableIdContext,
 ): Promise<void> {
   const lhsIsEmpty = assignmentStmt.Lhs.length === 0;
   if (lhsIsEmpty) {
@@ -375,6 +443,7 @@ async function processAssignment(
     errors,
     importer,
     seenImports,
+    ctx,
   ).catch((err) => {
     console.debug("Assignment failure:", err);
     return null;
@@ -443,10 +512,11 @@ async function processStatement(
   errors: Error[],
   importer: ImportCacher,
   seenImports: Set<string>,
+  ctx: StableIdContext,
 ): Promise<void> {
   await match(stmt.Type)
     .with(NodeType.Call, () => {
-      processCall(stmt as CallTreeNode, workingDag, errors);
+      processCall(stmt as CallTreeNode, workingDag, errors, ctx);
     })
     .with(NodeType.Assignment, async () => {
       await processAssignment(
@@ -455,6 +525,7 @@ async function processStatement(
         errors,
         importer,
         seenImports,
+        ctx,
       );
     })
     .with(NodeType.NamedStyle, () => {
@@ -478,6 +549,7 @@ async function processStatement(
         errors,
         importer,
         seenImports,
+        ctx,
       );
     })
     .with(NodeType.Import, async () => {
@@ -487,6 +559,7 @@ async function processStatement(
         errors,
         importer,
         seenImports,
+        ctx,
       ).catch((err) => {
         console.debug(err);
       });
@@ -510,7 +583,9 @@ export async function makeSubDag(
   importer: ImportCacher,
   seenImports: Set<string> = new Set(),
   parentDag?: Dag,
+  ctx?: StableIdContext,
 ): Promise<Dag> {
+  const idCtx = ctx ?? new StableIdContext(dagId);
   checkStyleTagsInStyleNode(dagNamespaceStmt.Styling, parentDag, errors);
   const dagStyleTags =
     dagNamespaceStmt.Styling?.StyleTags.map((tag) => tag.QualifiedTagName) ??
@@ -525,7 +600,14 @@ export async function makeSubDag(
   );
 
   for (const stmt of dagNamespaceStmt.Statements) {
-    await processStatement(stmt, curLevelDag, errors, importer, seenImports);
+    await processStatement(
+      stmt,
+      curLevelDag,
+      errors,
+      importer,
+      seenImports,
+      idCtx,
+    );
   }
   return curLevelDag;
 }
@@ -536,16 +618,19 @@ export async function makeDag(
   seenImports: Set<string> = new Set(),
 ): Promise<{ dag: Dag; errors: Error[] }> {
   const errors: Error[] = [];
+  const rootCtx = new StableIdContext("root");
   const statementList = new StatementListTreeNode(
     recipe.Statements,
     recipe.Position,
   );
   const dag = await makeSubDag(
-    uuidv4(),
+    "root",
     new NamespaceTreeNode("", statementList),
     errors,
     importer,
     seenImports,
+    undefined,
+    rootCtx,
   );
   return { dag, errors };
 }

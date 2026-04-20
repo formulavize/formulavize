@@ -71,16 +71,24 @@ export function makeElementStylesheets(
 }
 
 export function makeNodeStylesheets(dag: Dag): StylesheetCSS[] {
-  return makeElementStylesheets(dag, dag.getNodeList(), (id) => `node#${id}`);
+  return makeElementStylesheets(
+    dag,
+    dag.getNodeList(),
+    (id) => `node[id = '${id}']`,
+  );
 }
 
 export function makeEdgeStyleSheets(dag: Dag): StylesheetCSS[] {
-  return makeElementStylesheets(dag, dag.getEdgeList(), (id) => `edge#${id}`);
+  return makeElementStylesheets(
+    dag,
+    dag.getEdgeList(),
+    (id) => `edge[id = '${id}']`,
+  );
 }
 
 export function makeCompoundNodeStylesheet(dag: Dag): StylesheetCSS[] {
   const dagNode = dag.getDagAsDagNode();
-  return makeElementStylesheets(dag, [dagNode], (id) => `node#${id}`);
+  return makeElementStylesheets(dag, [dagNode], (id) => `node[id = '${id}']`);
 }
 
 export function makeDagLineageSelector(dag: Dag): string {

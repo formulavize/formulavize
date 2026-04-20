@@ -113,19 +113,28 @@ function getElementDescriptions(
 }
 export function getNodeDescriptions(dag: Dag): SelectorDescriptionPair[] {
   const nodeDescs = getElementDescriptions(dag, dag.getNodeList());
-  return Array.from(nodeDescs, ([id, descData]) => [`node#${id}`, descData]);
+  return Array.from(nodeDescs, ([id, descData]) => [
+    `node[id = '${id}']`,
+    descData,
+  ]);
 }
 
 export function getEdgeDescriptions(dag: Dag): SelectorDescriptionPair[] {
   const edgeDescs = getElementDescriptions(dag, dag.getEdgeList());
-  return Array.from(edgeDescs, ([id, descData]) => [`edge#${id}`, descData]);
+  return Array.from(edgeDescs, ([id, descData]) => [
+    `edge[id = '${id}']`,
+    descData,
+  ]);
 }
 
 export function getCompoundNodeDescriptions(
   dag: Dag,
 ): SelectorDescriptionPair[] {
   const compNodeDesc = getElementDescriptions(dag, [dag.getDagAsDagNode()]);
-  return Array.from(compNodeDesc, ([id, descData]) => [`node#${id}`, descData]);
+  return Array.from(compNodeDesc, ([id, descData]) => [
+    `node[id = '${id}']`,
+    descData,
+  ]);
 }
 
 function clearAllPopperDivs(canvasElement: HTMLElement) {
@@ -221,11 +230,11 @@ export function extendCyPopperElements(
   canvasElement: HTMLElement,
 ) {
   clearAllPopperDivs(canvasElement);
+  cy.removeAllListeners();
 
   addCyPopperElementsFromDag(cy, canvasElement, dag);
 
-  // scale popper divs with zoom level
-  cy.on("zoom", () => {
+  function applyZoomScale() {
     const zoomLevel = cy.zoom();
     const popperInnerDivArray = Array.from(
       canvasElement.getElementsByClassName(POPPER_INNER_DIV_CLASS),
@@ -234,5 +243,9 @@ export function extendCyPopperElements(
       const popperDivElement = popperInnerDiv as HTMLElement;
       popperDivElement.style.transform = `scale(${zoomLevel})`;
     });
-  });
+  }
+
+  // Apply current zoom scale immediately, then track future changes
+  applyZoomScale();
+  cy.on("zoom", applyZoomScale);
 }
