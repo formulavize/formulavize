@@ -32,7 +32,7 @@ import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
 import {
   setupCyPoppers,
-  collectDescriptions,
+  addDescriptionGhostNodes,
   PopperCleanup,
 } from "./cyPopperExtender";
 import { diffCyElements, applyDiff } from "./cyDiffer";
@@ -220,36 +220,9 @@ const CytoscapeRenderer = defineComponent({
       this.previousElements = newElements;
     },
 
-    addDescriptionGhostNodes(): string[] {
+    addGhostNodes(): string[] {
       if (!this.cy) return [];
-
-      const descriptionMap = collectDescriptions(this.cy, this.dag);
-      const ghostIds: string[] = [];
-
-      for (const [id, descriptions] of descriptionMap) {
-        const ele = this.cy.getElementById(id);
-        if (ele.empty()) continue;
-
-        const eleBB = ele.boundingBox({ includeLabels: true });
-        const centerX = (eleBB.x1 + eleBB.x2) / 2;
-        let nextY = eleBB.y2;
-
-        for (let i = 0; i < descriptions.length; i++) {
-          const ghostId = `__ghost_desc_${id}_${i}`;
-          const ghostNode = this.cy.add({
-            group: "nodes",
-            data: { id: ghostId },
-          });
-          // Position after adding so Cytoscape computes the label dimensions
-          const labelHeight = ghostNode.boundingBox({ includeLabels: true }).h;
-          nextY += labelHeight / 2;
-          ghostNode.position({ x: centerX, y: nextY });
-          nextY += labelHeight / 2;
-          ghostIds.push(ghostId);
-        }
-      }
-
-      return ghostIds;
+      return addDescriptionGhostNodes(this.cy, this.dag);
     },
 
     removeGhostNodes(ghostIds: string[]): void {
@@ -267,7 +240,7 @@ const CytoscapeRenderer = defineComponent({
 
       // Create invisible ghost nodes with description text and styling
       // so Cytoscape's canvas-based exporters capture them natively.
-      const ghostIds = this.addDescriptionGhostNodes();
+      const ghostIds = this.addGhostNodes();
 
       // Issue: the svg exporter rasterizes images in the graph.
       // The workaround for exporting large images is to export a scaled up

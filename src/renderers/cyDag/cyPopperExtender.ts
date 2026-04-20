@@ -328,3 +328,39 @@ export function setupCyPoppers(
     clearAllPopperDivs(canvasElement);
   };
 }
+
+// Adds invisible "ghost" nodes with description text to ensure descriptions
+// are included in canvas-based exports.
+// Returns the IDs of the created ghost nodes for later cleanup.
+export function addDescriptionGhostNodes(
+  cy: cytoscape.Core,
+  dag: Dag,
+): string[] {
+  const descriptionMap = collectDescriptions(cy, dag);
+  const ghostIds: string[] = [];
+
+  for (const [id, descriptions] of descriptionMap) {
+    const ele = cy.getElementById(id);
+    if (ele.empty()) continue;
+
+    const eleBB = ele.boundingBox({ includeLabels: true });
+    const centerX = (eleBB.x1 + eleBB.x2) / 2;
+    let nextY = eleBB.y2;
+
+    for (let i = 0; i < descriptions.length; i++) {
+      const ghostId = `__ghost_desc_${id}_${i}`;
+      const ghostNode = cy.add({
+        group: "nodes",
+        data: { id: ghostId },
+      });
+      // Position after adding so Cytoscape computes the label dimensions
+      const labelHeight = ghostNode.boundingBox({ includeLabels: true }).h;
+      nextY += labelHeight / 2;
+      ghostNode.position({ x: centerX, y: nextY });
+      nextY += labelHeight / 2;
+      ghostIds.push(ghostId);
+    }
+  }
+
+  return ghostIds;
+}
