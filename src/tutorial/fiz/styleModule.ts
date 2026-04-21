@@ -230,11 +230,14 @@ const stylePuzzlets: Puzzlet[] = [
     name: "Put a Label on it",
     instructions: [
       normal("The 'label' style property will override the current name.\n"),
-      normal("Extra labels can be shown by adding strings to a { }.\n"),
+      normal("Extra labels can be shown by adding strings to a { }\n"),
+      normal("or by adding a 'description' property.\n"),
+      normal("Descriptions are styled with description-* prefixed CSS.\n"),
       normal("Uncomment the strings in { } to see the changes."),
     ],
     examples: [
       fast("main_label() {\n"),
+      fast("  description-font-size: 6px\n"),
       fast('  //"this extra label"\n'),
       fast('  //"spans two lines"\n'),
       fast("}\n"),

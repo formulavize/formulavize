@@ -1,5 +1,8 @@
 <template>
-  <div ref="container" class="cytoscape-renderer" />
+  <div class="cytoscape-wrapper">
+    <div ref="container" class="cytoscape-renderer" />
+    <div ref="popperContainer" class="popper-overlay" />
+  </div>
 </template>
 
 <script lang="ts">
@@ -10,6 +13,7 @@ import cytoscape, {
   ElementsDefinition,
   LayoutOptions,
   NodeSingular,
+  StylesheetCSS,
 } from "cytoscape";
 import dagre from "cytoscape-dagre";
 import cytoscapePopper, {
@@ -26,9 +30,12 @@ import {
 import svg from "cytoscape-svg";
 import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
-import { extendCyPopperElements } from "./cyPopperExtender";
-import { diffCyElements } from "./cyDiffer";
-import { applyDiff } from "./cyUpdateHelpers";
+import {
+  setupCyPoppers,
+  addDescriptionGhostNodes,
+  PopperCleanup,
+} from "./cyPopperExtender";
+import { diffCyElements, applyDiff } from "./cyDiffer";
 import { Dag } from "../../compiler/dag";
 import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
@@ -116,6 +123,8 @@ const CytoscapeRenderer = defineComponent({
     return {
       cy: null as Core | null,
       previousElements: null as ElementsDefinition | null,
+      previousStylesheetsJson: null as string | null,
+      popperCleanup: null as PopperCleanup | null,
     };
   },
   watch: {
@@ -157,10 +166,20 @@ const CytoscapeRenderer = defineComponent({
       });
     },
 
+    applyStyles(newStylesheets: StylesheetCSS[]): void {
+      if (!this.cy) return;
+      const stylesheetsJson = JSON.stringify(newStylesheets);
+      if (stylesheetsJson !== this.previousStylesheetsJson) {
+        this.cy.style(newStylesheets).update();
+        this.cy.forceRender();
+        this.previousStylesheetsJson = stylesheetsJson;
+      }
+    },
+
     applyThemeStyles(): void {
       if (!this.cy) return;
       const newStylesheets = makeCyStylesheets(this.dag, this.isDark);
-      this.cy.style(newStylesheets);
+      this.applyStyles(newStylesheets);
     },
 
     updateDag(dag: Dag): void {
@@ -172,22 +191,24 @@ const CytoscapeRenderer = defineComponent({
       if (!this.previousElements) {
         // First render: full build
         this.cy.add(newElements);
-        this.cy.style(newStylesheets);
-        extendCyPopperElements(
+        this.applyStyles(newStylesheets);
+        this.popperCleanup?.();
+        this.popperCleanup = setupCyPoppers(
           this.cy,
           dag,
-          this.$refs.container as HTMLElement,
+          this.$refs.popperContainer as HTMLElement,
         );
         this.runLayout();
       } else {
         const diff = diffCyElements(this.previousElements, newElements);
         applyDiff(this.cy, diff);
 
-        this.cy.style(newStylesheets);
-        extendCyPopperElements(
+        this.applyStyles(newStylesheets);
+        this.popperCleanup?.();
+        this.popperCleanup = setupCyPoppers(
           this.cy,
           dag,
-          this.$refs.container as HTMLElement,
+          this.$refs.popperContainer as HTMLElement,
         );
 
         // Avoid unnecessary layout runs by checking if the topology has changed
@@ -199,11 +220,27 @@ const CytoscapeRenderer = defineComponent({
       this.previousElements = newElements;
     },
 
+    addGhostNodes(): string[] {
+      if (!this.cy) return [];
+      return addDescriptionGhostNodes(this.cy, this.dag);
+    },
+
+    removeGhostNodes(ghostIds: string[]): void {
+      if (!this.cy) return;
+      for (const id of ghostIds) {
+        this.cy.getElementById(id).remove();
+      }
+    },
+
     export(exportOptions: FileExportOptions): void {
       if (!this.cy) {
         console.error("Cytoscape instance not initialized");
         return;
       }
+
+      // Create invisible ghost nodes with description text and styling
+      // so Cytoscape's canvas-based exporters capture them natively.
+      const ghostIds = this.addGhostNodes();
 
       // Issue: the svg exporter rasterizes images in the graph.
       // The workaround for exporting large images is to export a scaled up
@@ -240,6 +277,8 @@ const CytoscapeRenderer = defineComponent({
           return null;
         });
 
+      this.removeGhostNodes(ghostIds);
+
       if (!imgBlob) return;
       const fileName = exportOptions.fileName + "." + exportOptions.fileType;
       saveAs(imgBlob, fileName);
@@ -258,11 +297,24 @@ export default Object.assign(CytoscapeRenderer, {
 </script>
 
 <style scoped>
+.cytoscape-wrapper {
+  position: relative;
+  height: 100%;
+  width: 100%;
+}
+
 .cytoscape-renderer {
   height: 100%;
   width: 100%;
   background-color: var(--fviz-bg);
   border: solid 1px var(--fviz-border);
   box-sizing: border-box;
+}
+
+.popper-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
 }
 </style>

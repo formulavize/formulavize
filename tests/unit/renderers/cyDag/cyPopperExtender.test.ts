@@ -7,7 +7,8 @@ import {
   getCompoundNodeDescriptions,
   DescriptionData,
   SelectorDescriptionPair,
-  addCyPopperElementsFromDag,
+  makeCyPopperMapFromDag,
+  setupCyPoppers,
 } from "src/renderers/cyDag/cyPopperExtender";
 import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
 import { Dag, StyleProperties } from "src/compiler/dag";
@@ -346,7 +347,7 @@ describe("subdag descriptions", () => {
     } as unknown as Core;
     const mockCoreSpy = vi.spyOn(mockCyCore, "elements");
     const mockElement = {} as HTMLElement;
-    addCyPopperElementsFromDag(mockCyCore, mockElement, testDag);
+    makeCyPopperMapFromDag(mockCyCore, mockElement, testDag);
     return mockCoreSpy;
   }
   test("one matching node in subdag", () => {
@@ -463,5 +464,133 @@ describe("subdag descriptions", () => {
       ["node[id = 'childId2']", makeDescriptionData("d1")],
     ];
     expect(getNodeDescriptions(childDag2)).toEqual(expectedDescs);
+  });
+});
+
+describe("listener management", () => {
+  function makeMockCy() {
+    const listeners: { events: string; handler: unknown; selector?: string }[] =
+      [];
+    const mockCy = {
+      elements: vi.fn(() => []),
+      on: vi.fn((...args: unknown[]) => {
+        if (typeof args[1] === "string" && typeof args[2] === "function") {
+          // cy.on("position", "node, edge", handler)
+          listeners.push({
+            events: args[0] as string,
+            selector: args[1] as string,
+            handler: args[2],
+          });
+        } else if (typeof args[1] === "function") {
+          // cy.on("pan zoom resize", handler)
+          listeners.push({
+            events: args[0] as string,
+            handler: args[1],
+          });
+        }
+        return mockCy;
+      }),
+      off: vi.fn(() => mockCy),
+      zoom: vi.fn(() => 1),
+      removeAllListeners: vi.fn(() => mockCy),
+    } as unknown as Core;
+    return { mockCy, listeners };
+  }
+
+  function makeMockCanvas(): HTMLElement {
+    return {
+      getElementsByClassName: vi.fn(() => []),
+    } as unknown as HTMLElement;
+  }
+
+  test("registers exactly 3 core listeners", () => {
+    const { mockCy } = makeMockCy();
+    const canvas = makeMockCanvas();
+    const dag = new Dag("DagId");
+
+    setupCyPoppers(mockCy, dag, canvas);
+
+    expect(mockCy.on).toHaveBeenCalledTimes(3);
+    const onCalls = vi.mocked(mockCy.on).mock.calls;
+    expect(onCalls[0][0]).toBe("pan zoom resize");
+    expect(onCalls[1][0]).toBe("position");
+    expect(onCalls[1][1]).toBe("node, edge");
+    expect(onCalls[2][0]).toBe("zoom");
+  });
+
+  test("cleanup removes previous listeners", () => {
+    const { mockCy } = makeMockCy();
+    const canvas = makeMockCanvas();
+    const dag = new Dag("DagId");
+
+    const cleanup = setupCyPoppers(mockCy, dag, canvas);
+
+    // Capture the handler refs from the first call
+    const firstOnCalls = vi.mocked(mockCy.on).mock.calls;
+    const firstCoreHandler = firstOnCalls.find(
+      (c) => typeof c[0] === "string" && c[0] === "pan zoom resize",
+    )![1];
+    const firstPositionHandler = firstOnCalls.find(
+      (c) => typeof c[0] === "string" && c[0] === "position",
+    )![2];
+    const firstZoomHandler = firstOnCalls.find(
+      (c) => typeof c[0] === "string" && c[0] === "zoom",
+    )![1];
+
+    cleanup();
+
+    const offCalls = vi.mocked(mockCy.off).mock.calls;
+    expect(offCalls).toHaveLength(3);
+    expect(offCalls[0]).toEqual(["pan zoom resize", firstCoreHandler]);
+    expect(offCalls[1]).toEqual([
+      "position",
+      "node, edge",
+      firstPositionHandler,
+    ]);
+    expect(offCalls[2]).toEqual(["zoom", firstZoomHandler]);
+  });
+
+  test("core update handler calls update on all poppers", () => {
+    const mockPopper = { update: vi.fn() };
+    const mockElement = {
+      popper: vi.fn(() => mockPopper),
+      id: vi.fn(() => "elem1"),
+    };
+    const mockCy = {
+      elements: vi.fn(() => [mockElement]),
+      on: vi.fn(function (this: unknown) {
+        return this;
+      }),
+      off: vi.fn(function (this: unknown) {
+        return this;
+      }),
+      zoom: vi.fn(() => 1),
+      removeAllListeners: vi.fn(),
+    } as unknown as Core;
+    const canvas = {
+      getElementsByClassName: vi.fn(() => []),
+      appendChild: vi.fn(),
+    } as unknown as HTMLElement;
+
+    const dag = new Dag("DagId");
+    dag.addNode({
+      id: "elem1",
+      name: "name1",
+      styleTags: [],
+      styleProperties: new Map([[DESCRIPTION_PROPERTY, "desc"]]),
+    });
+
+    setupCyPoppers(mockCy, dag, canvas);
+
+    // Find the pan/zoom/resize handler (first on call)
+    const onCalls = vi.mocked(mockCy.on).mock.calls;
+    const coreHandler = onCalls.find((call) => {
+      const arg = call[0];
+      return typeof arg === "string" && arg === "pan zoom resize";
+    })![1] as unknown as () => void;
+
+    mockPopper.update.mockClear();
+    coreHandler();
+    expect(mockPopper.update).toHaveBeenCalled();
   });
 });

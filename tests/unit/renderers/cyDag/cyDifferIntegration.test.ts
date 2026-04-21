@@ -1,6 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { diffCyElements } from "src/renderers/cyDag/cyDiffer";
-import { applyDiff } from "src/renderers/cyDag/cyUpdateHelpers";
+import { diffCyElements, applyDiff } from "src/renderers/cyDag/cyDiffer";
 import cytoscape from "cytoscape";
 import { Compiler } from "src/compiler/driver";
 import { Dag } from "src/compiler/dag";
