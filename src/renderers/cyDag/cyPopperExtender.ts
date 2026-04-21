@@ -328,6 +328,24 @@ export function setupCyPoppers(
     clearAllPopperDivs(canvasElement);
   };
 }
+export function buildGhostNodeStyle(
+  descriptionData: DescriptionData,
+): Record<string, string | number> {
+  const style: Record<string, string | number> = {
+    // Hide the node body — only the label should be visible
+    "background-opacity": 0,
+    "border-width": 0,
+    width: 1,
+    height: 1,
+    // Label configuration
+    label: descriptionData.description,
+    "text-valign": "center",
+    "text-halign": "center",
+    "text-wrap": "wrap",
+  };
+
+  return style;
+}
 
 // Adds invisible "ghost" nodes with description text to ensure descriptions
 // are included in canvas-based exports.
@@ -353,7 +371,9 @@ export function addDescriptionGhostNodes(
         group: "nodes",
         data: { id: ghostId },
       });
-      // Position after adding so Cytoscape computes the label dimensions
+      const style = buildGhostNodeStyle(descriptions[i]);
+      ghostNode.style(style);
+      // Position after styling so Cytoscape computes the label dimensions
       const labelHeight = ghostNode.boundingBox({ includeLabels: true }).h;
       nextY += labelHeight / 2;
       ghostNode.position({ x: centerX, y: nextY });
