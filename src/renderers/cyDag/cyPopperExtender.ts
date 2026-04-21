@@ -15,6 +15,50 @@ import {
 const POPPER_OUTER_DIV_CLASS: string = "popper-outer-div";
 const POPPER_INNER_DIV_CLASS: string = "popper-inner-div";
 
+/**
+ * Maps Cytoscape label style properties to CSS equivalents for popper rendering.
+ * Properties without a CSS equivalent are omitted (they still apply to ghost nodes).
+ * The reason for this mapping is that poppers are regular DOM elements and only understand CSS properties,
+ * whereas Cytoscape has its own set of style properties that don't always match CSS.
+ * For example, "text-opacity" in Cytoscape corresponds to "opacity" in CSS.
+ * This mapping allows us to apply the intended styles to the popper content correctly.
+ * Though CSS properties are a richer superset of Cytoscape properties,
+ * we restrict styles to only known Cytoscape label style properties to maintain parity
+ * between popper-rendered descriptions and ghost-node-rendered descriptions for exporting.
+ * If we allowed arbitrary CSS properties, users might use styles that work in poppers but not in exports.
+ * We can expand to use CSS properties more fully in the future if we implement
+ * a more robust export solution that can handle CSS directly.
+ */
+const CY_TO_CSS_PROPERTIES = new Map<string, string>([
+  // Font properties (same name in both)
+  ["font-family", "font-family"],
+  ["font-style", "font-style"],
+  ["font-weight", "font-weight"],
+  ["font-size", "font-size"],
+  ["line-height", "line-height"],
+  ["color", "color"],
+  // Text layout
+  // Note: text-halign and text-valign are intentionally excluded.
+  // In Cytoscape they control label *position* relative to the node body
+  // (e.g. "right" places the label to the right of the node), whereas
+  // the CSS equivalents (text-align, vertical-align) control text alignment
+  // *within* a block. On ghost nodes (1px body), applying text-halign
+  // shifts the entire label off-center. The semantics are incompatible,
+  // so these properties are not supported for descriptions.
+  ["text-transform", "text-transform"],
+  ["text-overflow-wrap", "overflow-wrap"],
+  ["text-max-width", "max-width"],
+  // Text background
+  ["text-background-color", "background-color"],
+  ["text-background-padding", "padding"],
+  // Text border
+  ["text-border-color", "border-color"],
+  ["text-border-width", "border-width"],
+  ["text-border-style", "border-style"],
+  // Visibility
+  ["text-opacity", "opacity"],
+]);
+
 export type PopperCleanup = () => void;
 
 export interface DescriptionData {
@@ -156,12 +200,16 @@ function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
   innerDiv.style.position = "relative";
   innerDiv.style.transformOrigin = "top";
   innerDiv.style.display = "inline-block";
+  innerDiv.style.textAlign = "center";
 
   // add popper class to inner div to allow for manipulation later
   innerDiv.classList.add(POPPER_INNER_DIV_CLASS);
-  // add custom description styles to inner div
+  // Map Cytoscape properties to CSS equivalents for DOM rendering
   descriptionData.descriptionStyleProperties.forEach((value, property) => {
-    innerDiv.style.setProperty(property, value);
+    const cssProp = CY_TO_CSS_PROPERTIES.get(property);
+    if (cssProp) {
+      innerDiv.style.setProperty(cssProp, value);
+    }
   });
 
   const text = document.createElement("p");
@@ -328,6 +376,7 @@ export function setupCyPoppers(
     clearAllPopperDivs(canvasElement);
   };
 }
+
 export function buildGhostNodeStyle(
   descriptionData: DescriptionData,
 ): Record<string, string | number> {
@@ -343,6 +392,30 @@ export function buildGhostNodeStyle(
     "text-halign": "center",
     "text-wrap": "wrap",
   };
+
+  const props = descriptionData.descriptionStyleProperties;
+  props.forEach((value, property) => {
+    if (CY_TO_CSS_PROPERTIES.has(property)) {
+      style[property] = value;
+    }
+  });
+
+  // Cytoscape defaults text-border-opacity and text-background-opacity to 0,
+  // but in CSS borders/backgrounds are visible as soon as their properties are
+  // set. Auto-enable opacity when related properties are present but opacity
+  // wasn't explicitly provided.
+  const hasBorder =
+    props.has("text-border-width") ||
+    props.has("text-border-color") ||
+    props.has("text-border-style");
+  if (hasBorder && !props.has("text-border-opacity")) {
+    style["text-border-opacity"] = 1;
+  }
+
+  const hasBackground = props.has("text-background-color");
+  if (hasBackground && !props.has("text-background-opacity")) {
+    style["text-background-opacity"] = 1;
+  }
 
   return style;
 }

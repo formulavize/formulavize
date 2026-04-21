@@ -1,5 +1,4 @@
 import { Completion } from "@codemirror/autocomplete";
-import { all as allCssProperties } from "known-css-properties";
 import {
   DESCRIPTION_PREFIX,
   DESCRIPTION_PROPERTY,
@@ -180,12 +179,25 @@ const CYTOSCAPE_EDGE_ARROW_PROPERTIES = [
   "mid-target-arrow-width",
 ];
 
+// Label-applicable visibility properties for descriptions
+const DESCRIPTION_VISIBILITY_PROPERTIES = [
+  "text-opacity",
+  "min-zoomed-font-size",
+];
+
+// text-halign and text-valign are excluded from description properties because
+// in Cytoscape they control label *position* relative to the node body (e.g.
+// "right" places the label to the right of the node), not text alignment within
+// a block. This makes them incompatible with ghost-node-based description export.
+const DESCRIPTION_EXCLUDED_PROPERTIES = new Set(["text-halign", "text-valign"]);
+
 // Description style properties (description + description-* variants)
 const DESCRIPTION_PROPERTIES = [
   DESCRIPTION_PROPERTY,
-  ...allCssProperties
-    .filter((p) => !p.startsWith("-"))
-    .map((p) => DESCRIPTION_PREFIX + p),
+  ...CYTOSCAPE_LABEL_STYLE_PROPERTIES.filter(
+    (p) => !DESCRIPTION_EXCLUDED_PROPERTIES.has(p),
+  ).map((p) => DESCRIPTION_PREFIX + p),
+  ...DESCRIPTION_VISIBILITY_PROPERTIES.map((p) => DESCRIPTION_PREFIX + p),
 ];
 
 function buildCompletions(properties: string[]): Completion[] {
