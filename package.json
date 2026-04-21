@@ -1,6 +1,6 @@
 {
   "name": "@formulavize/formulavize",
-  "version": "1.12.1",
+  "version": "1.12.2",
   "type": "module",
   "scripts": {
     "preinstall": "npx only-allow pnpm",
