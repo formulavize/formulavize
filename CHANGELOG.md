@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.2](https://github.com/formulavize/formulavize/compare/v1.12.1...v1.12.2) (2026-04-21)
+
+
+### Bug Fixes
+
+* descriptions render properly in image export ([#59](https://github.com/formulavize/formulavize/issues/59)) ([1903fce](https://github.com/formulavize/formulavize/commit/1903fce7b8bd2e71e087af36a0a3f667e476e43e))
+
 ## [1.12.1](https://github.com/formulavize/formulavize/compare/v1.12.0...v1.12.1) (2026-04-20)
 
 
