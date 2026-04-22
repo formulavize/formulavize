@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.12.3](https://github.com/formulavize/formulavize/compare/v1.12.2...v1.12.3) (2026-04-22)
+
+
+### Bug Fixes
+
+* **CytoscapeRenderer:** ensure consistent visual order between DAG changes ([#61](https://github.com/formulavize/formulavize/issues/61)) ([360fb28](https://github.com/formulavize/formulavize/commit/360fb2854591b79c2c325323f3da67310ebd2c59))
+
 ## [1.12.2](https://github.com/formulavize/formulavize/compare/v1.12.1...v1.12.2) (2026-04-21)
 
 
