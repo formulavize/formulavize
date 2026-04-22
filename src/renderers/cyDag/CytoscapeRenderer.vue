@@ -35,7 +35,7 @@ import {
   addDescriptionGhostNodes,
   PopperCleanup,
 } from "./cyPopperExtender";
-import { diffCyElements, applyDiff } from "./cyDiffer";
+import { diffCyElements, applyDataUpdates } from "./cyDiffer";
 import { Dag } from "../../compiler/dag";
 import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
@@ -201,7 +201,18 @@ const CytoscapeRenderer = defineComponent({
         this.runLayout();
       } else {
         const diff = diffCyElements(this.previousElements, newElements);
-        applyDiff(this.cy, diff);
+
+        if (diff.topologyChanged) {
+          // Full replace to preserve elements' visual ordering in Dagre layout.
+          // Re-added nodes would otherwise appear at the end of Cytoscape's
+          // internal collection, causing Dagre's sort hint to lose to its
+          // crossing minimization heuristic.
+          // This ensures we get consistent layouts for the same DAG structure.
+          this.cy.elements().remove();
+          this.cy.add(newElements);
+        } else {
+          applyDataUpdates(this.cy, diff);
+        }
 
         this.applyStyles(newStylesheets);
         this.popperCleanup?.();
@@ -212,9 +223,7 @@ const CytoscapeRenderer = defineComponent({
         );
 
         // Avoid unnecessary layout runs by checking if the topology has changed
-        if (diff.topologyChanged) {
-          this.runLayout();
-        }
+        if (diff.topologyChanged) this.runLayout();
       }
 
       this.previousElements = newElements;

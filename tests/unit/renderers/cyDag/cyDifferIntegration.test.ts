@@ -1,6 +1,10 @@
-import { describe, test, expect } from "vitest";
-import { diffCyElements, applyDiff } from "src/renderers/cyDag/cyDiffer";
-import cytoscape from "cytoscape";
+import { afterEach, describe, test, expect } from "vitest";
+import {
+  diffCyElements,
+  applyDiff,
+  applyDataUpdates,
+} from "src/renderers/cyDag/cyDiffer";
+import cytoscape, { Core, ElementsDefinition } from "cytoscape";
 import { Compiler } from "src/compiler/driver";
 import { Dag } from "src/compiler/dag";
 import { makeCyElements } from "src/renderers/cyDag/cyGraphFactory";
@@ -122,6 +126,44 @@ describe("diffCyElements integration", () => {
     cy.destroy();
   });
 
+  test("element order data is stable after remove and re-add", async () => {
+    const compiler = new Compiler();
+
+    // Original: x = f(), a(x), b(x)
+    const original = await compiler.compileFromSource("x = f()\na(x)\nb(x)");
+    const originalElements = makeCyElements(original.DAG);
+
+    // Remove a(x): x = f(), b(x)
+    const reduced = await compiler.compileFromSource("x = f()\nb(x)");
+    const reducedElements = makeCyElements(reduced.DAG);
+
+    // Restore a(x): x = f(), a(x), b(x)
+    const restored = await compiler.compileFromSource("x = f()\na(x)\nb(x)");
+    const restoredElements = makeCyElements(restored.DAG);
+
+    // Build a map of node id → order for easy comparison
+    const getOrderMap = (elements: ReturnType<typeof makeCyElements>) => {
+      const map = new Map<string, number[]>();
+      for (const node of elements.nodes) {
+        map.set(node.data.id as string, node.data.order as number[]);
+      }
+      return map;
+    };
+
+    const originalOrders = getOrderMap(originalElements);
+    const restoredOrders = getOrderMap(restoredElements);
+
+    // Verify the reduced compilation actually removed a node (sanity check)
+    const reducedOrders = getOrderMap(reducedElements);
+    expect(reducedOrders.size).toBeLessThan(originalOrders.size);
+
+    // The restored elements should have the same order values as the originals
+    expect(restoredOrders.size).toBe(originalOrders.size);
+    for (const [id, order] of originalOrders) {
+      expect(restoredOrders.get(id)).toEqual(order);
+    }
+  });
+
   test("recompiling same source produces empty diff", async () => {
     const compiler = new Compiler();
     const source = "a(a(a(), a()), a(a(), a()))";
@@ -139,5 +181,107 @@ describe("diffCyElements integration", () => {
     expect(diff.edgesToRemove).toHaveLength(0);
     expect(diff.edgesToUpdate).toHaveLength(0);
     expect(diff.topologyChanged).toBe(false);
+  });
+});
+
+describe("applyDataUpdates", () => {
+  let cy: Core;
+
+  afterEach(() => {
+    cy.destroy();
+  });
+
+  function applyDataUpdateScenario(
+    oldElements: ElementsDefinition,
+    newElements: ElementsDefinition,
+    initialElements: ElementsDefinition = oldElements,
+  ) {
+    cy = cytoscape({ headless: true });
+    cy.add(initialElements);
+
+    const diff = diffCyElements(oldElements, newElements);
+    applyDataUpdates(cy, diff);
+
+    return { diff, cy };
+  }
+
+  test("updates node data in place", () => {
+    const oldElements: ElementsDefinition = {
+      nodes: [{ data: { id: "n1", name: "old" } }],
+      edges: [],
+    };
+    const newElements: ElementsDefinition = {
+      nodes: [{ data: { id: "n1", name: "new" } }],
+      edges: [],
+    };
+
+    const { diff, cy } = applyDataUpdateScenario(oldElements, newElements);
+
+    expect(diff.topologyChanged).toBe(false);
+    expect(cy.getElementById("n1").data("name")).toBe("new");
+  });
+
+  test("updates node classes in place", () => {
+    const oldElements: ElementsDefinition = {
+      nodes: [{ data: { id: "n1" }, classes: "foo" }],
+      edges: [],
+    };
+    const newElements: ElementsDefinition = {
+      nodes: [{ data: { id: "n1" }, classes: "bar" }],
+      edges: [],
+    };
+
+    const { diff, cy } = applyDataUpdateScenario(oldElements, newElements);
+
+    expect(diff.topologyChanged).toBe(false);
+    expect(cy.getElementById("n1").hasClass("bar")).toBe(true);
+    expect(cy.getElementById("n1").hasClass("foo")).toBe(false);
+  });
+
+  test("updates edge data in place", () => {
+    const oldElements: ElementsDefinition = {
+      nodes: [{ data: { id: "n1" } }, { data: { id: "n2" } }],
+      edges: [{ data: { id: "e1", source: "n1", target: "n2", label: "old" } }],
+    };
+    const newElements: ElementsDefinition = {
+      nodes: [{ data: { id: "n1" } }, { data: { id: "n2" } }],
+      edges: [{ data: { id: "e1", source: "n1", target: "n2", label: "new" } }],
+    };
+
+    const { diff, cy } = applyDataUpdateScenario(oldElements, newElements);
+
+    expect(diff.topologyChanged).toBe(false);
+    expect(cy.getElementById("e1").data("label")).toBe("new");
+  });
+
+  test("does not add or remove elements", () => {
+    const oldElements: ElementsDefinition = {
+      nodes: [{ data: { id: "n1", name: "a" } }],
+      edges: [],
+    };
+    const newElements: ElementsDefinition = {
+      nodes: [
+        { data: { id: "n1", name: "a" } },
+        { data: { id: "n2", name: "b" } },
+      ],
+      edges: [],
+    };
+
+    const { diff, cy } = applyDataUpdateScenario(oldElements, newElements);
+
+    expect(diff.topologyChanged).toBe(true);
+    expect(cy.nodes().length).toBe(1);
+  });
+
+  test("no-op on empty diff", () => {
+    const elements: ElementsDefinition = {
+      nodes: [{ data: { id: "n1", name: "a" } }],
+      edges: [],
+    };
+
+    const { diff, cy } = applyDataUpdateScenario(elements, elements);
+
+    expect(diff.topologyChanged).toBe(false);
+    expect(cy.getElementById("n1").data("name")).toBe("a");
   });
 });

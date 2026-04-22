@@ -174,6 +174,16 @@ export function diffCyElements(
   };
 }
 
+export function applyDataUpdates(cy: Core, diff: CyDiffResult): void {
+  cy.batch(() => {
+    for (const upd of [...diff.nodesToUpdate, ...diff.edgesToUpdate]) {
+      const ele = cy.getElementById(upd.id);
+      ele.data(upd.data);
+      if (upd.classes !== undefined) ele.classes(upd.classes);
+    }
+  });
+}
+
 export function applyDiff(cy: Core, diff: CyDiffResult): void {
   cy.batch(() => {
     for (const id of [...diff.nodesToRemove, ...diff.edgesToRemove]) {
@@ -181,10 +191,6 @@ export function applyDiff(cy: Core, diff: CyDiffResult): void {
     }
     cy.add(diff.nodesToAdd);
     cy.add(diff.edgesToAdd);
-    for (const upd of [...diff.nodesToUpdate, ...diff.edgesToUpdate]) {
-      const ele = cy.getElementById(upd.id);
-      ele.data(upd.data);
-      if (upd.classes !== undefined) ele.classes(upd.classes);
-    }
+    applyDataUpdates(cy, diff);
   });
 }
