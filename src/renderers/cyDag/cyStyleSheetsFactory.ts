@@ -156,6 +156,7 @@ export function makeNameStyleSheets(dag: Dag): StylesheetCSS[] {
 export function getBaseStylesheet(isDark = false): StylesheetCSS[] {
   const labelColor = isDark ? "#e0e0e0" : "#000";
   const edgeColor = isDark ? "#aaa" : "#999";
+  const namespaceBackground = isDark ? "#2a2a2a" : "#f0f0f0";
   return [
     {
       selector: "node",
@@ -164,6 +165,12 @@ export function getBaseStylesheet(isDark = false): StylesheetCSS[] {
         color: labelColor,
         "text-valign": "bottom",
         "text-wrap": "wrap",
+      },
+    },
+    {
+      selector: "node:parent",
+      css: {
+        "background-color": namespaceBackground,
       },
     },
     {
