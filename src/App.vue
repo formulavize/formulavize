@@ -4,7 +4,7 @@
       <TextEditor
         ref="textEditor"
         :editor-debounce-delay="editorDebounceDelay"
-        :tab-to-indent="tabToIndent"
+        :enable-tabbing-in-editor="enableTabbingInEditor"
         :code-diagnostics="curDiagnostics"
         :completion-index="curCompletionIndex"
         :debug-mode="debugMode"
@@ -71,7 +71,7 @@
   />
   <OptionsPopup
     v-model:show-options="showOptionsPopup"
-    v-model:tab-to-indent="tabToIndent"
+    v-model:enable-tabbing-in-editor="enableTabbingInEditor"
     v-model:debug-mode="debugMode"
     v-model:theme-mode="themeMode"
     v-model:selected-renderer="selectedRenderer"
@@ -120,7 +120,7 @@ const confettiEffect = ref<InstanceType<typeof ConfettiEffect> | null>(null);
 const editorDebounceDelay = 300; // ms
 const optionsStore = new OptionsStore();
 const debugMode = ref(false);
-const tabToIndent = ref(false);
+const enableTabbingInEditor = ref(false);
 const showExportPopup = ref(false);
 const showOptionsPopup = ref(false);
 const tutorialMode = ref(false);
@@ -174,14 +174,14 @@ const tutorialModuleStartIndices = computed(() =>
 // Options persistence
 function persistOptions() {
   optionsStore.save({
-    tabToIndent: tabToIndent.value,
+    enableTabbingInEditor: enableTabbingInEditor.value,
     debugMode: debugMode.value,
     selectedRenderer: selectedRenderer.value,
     themeMode: themeMode.value,
   });
 }
 
-watch(tabToIndent, () => persistOptions());
+watch(enableTabbingInEditor, () => persistOptions());
 watch(debugMode, (newVal: boolean) => {
   tutorialManager.setDisableAnimations(newVal);
   repaint();
@@ -245,7 +245,7 @@ function onRestartTutorial() {
 // Lifecycle
 onMounted(() => {
   const savedOptions = optionsStore.load();
-  tabToIndent.value = savedOptions.tabToIndent;
+  enableTabbingInEditor.value = savedOptions.enableTabbingInEditor;
   debugMode.value = savedOptions.debugMode;
   selectedRenderer.value = savedOptions.selectedRenderer;
   themeMode.value = savedOptions.themeMode ?? "system";
