@@ -1,5 +1,9 @@
 <template>
-  <div ref="container" class="minimal-example-renderer">
+  <div
+    ref="container"
+    class="minimal-example-renderer"
+    :class="{ 'dark-mode': isDark }"
+  >
     <div class="stats">
       <h3>Basic DAG Statistics</h3>
       <ul>
@@ -30,6 +34,10 @@ const MinimalExampleRenderer = defineComponent({
     dag: {
       type: Object as PropType<Dag>,
       required: true,
+    },
+    isDark: {
+      type: Boolean,
+      default: false,
     },
   },
   computed: {
@@ -93,15 +101,29 @@ export default Object.assign(MinimalExampleRenderer, {
   overflow: auto;
 }
 
+.minimal-example-renderer.dark-mode {
+  background-color: #0d0d0d;
+  border-color: #2a2a2a;
+}
+
 .stats {
   margin-bottom: 20px;
   padding: 15px;
   border-radius: 4px;
+  background-color: #ffffff;
+}
+
+.minimal-example-renderer.dark-mode .stats {
+  background-color: #1a1a1a;
 }
 
 .stats h3 {
   margin-top: 0;
-  color: #333;
+  color: #333333;
+}
+
+.minimal-example-renderer.dark-mode .stats h3 {
+  color: #ffffff;
 }
 
 .stats ul {
@@ -111,6 +133,10 @@ export default Object.assign(MinimalExampleRenderer, {
 
 .stats li {
   padding: 5px 0;
-  color: #666;
+  color: #666666;
+}
+
+.minimal-example-renderer.dark-mode .stats li {
+  color: #d0d0d0;
 }
 </style>

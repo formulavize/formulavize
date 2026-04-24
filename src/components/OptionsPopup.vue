@@ -13,17 +13,17 @@
       <v-card-text class="py-1">
         <div>
           <v-checkbox
-            label="Tab to Indent"
+            label="Tab to Indent / Autocomplete"
             hide-details
-            :model-value="tabToIndent"
-            @update:model-value="$emit('update:tabToIndent', $event)"
+            :model-value="enableTabbingInEditor"
+            @update:model-value="$emit('update:enableTabbingInEditor', $event)"
           />
           <v-tooltip
             activator="parent"
-            :model-value="tabToIndent"
+            :model-value="enableTabbingInEditor"
             :open-on-hover="false"
             location="start"
-            text="Press Esc to ignore next Tab indent"
+            text="Press Esc to ignore next Tab"
           />
         </div>
         <v-checkbox
@@ -76,7 +76,7 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
-    tabToIndent: {
+    enableTabbingInEditor: {
       type: Boolean,
       required: true,
     },
@@ -99,7 +99,7 @@ export default defineComponent({
   },
   emits: [
     "update:showOptions",
-    "update:tabToIndent",
+    "update:enableTabbingInEditor",
     "update:debugMode",
     "update:themeMode",
     "update:selectedRenderer",

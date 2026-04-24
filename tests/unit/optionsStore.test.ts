@@ -11,8 +11,8 @@ describe("OptionsStore", () => {
     vi.unstubAllGlobals();
   });
 
-  test("defaults to tabToIndent false", () => {
-    expect(new OptionsStore().load().tabToIndent).toBe(false);
+  test("defaults to enableTabbingInEditor false", () => {
+    expect(new OptionsStore().load().enableTabbingInEditor).toBe(false);
   });
 
   test("defaults to debugMode false", () => {
@@ -26,7 +26,7 @@ describe("OptionsStore", () => {
   test("round-trips all option fields", () => {
     const store = new OptionsStore();
     const options = {
-      tabToIndent: true,
+      enableTabbingInEditor: true,
       debugMode: true,
       selectedRenderer: "minimal",
     };

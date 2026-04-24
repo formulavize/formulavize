@@ -10,6 +10,8 @@ import {
   closeBrackets,
   closeBracketsKeymap,
   autocompletion,
+  completionKeymap,
+  acceptCompletion,
 } from "@codemirror/autocomplete";
 import {
   defaultKeymap,
@@ -125,7 +127,7 @@ export default defineComponent({
       type: Number,
       default: 300, // ms
     },
-    tabToIndent: {
+    enableTabbingInEditor: {
       type: Boolean,
       default: false,
     },
@@ -258,7 +260,10 @@ export default defineComponent({
         ...searchKeymap,
         ...foldKeymap,
         ...closeBracketsKeymap,
-        ...(isTabbingOn ? [indentWithTab] : []),
+        ...completionKeymap,
+        ...(isTabbingOn
+          ? [{ key: "Tab", run: acceptCompletion }, indentWithTab]
+          : []),
       ]);
     };
 
@@ -295,7 +300,7 @@ export default defineComponent({
         EditorView.updateListener.of((v: ViewUpdate): void => {
           if (v.docChanged) emitEditorState(v.state);
         }),
-        keymapCompartment.of(getKeymap(this.tabToIndent)),
+        keymapCompartment.of(getKeymap(this.enableTabbingInEditor)),
         autocompletionCompartment.of(
           createAutocompletion(this.completionIndex, this.selectedRenderer),
         ),
@@ -317,7 +322,7 @@ export default defineComponent({
     view.focus();
 
     watch(
-      () => this.tabToIndent,
+      () => this.enableTabbingInEditor,
       (isTabbingOn) => {
         view.dispatch({
           effects: keymapCompartment.reconfigure(getKeymap(isTabbingOn)),

@@ -3,14 +3,14 @@ import { VersionedStore } from "./versionedStore";
 export type ThemeMode = "light" | "dark" | "system";
 
 export interface Options {
-  tabToIndent: boolean;
+  enableTabbingInEditor: boolean;
   debugMode: boolean;
   selectedRenderer: string;
   themeMode?: ThemeMode;
 }
 
 const DEFAULTS: Options = {
-  tabToIndent: false,
+  enableTabbingInEditor: false, // off by default to avoid focus trapping
   debugMode: false,
   selectedRenderer: "cytoscape",
 };
