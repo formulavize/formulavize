@@ -8,6 +8,14 @@ import {
   createNodeIdToVarNameCount,
 } from "../winCheckHelpers";
 
+const getAssignedVariableUsageCount = (compilation: Compilation): number => {
+  const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
+  const assignedNodeIds = new Set(varNameToNodeIdMap.values());
+  return compilation.DAG.getEdgeList().filter((edge) =>
+    assignedNodeIds.has(edge.srcNodeId),
+  ).length;
+};
+
 const assignmentPuzzlets: Puzzlet[] = [
   {
     name: "On Assignment",
@@ -18,9 +26,13 @@ const assignmentPuzzlets: Puzzlet[] = [
     ],
     examples: [fast("// x = f()")],
     clearEditorOnStart: true,
-    successCondition: (compilation: Compilation) => {
-      return compilation.DAG.getVarNameToNodeIdMap().size > 0;
-    },
+    successCriteria: [
+      {
+        description: "Assign a function output to a variable",
+        check: (compilation: Compilation) =>
+          compilation.DAG.getVarNameToNodeIdMap().size > 0,
+      },
+    ],
   },
   {
     name: "Understand the Assignment",
@@ -29,13 +41,18 @@ const assignmentPuzzlets: Puzzlet[] = [
       normal("On a new line, input the variable into another function."),
     ],
     examples: [],
-    successCondition: (compilation: Compilation) => {
-      const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
-      const assignedNodeIds = new Set(varNameToNodeIdMap.values());
-      return compilation.DAG.getEdgeList().some((edge) =>
-        assignedNodeIds.has(edge.srcNodeId),
-      );
-    },
+    successCriteria: [
+      {
+        description: "Input an assigned variable to a function",
+        check: (compilation: Compilation) => {
+          const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
+          const assignedNodeIds = new Set(varNameToNodeIdMap.values());
+          return compilation.DAG.getEdgeList().some((edge) =>
+            assignedNodeIds.has(edge.srcNodeId),
+          );
+        },
+      },
+    ],
   },
   {
     name: "Making a Statement",
@@ -47,15 +64,18 @@ const assignmentPuzzlets: Puzzlet[] = [
       normal("Reorder the lines so the variable is assigned before used."),
     ],
     examples: [fast("g(x); h(x)")],
-    successCondition: (compilation: Compilation) => {
-      const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
-      const assignedNodeIds = new Set(varNameToNodeIdMap.values());
-      return (
-        compilation.DAG.getEdgeList().filter((edge) =>
-          assignedNodeIds.has(edge.srcNodeId),
-        ).length >= 2
-      );
-    },
+    successCriteria: [
+      {
+        description: "Use a single variable as input to at least 1 function",
+        check: (compilation: Compilation) =>
+          getAssignedVariableUsageCount(compilation) >= 1,
+      },
+      {
+        description: "Use a single variable as input to at least 2 functions",
+        check: (compilation: Compilation) =>
+          getAssignedVariableUsageCount(compilation) >= 2,
+      },
+    ],
   },
   {
     name: "Legal Aliases",
@@ -69,31 +89,31 @@ const assignmentPuzzlets: Puzzlet[] = [
       fast("alias = long_variable_name\n"),
       fast("// g(long_variable_name); h(alias)"),
     ],
-    successCondition: (compilation: Compilation) => {
-      // Check AST for variable-to-variable assignment
-      const hasVariableToVariableAssignment = compilation.AST.Statements.some(
-        (stmt) => {
-          if (stmt.Type !== NodeType.Assignment) return false;
-          const assignment = stmt as AssignmentTreeNode;
-          if (assignment.Lhs.length !== 1) return false;
-          if (assignment.Rhs?.Type !== NodeType.QualifiedVariable) {
-            return false;
-          }
-          return true;
+    successCriteria: [
+      {
+        description: "Assign a variable to another variable (an alias)",
+        check: (compilation: Compilation) =>
+          compilation.AST.Statements.some((stmt) => {
+            if (stmt.Type !== NodeType.Assignment) return false;
+            const assignment = stmt as AssignmentTreeNode;
+            if (assignment.Lhs.length !== 1) return false;
+            return assignment.Rhs?.Type === NodeType.QualifiedVariable;
+          }),
+      },
+      {
+        description: "Use the alias as input to a function",
+        check: (compilation: Compilation) => {
+          const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
+          const nodeIdToVarNameCount =
+            createNodeIdToVarNameCount(varNameToNodeIdMap);
+          const edgeList = compilation.DAG.getEdgeList();
+          return Array.from(nodeIdToVarNameCount.entries()).some(
+            ([nodeId, count]) =>
+              count >= 2 && getOutDegree(nodeId, edgeList) >= 2,
+          );
         },
-      );
-
-      // Check DAG for alias usage
-      const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
-      const nodeIdToVarNameCount =
-        createNodeIdToVarNameCount(varNameToNodeIdMap);
-      const edgeList = compilation.DAG.getEdgeList();
-      const hasAliasUsedInDAG = Array.from(nodeIdToVarNameCount.entries()).some(
-        ([nodeId, count]) => count >= 2 && getOutDegree(nodeId, edgeList) >= 2,
-      );
-
-      return hasVariableToVariableAssignment && hasAliasUsedInDAG;
-    },
+      },
+    ],
   },
   {
     name: "Do the Splits",
@@ -106,29 +126,30 @@ const assignmentPuzzlets: Puzzlet[] = [
       fast("// yolk, white = split(egg())\n"),
       fast("whisk(yolk); whip(white)\n"),
     ],
-    successCondition: (compilation: Compilation) => {
-      // Check AST for multi-variable assignment
-      const hasMultiVariableAssignment = compilation.AST.Statements.some(
-        (stmt) => {
-          if (stmt.Type !== NodeType.Assignment) return false;
-          const assignment = stmt as AssignmentTreeNode;
-          return assignment.Lhs.length >= 2;
+    successCriteria: [
+      {
+        description: "Create a multi-variable assignment",
+        check: (compilation: Compilation) =>
+          compilation.AST.Statements.some((stmt) => {
+            if (stmt.Type !== NodeType.Assignment) return false;
+            const assignment = stmt as AssignmentTreeNode;
+            return assignment.Lhs.length >= 2;
+          }),
+      },
+      {
+        description: "Use the parallelly assigned variables as inputs",
+        check: (compilation: Compilation) => {
+          const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
+          const nodeIdToVarNameCount =
+            createNodeIdToVarNameCount(varNameToNodeIdMap);
+          const edgeList = compilation.DAG.getEdgeList();
+          return Array.from(nodeIdToVarNameCount.entries()).some(
+            ([nodeId, count]) =>
+              count >= 2 && getOutDegree(nodeId, edgeList) >= 2,
+          );
         },
-      );
-
-      // Check DAG for multiple variables referencing same node
-      const varNameToNodeIdMap = compilation.DAG.getVarNameToNodeIdMap();
-      const nodeIdToVarNameCount =
-        createNodeIdToVarNameCount(varNameToNodeIdMap);
-      const edgeList = compilation.DAG.getEdgeList();
-      const hasMultipleVarsInDAG = Array.from(
-        nodeIdToVarNameCount.entries(),
-      ).some(
-        ([nodeId, count]) => count >= 2 && getOutDegree(nodeId, edgeList) >= 2,
-      );
-
-      return hasMultiVariableAssignment && hasMultipleVarsInDAG;
-    },
+      },
+    ],
   },
   {
     name: "Ace of Diamonds",
@@ -141,43 +162,59 @@ const assignmentPuzzlets: Puzzlet[] = [
     ],
     examples: [],
     clearEditorOnStart: true,
-    successCondition: (compilation: Compilation) => {
-      const nodeList = compilation.DAG.getNodeList();
-      const edgeList = compilation.DAG.getEdgeList();
-
-      if (nodeList.length < 4 || edgeList.length < 4) return false;
-
-      const topNode = nodeList.find(
-        (node) =>
-          getInDegree(node.id, edgeList) === 0 &&
-          getOutDegree(node.id, edgeList) === 2,
-      );
-      if (!topNode) return false;
-
-      const bottomNode = nodeList.find(
-        (node) =>
-          getInDegree(node.id, edgeList) === 2 &&
-          getOutDegree(node.id, edgeList) === 0,
-      );
-      if (!bottomNode) return false;
-
-      const middleNodes = nodeList.filter(
-        (node) =>
-          getInDegree(node.id, edgeList) === 1 &&
-          getOutDegree(node.id, edgeList) === 1,
-      );
-      if (middleNodes.length < 2) return false;
-
-      return middleNodes.every(
-        (node) =>
-          edgeList.some(
-            (e) => e.srcNodeId === topNode.id && e.destNodeId === node.id,
-          ) &&
-          edgeList.some(
-            (e) => e.srcNodeId === node.id && e.destNodeId === bottomNode.id,
-          ),
-      );
-    },
+    successCriteria: [
+      {
+        description: "Create a top node (0 in, 2 out)",
+        check: (compilation: Compilation) => {
+          const edgeList = compilation.DAG.getEdgeList();
+          return compilation.DAG.getNodeList().some(
+            (node) =>
+              getInDegree(node.id, edgeList) === 0 &&
+              getOutDegree(node.id, edgeList) === 2,
+          );
+        },
+      },
+      {
+        description: "Create a side node (1 in, 1 out)",
+        check: (compilation: Compilation) => {
+          const edgeList = compilation.DAG.getEdgeList();
+          return compilation.DAG.getNodeList().some(
+            (node) =>
+              getInDegree(node.id, edgeList) === 1 &&
+              getOutDegree(node.id, edgeList) === 1,
+          );
+        },
+      },
+      {
+        description: "Create 2 side nodes (1 in, 1 out)",
+        check: (compilation: Compilation) => {
+          const edgeList = compilation.DAG.getEdgeList();
+          const sideNodeCount = compilation.DAG.getNodeList().filter(
+            (node) =>
+              getInDegree(node.id, edgeList) === 1 &&
+              getOutDegree(node.id, edgeList) === 1,
+          ).length;
+          return sideNodeCount === 2;
+        },
+      },
+      {
+        description: "Create a bottom node (2 in, 0 out)",
+        check: (compilation: Compilation) => {
+          const edgeList = compilation.DAG.getEdgeList();
+          return compilation.DAG.getNodeList().some(
+            (node) =>
+              getInDegree(node.id, edgeList) === 2 &&
+              getOutDegree(node.id, edgeList) === 0,
+          );
+        },
+      },
+      {
+        description: "Create exactly 4 nodes and 4 edges",
+        check: (compilation: Compilation) =>
+          compilation.DAG.getNodeList().length === 4 &&
+          compilation.DAG.getEdgeList().length === 4,
+      },
+    ],
   },
 ];
 

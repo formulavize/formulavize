@@ -16,10 +16,17 @@ const namespacePuzzlets: Puzzlet[] = [
     ],
     examples: [fast("ns[ ]\n")],
     clearEditorOnStart: true,
-    successCondition: (compilation: Compilation) => {
-      const childDags = compilation.DAG.getChildDags();
-      return childDags.some((childDag) => childDag.getNodeList().length > 0);
-    },
+    successCriteria: [
+      {
+        description: "Add a function call inside a namespace",
+        check: (compilation: Compilation) => {
+          const childDags = compilation.DAG.getChildDags();
+          return childDags.some(
+            (childDag) => childDag.getNodeList().length > 0,
+          );
+        },
+      },
+    ],
   },
   {
     name: "Scope It Out",
@@ -34,21 +41,24 @@ const namespacePuzzlets: Puzzlet[] = [
       normal("Pass the variable in the namespace to the outer function."),
     ],
     examples: [fast("ns[ x = f() ]\n"), fast("g()\n")],
-    successCondition: (compilation: Compilation) => {
-      const topLevelNodeIds = getDagNodesIds(compilation.DAG);
-      const childDags = compilation.DAG.getChildDags();
-      const edgeList = compilation.DAG.getEdgeList();
-
-      // Check if there's an edge where source is in a namespace (child DAG)
-      // and destination is in the top-level DAG
-      return edgeList.some((edge) => {
-        const sourceInChildDag = childDags.some((childDag) =>
-          getDagNodesIds(childDag).has(edge.srcNodeId),
-        );
-        const destInTopLevel = topLevelNodeIds.has(edge.destNodeId);
-        return sourceInChildDag && destInTopLevel;
-      });
-    },
+    successCriteria: [
+      {
+        description:
+          "Pass a namespaced variable to a function outside the namespace",
+        check: (compilation: Compilation) => {
+          const topLevelNodeIds = getDagNodesIds(compilation.DAG);
+          const childDags = compilation.DAG.getChildDags();
+          const edgeList = compilation.DAG.getEdgeList();
+          return edgeList.some((edge) => {
+            const sourceInChildDag = childDags.some((childDag) =>
+              getDagNodesIds(childDag).has(edge.srcNodeId),
+            );
+            const destInTopLevel = topLevelNodeIds.has(edge.destNodeId);
+            return sourceInChildDag && destInTopLevel;
+          });
+        },
+      },
+    ],
   },
   {
     name: "The Edge of Space",
@@ -68,26 +78,36 @@ const namespacePuzzlets: Puzzlet[] = [
       fast("]() // pass s here\n"),
       fast("g() // pass n here\n"),
     ],
-    successCondition: (compilation: Compilation) => {
-      const topLevelNodeIds = getDagNodesIds(compilation.DAG);
-      const childDags = compilation.DAG.getChildDags();
-      const edgeList = compilation.DAG.getEdgeList();
-      const childDagIds = new Set(childDags.map((dag) => dag.Id));
-
-      const hasEdgeFromTopLevelToNamespace = edgeList.some(
-        (edge) =>
-          topLevelNodeIds.has(edge.srcNodeId) &&
-          childDagIds.has(edge.destNodeId),
-      );
-
-      const hasEdgeFromNamespaceToTopLevel = edgeList.some(
-        (edge) =>
-          childDagIds.has(edge.srcNodeId) &&
-          topLevelNodeIds.has(edge.destNodeId),
-      );
-
-      return hasEdgeFromTopLevelToNamespace && hasEdgeFromNamespaceToTopLevel;
-    },
+    successCriteria: [
+      {
+        description: "Pass a top-level function to the namespace itself",
+        check: (compilation: Compilation) => {
+          const topLevelNodeIds = getDagNodesIds(compilation.DAG);
+          const childDags = compilation.DAG.getChildDags();
+          const edgeList = compilation.DAG.getEdgeList();
+          const childDagIds = new Set(childDags.map((dag) => dag.Id));
+          return edgeList.some(
+            (edge) =>
+              topLevelNodeIds.has(edge.srcNodeId) &&
+              childDagIds.has(edge.destNodeId),
+          );
+        },
+      },
+      {
+        description: "Use a variable to pass the namespace to a function",
+        check: (compilation: Compilation) => {
+          const topLevelNodeIds = getDagNodesIds(compilation.DAG);
+          const childDags = compilation.DAG.getChildDags();
+          const edgeList = compilation.DAG.getEdgeList();
+          const childDagIds = new Set(childDags.map((dag) => dag.Id));
+          return edgeList.some(
+            (edge) =>
+              childDagIds.has(edge.srcNodeId) &&
+              topLevelNodeIds.has(edge.destNodeId),
+          );
+        },
+      },
+    ],
   },
   {
     name: "Outer Space",
@@ -105,26 +125,28 @@ const namespacePuzzlets: Puzzlet[] = [
       fast("// g(outer.inner.x)\n"),
     ],
     clearEditorOnStart: true,
-    successCondition: (compilation: Compilation) => {
-      const childDags = compilation.DAG.getChildDags();
-      const topLevelNodeIds = getDagNodesIds(compilation.DAG);
-      const edgeList = compilation.DAG.getEdgeList();
-
-      const nestedNodeIds = new Set(
-        childDags.flatMap((outerDag) =>
-          outerDag
-            .getChildDags()
-            .flatMap((innerDag) => Array.from(getDagNodesIds(innerDag))),
-        ),
-      );
-
-      // Check if there's an edge from a nested node to a top-level node
-      return edgeList.some(
-        (edge) =>
-          nestedNodeIds.has(edge.srcNodeId) &&
-          topLevelNodeIds.has(edge.destNodeId),
-      );
-    },
+    successCriteria: [
+      {
+        description: "Pass a doubly nested variable to a top-level function",
+        check: (compilation: Compilation) => {
+          const childDags = compilation.DAG.getChildDags();
+          const topLevelNodeIds = getDagNodesIds(compilation.DAG);
+          const edgeList = compilation.DAG.getEdgeList();
+          const nestedNodeIds = new Set(
+            childDags.flatMap((outerDag) =>
+              outerDag
+                .getChildDags()
+                .flatMap((innerDag) => Array.from(getDagNodesIds(innerDag))),
+            ),
+          );
+          return edgeList.some(
+            (edge) =>
+              nestedNodeIds.has(edge.srcNodeId) &&
+              topLevelNodeIds.has(edge.destNodeId),
+          );
+        },
+      },
+    ],
   },
   {
     name: "Space Decor",
@@ -138,24 +160,23 @@ const namespacePuzzlets: Puzzlet[] = [
       fast("  //#bg\n"),
       fast("}\n"),
     ],
-    successCondition: (compilation: Compilation) => {
-      const childDags = compilation.DAG.getChildDags();
-      const flattenedStyles = compilation.DAG.getFlattenedStyles();
-
-      return childDags.some((childDag) => {
-        // Check if the childDag has direct style properties
-        if (childDag.DagStyleProperties.size > 0) {
-          return true;
-        }
-
-        // Check if the childDag has style tags with properties
-        return childDag.DagStyleTags.some((styleTag) => {
-          const tagName = styleTag.join(".");
-          const properties = flattenedStyles.get(tagName);
-          return (properties?.size ?? 0) > 0;
-        });
-      });
-    },
+    successCriteria: [
+      {
+        description: "Apply at least 1 style to a namespace",
+        check: (compilation: Compilation) => {
+          const childDags = compilation.DAG.getChildDags();
+          const flattenedStyles = compilation.DAG.getFlattenedStyles();
+          return childDags.some((childDag) => {
+            if (childDag.DagStyleProperties.size > 0) return true;
+            return childDag.DagStyleTags.some((styleTag) => {
+              const tagName = styleTag.join(".");
+              const properties = flattenedStyles.get(tagName);
+              return (properties?.size ?? 0) > 0;
+            });
+          });
+        },
+      },
+    ],
   },
   {
     name: "'Solve By Part' Title",
@@ -181,91 +202,129 @@ const namespacePuzzlets: Puzzlet[] = [
       fast("blueB(/* 3 orange inputs */){#b}"),
     ],
     clearEditorOnStart: true,
-    successCondition: (compilation: Compilation) => {
-      const topLevelNodeIds = getDagNodesIds(compilation.DAG);
-      const childDags = compilation.DAG.getChildDags();
-      const childDagIds = new Set(childDags.map((dag) => dag.Id));
+    successCriteria: (() => {
+      // Shared helper to collect all cross-level edge/node data
+      function collectLevelData(compilation: Compilation) {
+        const topLevelNodeIds = getDagNodesIds(compilation.DAG);
+        const childDags = compilation.DAG.getChildDags();
+        const childDagIds = new Set(childDags.map((dag) => dag.Id));
+        const edgeList = [
+          ...compilation.DAG.getEdgeList(),
+          ...childDags.flatMap((dag) => [
+            ...dag.getEdgeList(),
+            ...dag
+              .getChildDags()
+              .flatMap((nestedDag) => nestedDag.getEdgeList()),
+          ]),
+        ];
+        function getNestedNodes(dags: Dag[], level: number): Set<string> {
+          const current = Array.from({ length: level - 1 }).reduce(
+            (dags: Dag[]) => dags.flatMap((dag) => dag.getChildDags()),
+            dags,
+          );
+          return new Set(
+            current.flatMap((dag) => Array.from(getDagNodesIds(dag))),
+          );
+        }
+        const singleNestedNodeIds = getNestedNodes(childDags, 1);
+        const doubleNestedNodeIds = getNestedNodes(childDags, 2);
+        const doubleNestedDagIds = new Set(
+          childDags.flatMap((dag) => dag.getChildDags()).map((dag) => dag.Id),
+        );
+        doubleNestedNodeIds.forEach((nodeId) =>
+          singleNestedNodeIds.delete(nodeId),
+        );
+        return {
+          topLevelNodeIds,
+          childDagIds,
+          singleNestedNodeIds,
+          doubleNestedNodeIds,
+          doubleNestedDagIds,
+          edgeList,
+        };
+      }
 
-      // Collect edges from all levels (top-level, single-nested, and double-nested)
-      const edgeList = [
-        ...compilation.DAG.getEdgeList(),
-        ...childDags.flatMap((dag) => [
-          ...dag.getEdgeList(),
-          ...dag.getChildDags().flatMap((nestedDag) => nestedDag.getEdgeList()),
-        ]),
+      return [
+        {
+          description:
+            "Connect orangeA to outer, blueA, and blueB with opposite-color inputs",
+          check: (compilation: Compilation) => {
+            const {
+              topLevelNodeIds,
+              childDagIds,
+              doubleNestedNodeIds,
+              edgeList,
+            } = collectLevelData(compilation);
+            return Array.from(topLevelNodeIds).some((nodeId) => {
+              const outEdges = getOutEdges(nodeId, edgeList);
+              return (
+                outEdges.some((e) => topLevelNodeIds.has(e.destNodeId)) &&
+                outEdges.some((e) => childDagIds.has(e.destNodeId)) &&
+                outEdges.some((e) => doubleNestedNodeIds.has(e.destNodeId))
+              );
+            });
+          },
+        },
+        {
+          description: "Connect blueA to receive orangeA and pass into orangeB",
+          check: (compilation: Compilation) => {
+            const {
+              topLevelNodeIds,
+              singleNestedNodeIds,
+              doubleNestedNodeIds,
+              edgeList,
+            } = collectLevelData(compilation);
+            return Array.from(doubleNestedNodeIds).some((nodeId) => {
+              const inEdges = getInEdges(nodeId, edgeList);
+              const outEdges = getOutEdges(nodeId, edgeList);
+              return (
+                inEdges.some((e) => topLevelNodeIds.has(e.srcNodeId)) &&
+                outEdges.some((e) => singleNestedNodeIds.has(e.destNodeId))
+              );
+            });
+          },
+        },
+        {
+          description: "Connect orangeB to receive blueA and pass into blueB",
+          check: (compilation: Compilation) => {
+            const {
+              topLevelNodeIds,
+              singleNestedNodeIds,
+              doubleNestedNodeIds,
+              edgeList,
+            } = collectLevelData(compilation);
+            return Array.from(singleNestedNodeIds).some((nodeId) => {
+              const inEdges = getInEdges(nodeId, edgeList);
+              const outEdges = getOutEdges(nodeId, edgeList);
+              return (
+                inEdges.some((e) => doubleNestedNodeIds.has(e.srcNodeId)) &&
+                outEdges.some((e) => topLevelNodeIds.has(e.destNodeId))
+              );
+            });
+          },
+        },
+        {
+          description:
+            "Connect blueB to receive orangeA, orangeB, and inner namespace output",
+          check: (compilation: Compilation) => {
+            const {
+              topLevelNodeIds,
+              singleNestedNodeIds,
+              doubleNestedDagIds,
+              edgeList,
+            } = collectLevelData(compilation);
+            return Array.from(topLevelNodeIds).some((nodeId) => {
+              const inEdges = getInEdges(nodeId, edgeList);
+              return (
+                inEdges.some((e) => topLevelNodeIds.has(e.srcNodeId)) &&
+                inEdges.some((e) => singleNestedNodeIds.has(e.srcNodeId)) &&
+                inEdges.some((e) => doubleNestedDagIds.has(e.srcNodeId))
+              );
+            });
+          },
+        },
       ];
-
-      // Helper to get nodes at a specific nesting level
-      function getNestedNodes(dags: Dag[], level: number): Set<string> {
-        const current = Array.from({ length: level - 1 }).reduce(
-          (dags: Dag[]) => dags.flatMap((dag) => dag.getChildDags()),
-          dags,
-        );
-        return new Set(
-          current.flatMap((dag) => Array.from(getDagNodesIds(dag))),
-        );
-      }
-
-      const singleNestedNodeIds = getNestedNodes(childDags, 1);
-
-      const doubleNestedNodeIds = getNestedNodes(childDags, 2);
-      const doubleNestedDagIds = new Set(
-        childDags.flatMap((dag) => dag.getChildDags()).map((dag) => dag.Id),
-      );
-      doubleNestedNodeIds.forEach((nodeId) =>
-        singleNestedNodeIds.delete(nodeId),
-      );
-
-      function hasNodeWithEdges(
-        nodeIds: Set<string>,
-        edgeChecker: (nodeId: string) => boolean,
-      ): boolean {
-        return Array.from(nodeIds).some(edgeChecker);
-      }
-
-      return (
-        // there is a top-level node with edges to a top-level node,
-        // a single-nested namespace, and a double-nested node
-        hasNodeWithEdges(topLevelNodeIds, (nodeId) => {
-          const outEdges = getOutEdges(nodeId, edgeList);
-          return (
-            outEdges.some((e) => topLevelNodeIds.has(e.destNodeId)) &&
-            outEdges.some((e) => childDagIds.has(e.destNodeId)) &&
-            outEdges.some((e) => doubleNestedNodeIds.has(e.destNodeId))
-          );
-        }) &&
-        // there is a double-nested node with an edge from a top-level node
-        // and an edge to a single-nested node
-        hasNodeWithEdges(doubleNestedNodeIds, (nodeId) => {
-          const inEdges = getInEdges(nodeId, edgeList);
-          const outEdges = getOutEdges(nodeId, edgeList);
-          return (
-            inEdges.some((e) => topLevelNodeIds.has(e.srcNodeId)) &&
-            outEdges.some((e) => singleNestedNodeIds.has(e.destNodeId))
-          );
-        }) &&
-        // there is a single-nested node with edges from a double-nested node
-        // and to a top-level node
-        hasNodeWithEdges(singleNestedNodeIds, (nodeId) => {
-          const inEdges = getInEdges(nodeId, edgeList);
-          const outEdges = getOutEdges(nodeId, edgeList);
-          return (
-            inEdges.some((e) => doubleNestedNodeIds.has(e.srcNodeId)) &&
-            outEdges.some((e) => topLevelNodeIds.has(e.destNodeId))
-          );
-        }) &&
-        // there is a top-level node with edges from a top level node,
-        // a single-nested node, and a double-nested namespace
-        hasNodeWithEdges(topLevelNodeIds, (nodeId) => {
-          const inEdges = getInEdges(nodeId, edgeList);
-          return (
-            inEdges.some((e) => topLevelNodeIds.has(e.srcNodeId)) &&
-            inEdges.some((e) => singleNestedNodeIds.has(e.srcNodeId)) &&
-            inEdges.some((e) => doubleNestedDagIds.has(e.srcNodeId))
-          );
-        })
-      );
-    },
+    })(),
   },
 ];
 

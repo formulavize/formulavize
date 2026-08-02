@@ -17,9 +17,13 @@ export function createFizLesson(): Lesson {
       normal("Start by uncommenting the following line (remove the '//'):"),
     ],
     examples: [fast("// f()")],
-    successCondition: (compilation: Compilation) => {
-      return compilation.DAG.getNodeList().length > 0;
-    },
+    successCriteria: [
+      {
+        description: "Create a node",
+        check: (compilation: Compilation) =>
+          compilation.DAG.getNodeList().length > 0,
+      },
+    ],
   };
   const introModule = {
     name: "Intro",
@@ -35,9 +39,13 @@ export function createFizLesson(): Lesson {
       normal("Uncomment the exit() function to exit this tutorial."),
     ],
     examples: [fast("// exit()")],
-    successCondition: (compilation: Compilation) => {
-      return compilation.DAG.getNodeList().some((node) => node.name === "exit");
-    },
+    successCriteria: [
+      {
+        description: "Create an exit() function",
+        check: (compilation: Compilation) =>
+          compilation.DAG.getNodeList().some((node) => node.name === "exit"),
+      },
+    ],
   };
   const outroModule = {
     name: "Outro",

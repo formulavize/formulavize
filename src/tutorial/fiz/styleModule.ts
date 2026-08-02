@@ -5,6 +5,75 @@ import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
 import { normal, fast } from "../animationHelpers";
 import { getStyleTaggedNodes } from "../winCheckHelpers";
 
+function checkBindingHasProperties(
+  compilation: Compilation,
+  keyword: string,
+  expectedProps: string[],
+): boolean {
+  const bindings = compilation.DAG.getStyleBindings();
+  const flattenedStyles = compilation.DAG.getFlattenedStyles();
+  const dagStyle = bindings.get(keyword);
+  if (!dagStyle?.styleTags.length && !dagStyle?.styleProperties.size)
+    return false;
+  const collectedProperties = new Set([
+    ...Array.from(dagStyle.styleProperties.keys()),
+    ...dagStyle.styleTags.flatMap((styleTag) => {
+      const properties = flattenedStyles.get(styleTag.join("."));
+      return properties ? Array.from(properties.keys()) : [];
+    }),
+  ]);
+  return expectedProps.every((p) => collectedProperties.has(p));
+}
+
+function getFlattenedMultiTagStyleNames(
+  compilation: Compilation,
+  minimumTagCount: number,
+): string[] {
+  const namedStyles = compilation.AST.Statements.filter(
+    (stmt) => stmt.Type === NodeType.NamedStyle,
+  ) as NamedStyleTreeNode[];
+  const flattenedStyles = compilation.DAG.getFlattenedStyles();
+  return namedStyles
+    .filter((style) => style.StyleNode.StyleTags.length >= minimumTagCount)
+    .map((style) => style.StyleName)
+    .filter((styleName) => {
+      const properties = flattenedStyles.get(styleName);
+      return (properties?.size ?? 0) > 0;
+    });
+}
+
+function hasCombinedStyleAppliedToMinimumNodes(
+  compilation: Compilation,
+  minimumTagCount: number,
+  minimumNodeCount: number,
+): boolean {
+  const styleNames = getFlattenedMultiTagStyleNames(
+    compilation,
+    minimumTagCount,
+  );
+  const nodes = compilation.DAG.getNodeList();
+  return styleNames.some((styleName) => {
+    const styledUsers = nodes.filter((node) =>
+      node.styleTags.some((tag) => tag.join(".") === styleName),
+    );
+    return styledUsers.length >= minimumNodeCount;
+  });
+}
+
+function hasEdgeTagWithMinimumProperties(
+  compilation: Compilation,
+  minimumPropertyCount: number,
+): boolean {
+  const flattenedStyles = compilation.DAG.getFlattenedStyles();
+  return compilation.DAG.getEdgeList().some((edge) =>
+    edge.styleTags.some((tag) => {
+      const tagKey = tag.join(".");
+      const properties = flattenedStyles.get(tagKey);
+      return (properties?.size ?? 0) >= minimumPropertyCount;
+    }),
+  );
+}
+
 const stylePuzzlets: Puzzlet[] = [
   {
     name: "Seeing Red",
@@ -25,11 +94,29 @@ const stylePuzzlets: Puzzlet[] = [
       fast("}"),
     ],
     clearEditorOnStart: true,
-    successCondition: (compilation: Compilation) => {
-      return compilation.DAG.getNodeList().some(
-        (node) => node.styleProperties.size >= 3,
-      );
-    },
+    successCriteria: [
+      {
+        description: "Apply at least 1 style property to a node",
+        check: (compilation: Compilation) =>
+          compilation.DAG.getNodeList().some(
+            (node) => node.styleProperties.size >= 1,
+          ),
+      },
+      {
+        description: "Apply at least 2 style properties to a node",
+        check: (compilation: Compilation) =>
+          compilation.DAG.getNodeList().some(
+            (node) => node.styleProperties.size >= 2,
+          ),
+      },
+      {
+        description: "Apply at least 3 style properties to a node",
+        check: (compilation: Compilation) =>
+          compilation.DAG.getNodeList().some(
+            (node) => node.styleProperties.size >= 3,
+          ),
+      },
+    ],
   },
   {
     name: "Getting Tagged",
@@ -48,11 +135,16 @@ const stylePuzzlets: Puzzlet[] = [
       fast("  //#easy\n"),
       fast("}\n"),
     ],
-    successCondition: (compilation: Compilation) => {
-      const flattenedStyles = compilation.DAG.getFlattenedStyles();
-      const nodes = compilation.DAG.getNodeList();
-      return getStyleTaggedNodes(flattenedStyles, nodes).length > 0;
-    },
+    successCriteria: [
+      {
+        description: "Apply a style tag with properties to a node",
+        check: (compilation: Compilation) => {
+          const flattenedStyles = compilation.DAG.getFlattenedStyles();
+          const nodes = compilation.DAG.getNodeList();
+          return getStyleTaggedNodes(flattenedStyles, nodes).length > 0;
+        },
+      },
+    ],
   },
   {
     name: "Mix and Match",
@@ -73,17 +165,40 @@ const stylePuzzlets: Puzzlet[] = [
       fast("  //#mix #match\n"),
       fast("}\n"),
     ],
-    successCondition: (compilation: Compilation) => {
-      const flattenedStyles = compilation.DAG.getFlattenedStyles();
-      const nodes = compilation.DAG.getNodeList();
-      const nonEmptyTagCount = Array.from(flattenedStyles.values()).filter(
-        (properties) => properties.size > 0,
-      ).length;
-      if (nonEmptyTagCount < 2) return false;
-      return getStyleTaggedNodes(flattenedStyles, nodes).some(
-        (node) => node.styleTags.length >= 2,
-      );
-    },
+    successCriteria: [
+      {
+        description: "Define at least 1 style tag with properties",
+        check: (compilation: Compilation) => {
+          const flattenedStyles = compilation.DAG.getFlattenedStyles();
+          return (
+            Array.from(flattenedStyles.values()).filter(
+              (properties) => properties.size > 0,
+            ).length >= 1
+          );
+        },
+      },
+      {
+        description: "Define at least 2 style tags with properties",
+        check: (compilation: Compilation) => {
+          const flattenedStyles = compilation.DAG.getFlattenedStyles();
+          return (
+            Array.from(flattenedStyles.values()).filter(
+              (properties) => properties.size > 0,
+            ).length >= 2
+          );
+        },
+      },
+      {
+        description: "Apply both style tags to a single node",
+        check: (compilation: Compilation) => {
+          const flattenedStyles = compilation.DAG.getFlattenedStyles();
+          const nodes = compilation.DAG.getNodeList();
+          return getStyleTaggedNodes(flattenedStyles, nodes).some(
+            (node) => node.styleTags.length >= 2,
+          );
+        },
+      },
+    ],
   },
   {
     name: "In Style",
@@ -100,33 +215,28 @@ const stylePuzzlets: Puzzlet[] = [
       fast("fourth() { #hard }\n"),
       fast("fourth_too() { #hard }\n"),
     ],
-    successCondition: (compilation: Compilation) => {
-      const flattenedStyles = compilation.DAG.getFlattenedStyles();
-      const nonEmptyTagCount = Array.from(flattenedStyles.values()).filter(
-        (properties) => properties.size > 0,
-      ).length;
-      if (nonEmptyTagCount < 3) return false;
-
-      const namedStyles = compilation.AST.Statements.filter(
-        (stmt) => stmt.Type === NodeType.NamedStyle,
-      ) as NamedStyleTreeNode[];
-
-      const multiTagStyleNames = namedStyles
-        .filter((style) => style.StyleNode.StyleTags.length >= 2)
-        .map((style) => style.StyleName)
-        .filter((styleName) => {
-          const properties = flattenedStyles.get(styleName);
-          return (properties?.size ?? 0) > 0;
-        });
-
-      const nodes = compilation.DAG.getNodeList();
-      return multiTagStyleNames.some((styleName) => {
-        const styledUsers = nodes.filter((node) =>
-          node.styleTags.some((tag) => tag.join(".") === styleName),
-        );
-        return styledUsers.length >= 2;
-      });
-    },
+    successCriteria: [
+      {
+        description: "Create a style tag containing 1 other style tag",
+        check: (compilation: Compilation) =>
+          getFlattenedMultiTagStyleNames(compilation, 1).length > 0,
+      },
+      {
+        description: "Create a style tag containing 2 other style tags",
+        check: (compilation: Compilation) =>
+          getFlattenedMultiTagStyleNames(compilation, 2).length > 0,
+      },
+      {
+        description: "Apply the combined style tag to at least 1 node",
+        check: (compilation: Compilation) =>
+          hasCombinedStyleAppliedToMinimumNodes(compilation, 1, 1),
+      },
+      {
+        description: "Apply the combined style tag to at least 2 nodes",
+        check: (compilation: Compilation) =>
+          hasCombinedStyleAppliedToMinimumNodes(compilation, 2, 2),
+      },
+    ],
   },
   {
     name: "Silver Lining",
@@ -144,16 +254,23 @@ const stylePuzzlets: Puzzlet[] = [
       fast("x{ #s } = fifth()\n"),
       fast("fifth_too(x)\n"),
     ],
-    successCondition: (compilation: Compilation) => {
-      const flattenedStyles = compilation.DAG.getFlattenedStyles();
-      return compilation.DAG.getEdgeList().some((edge) => {
-        return edge.styleTags.some((tag) => {
-          const tagKey = tag.join(".");
-          const properties = flattenedStyles.get(tagKey);
-          return (properties?.size ?? 0) >= 3;
-        });
-      });
-    },
+    successCriteria: [
+      {
+        description: "Apply at least 1 style property to an edge via tags",
+        check: (compilation: Compilation) =>
+          hasEdgeTagWithMinimumProperties(compilation, 1),
+      },
+      {
+        description: "Apply at least 2 style properties to an edge via tags",
+        check: (compilation: Compilation) =>
+          hasEdgeTagWithMinimumProperties(compilation, 2),
+      },
+      {
+        description: "Apply at least 3 style properties to an edge via tags",
+        check: (compilation: Compilation) =>
+          hasEdgeTagWithMinimumProperties(compilation, 3),
+      },
+    ],
   },
   {
     name: "In a Bind",
@@ -171,26 +288,33 @@ const stylePuzzlets: Puzzlet[] = [
       fast("// star()\n"),
     ],
     clearEditorOnStart: true,
-    successCondition: (compilation: Compilation) => {
-      const bindings = compilation.DAG.getStyleBindings();
-      const flattenedStyles = compilation.DAG.getFlattenedStyles();
-      const nodes = compilation.DAG.getNodeList();
-
-      // Find bindings that have style tags or inline properties
-      return Array.from(bindings.entries()).some(([keyword, dagStyle]) => {
-        const bindingHasProperties =
-          dagStyle.styleProperties.size > 0 ||
-          dagStyle.styleTags.some((styleTag) => {
-            const tagName = styleTag.join(".");
-            const properties = flattenedStyles.get(tagName);
-            return (properties?.size ?? 0) > 0;
-          });
-        if (!bindingHasProperties) return false;
-
-        // Check if any node uses this binding
-        return nodes.some((node) => node.name === keyword);
-      });
-    },
+    successCriteria: [
+      {
+        description: "Define a keyword binding with styles",
+        check: (compilation: Compilation) => {
+          const bindings = compilation.DAG.getStyleBindings();
+          const flattenedStyles = compilation.DAG.getFlattenedStyles();
+          return Array.from(bindings.values()).some(
+            (dagStyle) =>
+              dagStyle.styleProperties.size > 0 ||
+              dagStyle.styleTags.some((styleTag) => {
+                const properties = flattenedStyles.get(styleTag.join("."));
+                return (properties?.size ?? 0) > 0;
+              }),
+          );
+        },
+      },
+      {
+        description: "Create a function matching the defined keyword",
+        check: (compilation: Compilation) => {
+          const bindings = compilation.DAG.getStyleBindings();
+          const nodes = compilation.DAG.getNodeList();
+          return Array.from(bindings.keys()).some((keyword) =>
+            nodes.some((node) => node.name === keyword),
+          );
+        },
+      },
+    ],
   },
   {
     name: "The All-Stars",
@@ -207,24 +331,56 @@ const stylePuzzlets: Puzzlet[] = [
       fast('//*subgraph{ border-style: "dashed" }\n'),
       fast("y[seventh(sixth())]"),
     ],
-    successCondition: (compilation: Compilation) => {
-      const bindings = compilation.DAG.getGlobalStyleBindings();
-      const flattenedStyles = compilation.DAG.getFlattenedStyles();
-
-      // Check that node, edge, and subgraph bindings exist and have properties
-      return ["node", "edge", "subgraph"].every((elementType) => {
-        const binding = bindings.get(elementType);
-        if (!binding) return false;
-
-        return (
-          binding.styleProperties.size > 0 ||
-          binding.styleTags.some((styleTag) => {
-            const properties = flattenedStyles.get(styleTag.join("."));
-            return (properties?.size ?? 0) > 0;
-          })
-        );
-      });
-    },
+    successCriteria: [
+      {
+        description: "Define a *node global binding",
+        check: (compilation: Compilation) => {
+          const bindings = compilation.DAG.getGlobalStyleBindings();
+          const flattenedStyles = compilation.DAG.getFlattenedStyles();
+          const binding = bindings.get("node");
+          if (!binding) return false;
+          return (
+            binding.styleProperties.size > 0 ||
+            binding.styleTags.some((styleTag) => {
+              const properties = flattenedStyles.get(styleTag.join("."));
+              return (properties?.size ?? 0) > 0;
+            })
+          );
+        },
+      },
+      {
+        description: "Define an *edge global binding",
+        check: (compilation: Compilation) => {
+          const bindings = compilation.DAG.getGlobalStyleBindings();
+          const flattenedStyles = compilation.DAG.getFlattenedStyles();
+          const binding = bindings.get("edge");
+          if (!binding) return false;
+          return (
+            binding.styleProperties.size > 0 ||
+            binding.styleTags.some((styleTag) => {
+              const properties = flattenedStyles.get(styleTag.join("."));
+              return (properties?.size ?? 0) > 0;
+            })
+          );
+        },
+      },
+      {
+        description: "Define a *subgraph global binding",
+        check: (compilation: Compilation) => {
+          const bindings = compilation.DAG.getGlobalStyleBindings();
+          const flattenedStyles = compilation.DAG.getFlattenedStyles();
+          const binding = bindings.get("subgraph");
+          if (!binding) return false;
+          return (
+            binding.styleProperties.size > 0 ||
+            binding.styleTags.some((styleTag) => {
+              const properties = flattenedStyles.get(styleTag.join("."));
+              return (properties?.size ?? 0) > 0;
+            })
+          );
+        },
+      },
+    ],
   },
   {
     name: "Put a Label on it",
@@ -242,12 +398,17 @@ const stylePuzzlets: Puzzlet[] = [
       fast('  //"spans two lines"\n'),
       fast("}\n"),
     ],
-    successCondition: (compilation: Compilation) => {
-      return compilation.DAG.getNodeList().some((node) => {
-        const descriptionValue = node.styleProperties.get(DESCRIPTION_PROPERTY);
-        return descriptionValue?.includes("\n") ?? false;
-      });
-    },
+    successCriteria: [
+      {
+        description: "Add a multi-line description to a node",
+        check: (compilation: Compilation) =>
+          compilation.DAG.getNodeList().some((node) => {
+            const descriptionValue =
+              node.styleProperties.get(DESCRIPTION_PROPERTY);
+            return descriptionValue?.includes("\n") ?? false;
+          }),
+      },
+    ],
   },
   {
     name: "FizBuzz",
@@ -281,37 +442,30 @@ const stylePuzzlets: Puzzlet[] = [
       fast("}\n"),
     ],
     clearEditorOnStart: true,
-    successCondition: (compilation: Compilation) => {
-      const expectedProperties = new Map([
-        ["water", new Set(["background-color"])],
-        ["seltzer", new Set(["background-color", "shape"])],
-        ["serve", new Set(["shape", "background-color"])],
-      ]);
-
-      const bindings = compilation.DAG.getStyleBindings();
-      const flattenedStyles = compilation.DAG.getFlattenedStyles();
-
-      // Check that each required keyword has all expected properties
-      return Array.from(expectedProperties.entries()).every(
-        ([keyword, expectedProps]) => {
-          const dagStyle = bindings.get(keyword);
-          if (!dagStyle?.styleTags.length && !dagStyle?.styleProperties.size)
-            return false;
-
-          // Collect all properties from this keyword's style tags and inline properties
-          const collectedProperties = new Set([
-            ...Array.from(dagStyle.styleProperties.keys()),
-            ...dagStyle.styleTags.flatMap((styleTag) => {
-              const properties = flattenedStyles.get(styleTag.join("."));
-              return properties ? Array.from(properties.keys()) : [];
-            }),
-          ]);
-
-          // Check if all expected properties are present
-          return expectedProps.isSubsetOf(collectedProperties);
-        },
-      );
-    },
+    successCriteria: [
+      {
+        description: "Create a %water binding with background-color",
+        check: (compilation: Compilation) =>
+          checkBindingHasProperties(compilation, "water", ["background-color"]),
+      },
+      {
+        description:
+          "Create a %seltzer binding with background-color and shape",
+        check: (compilation: Compilation) =>
+          checkBindingHasProperties(compilation, "seltzer", [
+            "background-color",
+            "shape",
+          ]),
+      },
+      {
+        description: "Create a %serve binding with shape and background-color",
+        check: (compilation: Compilation) =>
+          checkBindingHasProperties(compilation, "serve", [
+            "shape",
+            "background-color",
+          ]),
+      },
+    ],
   },
 ];
 

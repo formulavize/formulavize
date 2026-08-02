@@ -105,4 +105,37 @@ describe("TutorialManager", () => {
       manager.startTutorialAt(0);
     });
   });
+
+  describe("checklist display", () => {
+    test("header includes checklist after startTutorialAt", () => {
+      const { manager, headerText } = setupManager();
+      manager.startTutorialAt(0);
+      expect(headerText.value).toContain("[ ]");
+    });
+
+    test("onCompilation updates checkmarks in header text", async () => {
+      vi.stubGlobal("window", { setTimeout: globalThis.setTimeout });
+      vi.useFakeTimers();
+      const { manager, headerText } = setupManager();
+      manager.startTutorialAt(0);
+      // Initially all unchecked
+      expect(headerText.value).toContain("[ ]");
+      expect(headerText.value).not.toContain("[\u2713]");
+
+      // Simulate a compilation that satisfies the first puzzlet's criteria
+      const mockCompilation = {
+        DAG: {
+          getNodeList: () => [{ id: "1", name: "f" }],
+        },
+      } as unknown as Parameters<typeof manager.onCompilation>[0];
+      // Don't await — just trigger the update (will start the advance delay)
+      const promise = manager.onCompilation(mockCompilation);
+      // After onCompilation, the header should show checked criteria
+      expect(headerText.value).toContain("[\u2713]");
+      expect(headerText.value).not.toContain("[ ]");
+      await vi.advanceTimersByTimeAsync(1000);
+      await promise;
+      vi.useRealTimers();
+    });
+  });
 });

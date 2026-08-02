@@ -14,9 +14,13 @@ const functionsPuzzlets: Puzzlet[] = [
       normal("Put another function between the ( )."),
     ],
     examples: [],
-    successCondition: (compilation: Compilation) => {
-      return compilation.DAG.getEdgeList().length > 0;
-    },
+    successCriteria: [
+      {
+        description: "Create an edge by inputting a function into a function",
+        check: (compilation: Compilation) =>
+          compilation.DAG.getEdgeList().length > 0,
+      },
+    ],
   },
   {
     name: "Double Edged",
@@ -26,12 +30,26 @@ const functionsPuzzlets: Puzzlet[] = [
       normal("Add a ',' and then another function in the outermost ( )."),
     ],
     examples: [],
-    successCondition: (compilation: Compilation) => {
-      const edgeList = compilation.DAG.getEdgeList();
-      return compilation.DAG.getNodeList().some(
-        (node) => getInDegree(node.id, edgeList) >= 2,
-      );
-    },
+    successCriteria: [
+      {
+        description: "Create a node with at least 1 input",
+        check: (compilation: Compilation) => {
+          const edgeList = compilation.DAG.getEdgeList();
+          return compilation.DAG.getNodeList().some(
+            (node) => getInDegree(node.id, edgeList) >= 1,
+          );
+        },
+      },
+      {
+        description: "Create a node with at least 2 inputs",
+        check: (compilation: Compilation) => {
+          const edgeList = compilation.DAG.getEdgeList();
+          return compilation.DAG.getNodeList().some(
+            (node) => getInDegree(node.id, edgeList) >= 2,
+          );
+        },
+      },
+    ],
   },
   {
     name: "Compose Yourself",
@@ -40,14 +58,19 @@ const functionsPuzzlets: Puzzlet[] = [
       normal("Add another function inside an innermost ( )."),
     ],
     examples: [],
-    successCondition: (compilation: Compilation) => {
-      const edgeList = compilation.DAG.getEdgeList();
-      return compilation.DAG.getNodeList().some((node) => {
-        const inDegree = getInDegree(node.id, edgeList);
-        const outDegree = getOutDegree(node.id, edgeList);
-        return inDegree >= 1 && outDegree >= 1;
-      });
-    },
+    successCriteria: [
+      {
+        description: "Create a node with both an input and an output",
+        check: (compilation: Compilation) => {
+          const edgeList = compilation.DAG.getEdgeList();
+          return compilation.DAG.getNodeList().some((node) => {
+            const inDegree = getInDegree(node.id, edgeList);
+            const outDegree = getOutDegree(node.id, edgeList);
+            return inDegree >= 1 && outDegree >= 1;
+          });
+        },
+      },
+    ],
   },
 ];
 

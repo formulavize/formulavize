@@ -7,7 +7,9 @@ function makePuzzlet(name: string, isSuccessful = false): Puzzlet {
     name,
     instructions: [{ text: "do something", typingSpeedDelayMs: 0 }],
     examples: [{ text: "example", typingSpeedDelayMs: 0 }],
-    successCondition: () => isSuccessful,
+    successCriteria: [
+      { description: "test criterion", check: () => isSuccessful },
+    ],
   };
 }
 
@@ -138,12 +140,12 @@ describe("Lesson", () => {
       expect(lesson.canAdvance(compilation)).toBe(false);
     });
 
-    test("returns true when success condition passes", () => {
+    test("returns true when all criteria pass", () => {
       const alwaysPass: Puzzlet = {
         name: "pass",
         instructions: [],
         examples: [],
-        successCondition: () => true,
+        successCriteria: [{ description: "always", check: () => true }],
       };
       const lesson = new Lesson("L", [{ name: "M", puzzlets: [alwaysPass] }]);
       const compilation = {} as Compilation;
@@ -155,11 +157,54 @@ describe("Lesson", () => {
         name: "pass",
         instructions: [],
         examples: [],
-        successCondition: () => true,
+        successCriteria: [{ description: "always", check: () => true }],
       };
       const lesson = new Lesson("L", [{ name: "M", puzzlets: [alwaysPass] }]);
       lesson.advance();
       expect(lesson.canAdvance({} as Compilation)).toBe(false);
+    });
+  });
+
+  describe("evaluateCriteria", () => {
+    test("returns mixed results for partial pass", () => {
+      const partial: Puzzlet = {
+        name: "partial",
+        instructions: [],
+        examples: [],
+        successCriteria: [
+          { description: "passes", check: () => true },
+          { description: "fails", check: () => false },
+          { description: "passes too", check: () => true },
+        ],
+      };
+      const lesson = new Lesson("L", [{ name: "M", puzzlets: [partial] }]);
+      expect(lesson.evaluateCriteria({} as Compilation)).toEqual([
+        true,
+        false,
+        true,
+      ]);
+    });
+
+    test("returns all true when all pass", () => {
+      const allPass: Puzzlet = {
+        name: "all",
+        instructions: [],
+        examples: [],
+        successCriteria: [
+          { description: "a", check: () => true },
+          { description: "b", check: () => true },
+        ],
+      };
+      const lesson = new Lesson("L", [{ name: "M", puzzlets: [allPass] }]);
+      expect(lesson.evaluateCriteria({} as Compilation)).toEqual([true, true]);
+    });
+
+    test("returns empty array when lesson is complete", () => {
+      const lesson = new Lesson("L", [
+        { name: "M", puzzlets: [makePuzzlet("p")] },
+      ]);
+      lesson.advance();
+      expect(lesson.evaluateCriteria({} as Compilation)).toEqual([]);
     });
   });
 

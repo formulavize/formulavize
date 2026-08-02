@@ -1,4 +1,4 @@
-import { Puzzlet } from "../lesson";
+import { Puzzlet, SuccessCriterion } from "../lesson";
 import { normal, fast } from "../animationHelpers";
 import { NodeType, ImportTreeNode } from "src/compiler/ast";
 
@@ -6,6 +6,17 @@ const importBaseUrl = "https://formulavize.github.io/fiz-tutorial-imports/";
 const antUrl = `${importBaseUrl}ant.fiz`;
 const flyingUrl = `${importBaseUrl}flying.fiz`;
 const byobUrl = `${importBaseUrl}example.fiz`;
+
+type PuzzletCompilation = Parameters<SuccessCriterion["check"]>[0];
+
+const createHasFunctionNodeCheck = (functionName: string) => {
+  return (compilation: PuzzletCompilation) => {
+    const nodeNames = new Set(
+      compilation.DAG.getNodeList().map((node) => node.name),
+    );
+    return nodeNames.has(functionName);
+  };
+};
 
 const importPuzzlets: Puzzlet[] = [
   {
@@ -20,9 +31,12 @@ const importPuzzlets: Puzzlet[] = [
     ],
     examples: [fast(`// @ "${antUrl}"`)],
     clearEditorOnStart: true,
-    successCondition: (compilation) => {
-      return compilation.DAG.UsedImports.has(antUrl);
-    },
+    successCriteria: [
+      {
+        description: "Import the ant.fiz file",
+        check: (compilation) => compilation.DAG.UsedImports.has(antUrl),
+      },
+    ],
   },
   {
     name: "Import Antigravity",
@@ -36,16 +50,24 @@ const importPuzzlets: Puzzlet[] = [
       normal("Add a namespace to the flying.fiz import below."),
     ],
     examples: [fast(`@ "${flyingUrl}"`)],
-    successCondition: (compilation) => {
-      const hasImport = compilation.DAG.UsedImports.has(flyingUrl);
-      const importStmts = compilation.AST.Statements.filter(
-        (stmt) => stmt.Type === NodeType.Import,
-      ) as ImportTreeNode[];
-      const hasNamespacedFlyingImport = importStmts.some(
-        (stmt) => stmt.ImportLocation === flyingUrl && stmt.ImportName != null,
-      );
-      return hasImport && hasNamespacedFlyingImport;
-    },
+    successCriteria: [
+      {
+        description: "Import the flying.fiz file",
+        check: (compilation) => compilation.DAG.UsedImports.has(flyingUrl),
+      },
+      {
+        description: "Import the flying.fiz file into a namespace",
+        check: (compilation) => {
+          const importStmts = compilation.AST.Statements.filter(
+            (stmt) => stmt.Type === NodeType.Import,
+          ) as ImportTreeNode[];
+          return importStmts.some(
+            (stmt) =>
+              stmt.ImportLocation === flyingUrl && stmt.ImportName != null,
+          );
+        },
+      },
+    ],
   },
   {
     name: "BYOB (Bring Your Own Bindings)",
@@ -62,15 +84,24 @@ const importPuzzlets: Puzzlet[] = [
       fast(`// join()\n`),
       fast(`// freeze()\n`),
     ],
-    successCondition: (compilation) => {
-      const hasImport = compilation.DAG.UsedImports.has(byobUrl);
-      const nodeList = compilation.DAG.getNodeList();
-      const nodeNames = new Set(nodeList.map((node) => node.name));
-      return (
-        hasImport &&
-        ["add", "join", "freeze"].every((name) => nodeNames.has(name))
-      );
-    },
+    successCriteria: [
+      {
+        description: "Import the example.fiz file",
+        check: (compilation) => compilation.DAG.UsedImports.has(byobUrl),
+      },
+      {
+        description: "Create the add function",
+        check: createHasFunctionNodeCheck("add"),
+      },
+      {
+        description: "Create the join function",
+        check: createHasFunctionNodeCheck("join"),
+      },
+      {
+        description: "Create the freeze function",
+        check: createHasFunctionNodeCheck("freeze"),
+      },
+    ],
   },
 ];
 

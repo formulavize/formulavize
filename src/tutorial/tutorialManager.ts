@@ -1,7 +1,8 @@
-import { Lesson, Puzzlet } from "./lesson";
+import { Lesson, Puzzlet, SuccessCriterion } from "./lesson";
 import { createFizLesson } from "./fiz/lessonPlan";
 import { Compilation } from "../compiler/compilation";
 import { TutorialProgressStore } from "./tutorialProgressStore";
+import { TypingSpeed } from "./animationHelpers";
 
 export class TutorialManager {
   private callbacks: {
@@ -26,6 +27,8 @@ export class TutorialManager {
   private disableAnimations: boolean = false;
   private progressStore: TutorialProgressStore = new TutorialProgressStore();
   public cachedHighestCompleted: number;
+  private staticHeaderText: string = "";
+  private latestCriteriaResults: boolean[] = [];
 
   constructor() {
     this.cachedHighestCompleted = this.progressStore.getHighestCompletedIndex();
@@ -83,8 +86,43 @@ export class TutorialManager {
     this.cancelAnimation();
   }
 
+  private formatChecklist(
+    criteria: SuccessCriterion[],
+    results: boolean[],
+  ): string {
+    if (criteria.length === 0) return "";
+    return (
+      "\n" +
+      criteria
+        .map((c, i) => {
+          const mark = results[i] ? "\u2713" : " ";
+          return `[${mark}] ${c.description}`;
+        })
+        .join("\n")
+    );
+  }
+
+  private updateChecklistDisplay(): void {
+    const puzzlet = this.currentLesson.getCurrentPuzzlet();
+    const checklist = this.formatChecklist(
+      puzzlet.successCriteria,
+      this.latestCriteriaResults,
+    );
+    this.setTutorialHeaderText(
+      "/* " + this.staticHeaderText + checklist + " */\n",
+    );
+  }
+
   public async onCompilation(compilation: Compilation): Promise<void> {
     if (!this.tutorialActive || this.isAdvancing) return;
+
+    // Update criteria results and checklist display
+    if (!this.isAnimating) {
+      this.latestCriteriaResults =
+        this.currentLesson.evaluateCriteria(compilation);
+      this.updateChecklistDisplay();
+    }
+
     if (!this.currentLesson.canAdvance(compilation)) return;
     this.isAdvancing = true;
     try {
@@ -134,11 +172,15 @@ export class TutorialManager {
     }
 
     let headerText = this.getProgressString();
+    this.latestCriteriaResults = new Array(puzzlet.successCriteria.length).fill(
+      false,
+    );
 
     // If animations are disabled, show all text immediately
     if (this.disableAnimations) {
       headerText += puzzlet.instructions.map((step) => step.text).join("");
-      this.setTutorialHeaderText("/* " + headerText + " */\n");
+      this.staticHeaderText = headerText;
+      this.updateChecklistDisplay();
 
       const examplesText = puzzlet.examples.map((step) => step.text).join("");
       this.setExamplesText(examplesText + "\n");
@@ -156,6 +198,22 @@ export class TutorialManager {
         this.setTutorialHeaderText("/* " + headerText + " */\n");
         await this.delay(step.typingSpeedDelayMs);
       }
+    }
+
+    // Store static header and animate the initial checklist
+    this.staticHeaderText = headerText;
+    const checklistText = this.formatChecklist(
+      puzzlet.successCriteria,
+      this.latestCriteriaResults,
+    );
+    let animatedChecklist = "";
+    for (const char of checklistText) {
+      if (!this.isAnimating) break;
+      animatedChecklist += char;
+      this.setTutorialHeaderText(
+        "/* " + this.staticHeaderText + animatedChecklist + " */\n",
+      );
+      await this.delay(TypingSpeed.Fast);
     }
 
     // Animate all examples at the header boundary (all are editable)
