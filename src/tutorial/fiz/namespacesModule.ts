@@ -246,8 +246,7 @@ const solveByPartPuzzlet: Puzzlet = {
 
     return [
       {
-        description:
-          "Connect orangeA to outer, blueA, and blueB with opposite-color inputs",
+        description: "Connect orangeA -> outer, blueA, blueB",
         check: (compilation: Compilation) => {
           const {
             topLevelNodeIds,
@@ -266,7 +265,7 @@ const solveByPartPuzzlet: Puzzlet = {
         },
       },
       {
-        description: "Connect blueA to receive orangeA and pass into orangeB",
+        description: "Connect orangeA -> blueA -> orangeB",
         check: (compilation: Compilation) => {
           const {
             topLevelNodeIds,
@@ -285,7 +284,7 @@ const solveByPartPuzzlet: Puzzlet = {
         },
       },
       {
-        description: "Connect orangeB to receive blueA and pass into blueB",
+        description: "Connect blueA -> orangeB -> blueB",
         check: (compilation: Compilation) => {
           const {
             topLevelNodeIds,
@@ -304,8 +303,7 @@ const solveByPartPuzzlet: Puzzlet = {
         },
       },
       {
-        description:
-          "Connect blueB to receive orangeA, orangeB, and inner namespace output",
+        description: "Connect orangeA, orangeB, inner -> blueB",
         check: (compilation: Compilation) => {
           const {
             topLevelNodeIds,
