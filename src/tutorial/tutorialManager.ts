@@ -5,6 +5,9 @@ import { TutorialProgressStore } from "./tutorialProgressStore";
 import { TypingSpeed } from "./animationHelpers";
 
 export class TutorialManager {
+  private static readonly CHECKLIST_SEPARATOR = "--------------------";
+  private static readonly EXAMPLES_SEPARATOR = "====================";
+
   private callbacks: {
     setEditorText: ((text: string) => void) | null;
     setTutorialHeaderText: ((text: string) => void) | null;
@@ -93,6 +96,8 @@ export class TutorialManager {
     if (criteria.length === 0) return "";
     return (
       "\n" +
+      TutorialManager.CHECKLIST_SEPARATOR +
+      "\n" +
       criteria
         .map((c, i) => {
           const mark = results[i] ? "\u2713" : " ";
@@ -108,8 +113,17 @@ export class TutorialManager {
       puzzlet.successCriteria,
       this.latestCriteriaResults,
     );
-    this.setTutorialHeaderText(
-      "/* " + this.staticHeaderText + checklist + " */\n",
+    this.setTutorialHeaderText(this.formatTutorialHeaderText(checklist));
+  }
+
+  private formatTutorialHeaderText(checklist: string): string {
+    return (
+      "/* " +
+      this.staticHeaderText +
+      checklist +
+      "\n" +
+      TutorialManager.EXAMPLES_SEPARATOR +
+      " */\n"
     );
   }
 
@@ -211,7 +225,7 @@ export class TutorialManager {
       if (!this.isAnimating) break;
       animatedChecklist += char;
       this.setTutorialHeaderText(
-        "/* " + this.staticHeaderText + animatedChecklist + " */\n",
+        this.formatTutorialHeaderText(animatedChecklist),
       );
       await this.delay(TypingSpeed.Fast);
     }
