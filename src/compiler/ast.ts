@@ -168,10 +168,7 @@ export class CallTreeNode extends BaseTreeNode {
 }
 
 export type AssignmentRhsNode =
-  | CallTreeNode
-  | QualifiedVarTreeNode
-  | NamespaceTreeNode
-  | ImportTreeNode;
+  CallTreeNode | QualifiedVarTreeNode | NamespaceTreeNode | ImportTreeNode;
 
 export class AssignmentTreeNode extends BaseTreeNode {
   private lhs: LocalVarTreeNode[];
