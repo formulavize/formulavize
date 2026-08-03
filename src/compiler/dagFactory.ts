@@ -340,10 +340,7 @@ async function processUnassignedImport(
 
 async function processAssignmentRhs(
   rhsNode:
-    | CallTreeNode
-    | QualifiedVarTreeNode
-    | NamespaceTreeNode
-    | ImportTreeNode,
+    CallTreeNode | QualifiedVarTreeNode | NamespaceTreeNode | ImportTreeNode,
   workingDag: Dag,
   errors: Error[],
   importer: ImportCacher,

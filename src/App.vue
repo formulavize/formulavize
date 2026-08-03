@@ -106,7 +106,6 @@ import { defaultCubic } from "./tutorial/defaultExample";
 import { useAppTheme } from "./composables/useAppTheme";
 import { useCompilation } from "./composables/useCompilation";
 import { useRendererRegistry } from "./composables/useRendererRegistry";
-// @ts-expect-error: remove once @types/splitpanes upgrades dependency to vue 3
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
 import "./tabs-component.css";

@@ -34,12 +34,7 @@ export interface CyDiffResult {
 }
 
 type CyScalarValue =
-  | string
-  | number
-  | boolean
-  | null
-  | undefined
-  | CyScalarValue[];
+  string | number | boolean | null | undefined | CyScalarValue[];
 
 function valueEqual(a: CyScalarValue, b: CyScalarValue): boolean {
   if (a === b) return true;
