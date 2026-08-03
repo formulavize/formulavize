@@ -5,13 +5,18 @@ export interface AnimationStep {
   typingSpeedDelayMs: number;
 }
 
+export interface SuccessCriterion {
+  description: string;
+  check: (compilation: Compilation) => boolean;
+}
+
 // Teach each grammar rule as a ludeme
 export interface Puzzlet {
   name: string;
   instructions: AnimationStep[];
   examples: AnimationStep[];
   clearEditorOnStart?: boolean;
-  successCondition: (compilation: Compilation) => boolean;
+  successCriteria: SuccessCriterion[];
 }
 
 export interface LudicModule {
@@ -62,9 +67,16 @@ export class Lesson {
     return this.currentPuzzletIndex >= this.flattenedPuzzlets.length;
   }
 
+  public evaluateCriteria(compilation: Compilation): boolean[] {
+    if (this.isComplete()) return [];
+    return this.getCurrentPuzzlet().successCriteria.map((c) =>
+      c.check(compilation),
+    );
+  }
+
   public canAdvance(compilation: Compilation): boolean {
     if (this.isComplete()) return false;
-    return this.getCurrentPuzzlet().successCondition(compilation);
+    return this.evaluateCriteria(compilation).every(Boolean);
   }
 
   public advance(): boolean {
