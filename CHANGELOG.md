@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.13.0](https://github.com/formulavize/formulavize/compare/v1.12.3...v1.13.0) (2026-08-03)
+
+
+### Features
+
+* **tutorial:** enhance tutorial with goal checklists ([#65](https://github.com/formulavize/formulavize/issues/65)) ([36db47b](https://github.com/formulavize/formulavize/commit/36db47b819dfa16812cf1b03204818b6747f6137))
+
+
+### Bug Fixes
+
+* adjust dark mode colors and add tab to autocomplete ([#63](https://github.com/formulavize/formulavize/issues/63)) ([85b061d](https://github.com/formulavize/formulavize/commit/85b061d90227ae7ba2a68b9a75f192b221b04fb2))
+
 ## [1.12.3](https://github.com/formulavize/formulavize/compare/v1.12.2...v1.12.3) (2026-04-22)
 
 
