@@ -5,8 +5,10 @@ import { RecipeTreeNode } from "./ast";
 import { makeRecipeTree } from "./astFactory";
 import { makeDag } from "./dagFactory";
 import { Compilation } from "./compilation";
+import { Dag } from "./dag";
 import { ImportCacher } from "./importCacher";
-import { CompilationError as Error } from "./compilationErrors";
+import { CompilationError as Error, ErrorSource } from "./compilationErrors";
+import { collectBracketMismatchErrors } from "./sourceScans";
 
 interface SourceGen<I> {
   (input: I): string;
@@ -23,7 +25,9 @@ export function parseFromSource(sourceRecipe: string): {
   const tree = fizLanguage.parser.parse(sourceRecipe);
   const editorState = EditorState.create({ extensions: [fizLanguage] });
   const text = editorState.toText(sourceRecipe);
-  return makeRecipeTree(tree, text);
+  const bracketErrors = collectBracketMismatchErrors(sourceRecipe);
+  const { ast, errors: parseErrors } = makeRecipeTree(tree, text);
+  return { ast, errors: [...bracketErrors, ...parseErrors] };
 }
 
 export class Compiler {
@@ -47,11 +51,20 @@ export class Compiler {
   ): Promise<Compilation> {
     const source = sourceGen(input);
     const { ast, errors: parseErrors } = parse(input);
-    const { dag, errors: dagErrors } = await makeDag(
-      ast,
-      this.importCacher,
-      seenImports,
+
+    let dag: Dag;
+    let dagErrors: Error[] = [];
+    const hasSyntaxErrors = parseErrors.some(
+      (error) => error.source === ErrorSource.Syntax,
     );
+    if (hasSyntaxErrors) {
+      dag = new Dag("root");
+    } else {
+      const dagResult = await makeDag(ast, this.importCacher, seenImports);
+      dag = dagResult.dag;
+      dagErrors = dagResult.errors;
+    }
+
     const errors = [...parseErrors, ...dagErrors];
     return new Compilation(source, ast, dag, errors);
   }
@@ -67,7 +80,11 @@ export class Compiler {
     } {
       const tree = syntaxTree(editorState);
       const text = editorState.doc;
-      return makeRecipeTree(tree, text);
+      const bracketErrors = collectBracketMismatchErrors(
+        editorState.doc.toString(),
+      );
+      const { ast, errors: parseErrors } = makeRecipeTree(tree, text);
+      return { ast, errors: [...bracketErrors, ...parseErrors] };
     }
 
     return this.compile(editorState, sourceFromEditor, parseFromEditor);

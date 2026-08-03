@@ -20,6 +20,7 @@ export enum ErrorCode {
   // Syntax errors
   MissingLhs = "SYN_MISSING_LHS",
   MissingRhs = "SYN_MISSING_RHS",
+  MismatchedBracket = "SYN_MISMATCHED_BRACKET",
   InvalidGlobalStyleKeyword = "SYN_INVALID_GLOBAL_STYLE_KEYWORD",
 
   // Import errors
