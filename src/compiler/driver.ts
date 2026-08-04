@@ -52,7 +52,6 @@ export class Compiler {
       this.importCacher,
       seenImports,
     );
-
     const errors = [...parseErrors, ...dagErrors];
     return new Compilation(source, ast, dag, errors);
   }
