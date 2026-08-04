@@ -23,8 +23,7 @@ export function parseFromSource(sourceRecipe: string): {
   const tree = fizLanguage.parser.parse(sourceRecipe);
   const editorState = EditorState.create({ extensions: [fizLanguage] });
   const text = editorState.toText(sourceRecipe);
-  const { ast, errors: parseErrors } = makeRecipeTree(tree, text);
-  return { ast, errors: parseErrors };
+  return makeRecipeTree(tree, text);
 }
 
 export class Compiler {
@@ -69,8 +68,7 @@ export class Compiler {
     } {
       const tree = syntaxTree(editorState);
       const text = editorState.doc;
-      const { ast, errors: parseErrors } = makeRecipeTree(tree, text);
-      return { ast, errors: parseErrors };
+      return makeRecipeTree(tree, text);
     }
 
     return this.compile(editorState, sourceFromEditor, parseFromEditor);
