@@ -26,6 +26,7 @@ import {
   DEFAULT_POSITION,
   ErrorSource,
 } from "./compilationErrors";
+import { collectRecoverySyntaxErrors } from "./syntaxChecks";
 
 function getPosition(c: TreeCursor): Position {
   return { from: c.from, to: c.to };
@@ -319,6 +320,7 @@ export function makeRecipeTree(
     console.error(errMsg);
   }
 
+  collectRecoverySyntaxErrors(cursor, text, errors);
   const statements = getStatements(cursor, text, errors);
   const ast = new RecipeTreeNode(statements, getPosition(cursor));
   return { ast, errors };
