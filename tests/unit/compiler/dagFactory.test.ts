@@ -1004,6 +1004,16 @@ describe("error reporting", () => {
       source: "Syntax",
     });
   }
+  function expectSyntaxWarning(
+    error: CompilationError,
+    expectedMessage: string,
+  ): void {
+    expectError(error, {
+      message: expectedMessage,
+      severity: "warning",
+      source: "Syntax",
+    });
+  }
   test("argListToEdgeInfo reports error when variable not found", async () => {
     const recipe = new Recipe([
       new Call("f", new ValueList([new QualifiedVariable(["not_found_var"])])),
@@ -1032,6 +1042,27 @@ describe("error reporting", () => {
 
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
+  });
+  test("assignment warns when lhs names are duplicated", async () => {
+    const recipe = new Recipe([
+      new Assignment(
+        [
+          new LocalVariable("a"),
+          new LocalVariable("a"),
+          new LocalVariable("b"),
+          new LocalVariable("b"),
+        ],
+        new Call("f", new ValueList([])),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+
+    expect(errors).toHaveLength(2);
+    expectSyntaxWarning(errors[0], "Duplicate left hand side variable 'a'");
+    expectSyntaxWarning(errors[1], "Duplicate left hand side variable 'b'");
+
+    expect(dag.getNodeList()).toHaveLength(1);
+    expect(dag.getNodeList()[0].name).toEqual("f");
   });
   test("error reporting when import fails", async () => {
     const mockImporterError = {
