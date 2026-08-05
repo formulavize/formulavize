@@ -24,6 +24,7 @@ import {
   CompilationError as Error,
   Position,
   DEFAULT_POSITION,
+  ErrorCode,
   ErrorSource,
 } from "./compilationErrors";
 import { collectRecoverySyntaxErrors } from "./syntaxChecks";
@@ -38,6 +39,20 @@ function makeInternalError(c: TreeCursor, errorMsg: string): Error {
     message: errorMsg,
     severity: "error",
     source: ErrorSource.Internal,
+  };
+}
+
+function makeSyntaxWarning(
+  c: TreeCursor,
+  errorMsg: string,
+  code?: ErrorCode,
+): Error {
+  return {
+    position: getPosition(c),
+    message: errorMsg,
+    severity: "warning",
+    source: ErrorSource.Syntax,
+    code,
   };
 }
 
@@ -95,20 +110,32 @@ function getStyleTagNames(c: TreeCursor, t: Text): StyleTagTreeNode[] {
     );
 }
 
-function makeStyle(c: TreeCursor, t: Text, _e: Error[]): StyleTreeNode {
+function makeStyle(c: TreeCursor, t: Text, e: Error[]): StyleTreeNode {
   const styleTags: StyleTagTreeNode[] = getStyleTagNames(c, t);
-  const styleDeclaredPropertyValues = new Map<string, string>(
-    c.node.getChildren("StyleDeclaration").map((styleDec) => {
-      const propName = getTextFromChild("PropertyName", styleDec.cursor(), t);
-      const styleVals = styleDec
-        .getChildren("StyleValue")
-        .map((styleVal) => t.sliceString(styleVal.from, styleVal.to))
-        .join(",") // comma delimit multiple values
-        .replace(/(^"|^'|"$|'$)/g, "") // remove captured bounding quotes
-        .replace(/\\n/g, "\n"); // for enabling cytoscape text-wrap
-      return [propName, styleVals];
-    }),
-  );
+  const styleDeclaredPropertyValues = new Map<string, string>();
+  const seenPropertyNames = new Set<string>();
+  c.node.getChildren("StyleDeclaration").forEach((styleDec) => {
+    const styleDecCursor = styleDec.cursor();
+    const propNameNode = styleDec.node.getChild("PropertyName");
+    const propName = getTextFromChild("PropertyName", styleDecCursor, t);
+    if (seenPropertyNames.has(propName) && propNameNode) {
+      e.push(
+        makeSyntaxWarning(
+          propNameNode.cursor(),
+          `Duplicate style property '${propName}'`,
+          ErrorCode.DuplicateStylePropertyName,
+        ),
+      );
+    }
+    seenPropertyNames.add(propName);
+    const styleVals = styleDec
+      .getChildren("StyleValue")
+      .map((styleVal) => t.sliceString(styleVal.from, styleVal.to))
+      .join(",") // comma delimit multiple values
+      .replace(/(^"|^'|"$|'$)/g, "") // remove captured bounding quotes
+      .replace(/\\n/g, "\n"); // for enabling cytoscape text-wrap
+    styleDeclaredPropertyValues.set(propName, styleVals);
+  });
 
   // If there are description strings, store them in a description property
   const description = getJoinedStringLiterals(c, t);
