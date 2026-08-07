@@ -23,6 +23,7 @@ export enum ErrorCode {
   DuplicateLhsName = "SYN_DUPLICATE_LHS_NAME",
   DuplicateStylePropertyName = "SYN_DUPLICATE_STYLE_PROPERTY_NAME",
   MismatchedBracket = "SYN_MISMATCHED_BRACKET",
+  UnexpectedToken = "SYN_UNEXPECTED_TOKEN",
   InvalidGlobalStyleKeyword = "SYN_INVALID_GLOBAL_STYLE_KEYWORD",
 
   // Import errors

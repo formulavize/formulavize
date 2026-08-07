@@ -11,9 +11,9 @@ function getPosition(c: TreeCursor): Position {
   return { from: c.from, to: c.to };
 }
 
-function makeBracketError(c: TreeCursor, errorMsg: string): Error {
+function makeBracketError(from: number, to: number, errorMsg: string): Error {
   return {
-    position: getPosition(c),
+    position: { from, to },
     message: errorMsg,
     severity: "error",
     source: ErrorSource.Syntax,
@@ -21,19 +21,23 @@ function makeBracketError(c: TreeCursor, errorMsg: string): Error {
   };
 }
 
-function addRecoverySyntaxError(
+function makeUnexpectedTokenError(
   c: TreeCursor,
-  text: Text,
-  errors: Error[],
-): boolean {
-  if (errors.some((error) => error.code === ErrorCode.MismatchedBracket)) {
-    return true;
-  }
+  unexpectedText: string,
+): Error {
+  return {
+    position: getPosition(c),
+    message: `Unexpected token '${unexpectedText}'`,
+    severity: "error",
+    source: ErrorSource.Syntax,
+    code: ErrorCode.UnexpectedToken,
+  };
+}
 
-  if (c.name !== "⚠") return false;
-
+function collectBracketErrors(text: Text): Error[] {
   const sourceText = text.toString();
   const stack: Array<{ char: string; from: number }> = [];
+  const bracketErrors: Error[] = [];
 
   for (let index = 0; index < sourceText.length; index += 1) {
     const char = sourceText[index];
@@ -46,29 +50,67 @@ function addRecoverySyntaxError(
       const matchingBracket = char === ")" ? "(" : char === "}" ? "{" : "[";
       const opener = stack[stack.length - 1];
       if (!opener) {
-        errors.push(
-          makeBracketError(c, `Unexpected closing bracket '${char}'`),
+        bracketErrors.push(
+          makeBracketError(
+            index,
+            index + 1,
+            `Unexpected closing bracket '${char}'`,
+          ),
         );
-        return true;
+        continue;
       }
 
       if (opener.char !== matchingBracket) {
-        errors.push(makeBracketError(c, `Mismatched bracket '${char}'`));
+        bracketErrors.push(
+          makeBracketError(index, index + 1, `Mismatched bracket '${char}'`),
+        );
         stack.pop();
-        return true;
+        continue;
       }
 
       stack.pop();
     }
   }
 
-  if (stack.length > 0) {
-    const opener = stack[stack.length - 1];
-    errors.push(makeBracketError(c, `Unclosed bracket '${opener.char}'`));
-    return true;
+  while (stack.length > 0) {
+    const opener = stack.pop();
+    if (!opener) break;
+    bracketErrors.push(
+      makeBracketError(
+        opener.from,
+        opener.from + 1,
+        `Unclosed bracket '${opener.char}'`,
+      ),
+    );
   }
 
-  return false;
+  return bracketErrors;
+}
+
+function addRecoverySyntaxError(
+  c: TreeCursor,
+  text: Text,
+  errors: Error[],
+): boolean {
+  if (c.name !== "⚠") return false;
+
+  if (!errors.some((error) => error.code === ErrorCode.MismatchedBracket)) {
+    errors.push(...collectBracketErrors(text));
+  }
+
+  const unexpectedText = text.sliceString(c.from, c.to).trim();
+  if (!unexpectedText) return false;
+
+  const hasBracketErrorAtSpan = errors.some(
+    (error) =>
+      error.code === ErrorCode.MismatchedBracket &&
+      error.position.from === c.from &&
+      error.position.to === c.to,
+  );
+  if (hasBracketErrorAtSpan) return true;
+
+  errors.push(makeUnexpectedTokenError(c, unexpectedText));
+  return true;
 }
 
 export function collectRecoverySyntaxErrors(
