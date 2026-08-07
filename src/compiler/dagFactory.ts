@@ -94,11 +94,12 @@ function makeError(
   message: string,
   source: ErrorSource,
   code?: ErrorCode,
+  severity: Error["severity"] = "error",
 ): Error {
   return {
     position: node.Position ?? DEFAULT_POSITION,
     message,
-    severity: "error",
+    severity,
     source,
     code,
   };
@@ -402,6 +403,28 @@ async function processAssignmentRhs(
     });
 }
 
+function checkDuplicateAssignmentLhsNames(
+  assignmentStmt: AssignmentTreeNode,
+  errors: Error[],
+): void {
+  const seenNames = new Set<string>();
+  assignmentStmt.Lhs.forEach((lhsVar) => {
+    if (seenNames.has(lhsVar.VarName)) {
+      const errMsg = makeError(
+        lhsVar,
+        `Duplicate left hand side variable '${lhsVar.VarName}'`,
+        ErrorSource.Syntax,
+        ErrorCode.DuplicateLhsName,
+        "warning",
+      );
+      errors.push(errMsg);
+      console.debug(errMsg);
+      return;
+    }
+    seenNames.add(lhsVar.VarName);
+  });
+}
+
 async function processAssignment(
   assignmentStmt: AssignmentTreeNode,
   workingDag: Dag,
@@ -433,6 +456,8 @@ async function processAssignment(
     console.debug(errMsg);
   }
   if (lhsIsEmpty || rhsIsEmpty) return;
+
+  checkDuplicateAssignmentLhsNames(assignmentStmt, errors);
 
   const thisNodeId = await processAssignmentRhs(
     assignmentStmt.Rhs,

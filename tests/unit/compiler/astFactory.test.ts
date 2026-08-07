@@ -36,6 +36,14 @@ function getErrors(input: string): Error[] {
   return parseFromSource(input).errors;
 }
 
+function expectSyntaxWarning(error: Error, expectedMessage: string): void {
+  expect(error).toMatchObject({
+    message: expectedMessage,
+    severity: "warning",
+    source: "Syntax",
+  });
+}
+
 describe("inactive elements", () => {
   test("with empty string", () => {
     const input = "";
@@ -158,6 +166,15 @@ describe("style nodes", () => {
         ),
       ]),
     );
+  });
+  test("duplicate style property warns and keeps last value", () => {
+    const input = "#s{x:1\nx:2}";
+    expect(makeTree(input)).toEqual(
+      new Recipe([new NamedStyle("s", new Style(new Map([["x", "2"]])))]),
+    );
+    const errors = getErrors(input);
+    expect(errors).toHaveLength(1);
+    expectSyntaxWarning(errors[0], "Duplicate style property 'x'");
   });
   test("styled call", () => {
     const input = "f(){x:1}";
