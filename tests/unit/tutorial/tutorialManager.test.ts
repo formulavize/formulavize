@@ -4,6 +4,12 @@ import { createMockLocalStorage } from "../versionedStoreTestHelpers";
 
 const STORAGE_KEY = "formulavize-tutorial-progress";
 
+function setupTutorialTimers(): void {
+  // Ensure window.setTimeout is bound to fake timers, not real timers.
+  vi.useFakeTimers();
+  vi.stubGlobal("window", { setTimeout: globalThis.setTimeout });
+}
+
 function setupManager(): {
   manager: TutorialManager;
   editorText: { value: string };
@@ -35,6 +41,7 @@ describe("TutorialManager", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.unstubAllGlobals();
   });
 
@@ -114,8 +121,7 @@ describe("TutorialManager", () => {
     });
 
     test("onCompilation updates checkmarks in header text", async () => {
-      vi.stubGlobal("window", { setTimeout: globalThis.setTimeout });
-      vi.useFakeTimers();
+      setupTutorialTimers();
       const { manager, headerText } = setupManager();
       manager.startTutorialAt(0);
       // Initially all unchecked
@@ -133,9 +139,8 @@ describe("TutorialManager", () => {
       // After onCompilation, the header should show checked criteria
       expect(headerText.value).toContain("[\u2713]");
       expect(headerText.value).not.toContain("[ ]");
-      await vi.advanceTimersByTimeAsync(1000);
+      await vi.advanceTimersByTimeAsync(500);
       await promise;
-      vi.useRealTimers();
     });
   });
 });
