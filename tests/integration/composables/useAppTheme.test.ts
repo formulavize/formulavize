@@ -4,8 +4,12 @@ import { useAppTheme } from "src/composables/useAppTheme";
 
 // Mock Vuetify's useTheme
 const mockVuetifyThemeName = { value: "light" };
+const mockVuetifyThemeChange = vi.fn((theme: "light" | "dark") => {
+  mockVuetifyThemeName.value = theme;
+});
 vi.mock("vuetify", () => ({
   useTheme: () => ({
+    change: mockVuetifyThemeChange,
     global: {
       name: mockVuetifyThemeName,
     },
@@ -19,6 +23,7 @@ describe("useAppTheme", () => {
 
   beforeEach(() => {
     mockVuetifyThemeName.value = "light";
+    mockVuetifyThemeChange.mockClear();
     mediaQueryHandler = null;
 
     mockMatchMedia = vi.fn().mockReturnValue({

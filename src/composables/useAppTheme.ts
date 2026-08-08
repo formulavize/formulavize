@@ -15,7 +15,7 @@ export function useAppTheme(initialThemeMode: ThemeMode = "system") {
   });
 
   function applyTheme(theme: "light" | "dark") {
-    vuetifyTheme.global.name.value = theme;
+    vuetifyTheme.change(theme);
     document.documentElement.classList.toggle("dark", theme === "dark");
   }
 

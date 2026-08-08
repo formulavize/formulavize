@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [Vue()],
   resolve: {
     alias: {
-      src: path.resolve(__dirname, "./src"),
+      src: path.resolve(import.meta.dirname, "./src"),
     },
   },
   test: {

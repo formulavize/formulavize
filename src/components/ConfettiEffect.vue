@@ -12,7 +12,7 @@ const triggerConfetti = async () => {
     startVelocity: 60,
     shapes: ["circle"],
     colors: ["#80ebff", "#33acff"],
-    ticks: 50,
+    ticks: 2000,
     gravity: 1,
     scalar: 1,
   };
