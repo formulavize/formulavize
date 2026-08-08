@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.14.0](https://github.com/formulavize/formulavize/compare/v1.13.0...v1.14.0) (2026-08-08)
+
+
+### Features
+
+* **compiler:** enhance error handling and syntax checks in compiler ([#68](https://github.com/formulavize/formulavize/issues/68)) ([ae08236](https://github.com/formulavize/formulavize/commit/ae08236d083d57bea8df161cfdab86c49d2adba0))
+
+
+### Bug Fixes
+
+* **confetti:** restore missing confetti blast ([#72](https://github.com/formulavize/formulavize/issues/72)) ([1913e13](https://github.com/formulavize/formulavize/commit/1913e13354f3e49a1f60225dc60135b476535011))
+
 ## [1.13.0](https://github.com/formulavize/formulavize/compare/v1.12.3...v1.13.0) (2026-08-03)
 
 
