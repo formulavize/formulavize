@@ -7,14 +7,7 @@
 
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
-import { match } from "ts-pattern";
-import cytoscape, {
-  Core,
-  ElementsDefinition,
-  LayoutOptions,
-  NodeSingular,
-  StylesheetCSS,
-} from "cytoscape";
+import cytoscape, { Core, ElementsDefinition, StylesheetCSS } from "cytoscape";
 import dagre from "cytoscape-dagre";
 import cytoscapePopper, {
   PopperFactory,
@@ -30,6 +23,8 @@ import {
 import svg from "cytoscape-svg";
 import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
+import { dagreLayoutOptions } from "./cyLayout";
+import { exportCyToBlob } from "./cyExport";
 import {
   setupCyPoppers,
   addDescriptionGhostNodes,
@@ -76,29 +71,6 @@ const popperFactory: PopperFactory = (
 cytoscape.use(dagre);
 cytoscape.use(cytoscapePopper(popperFactory));
 cytoscape.use(svg);
-
-// Dagre layout options type - refer to dagre documentation and cytoscape-dagre typings
-// https://github.com/cytoscape/cytoscape.js-dagre?tab=readme-ov-file#api
-type DagreLayoutOptions = LayoutOptions & {
-  name: "dagre";
-  sort: (a: NodeSingular, b: NodeSingular) => number;
-};
-
-// We define a custom sort function to encourage the layout manager
-// to follow the insertion order of nodes in the DAG.
-// However, Dagre's crossing minimization may still rearrange nodes in a way
-// that doesn't preserve the insertion order.
-const layoutOptions = {
-  name: "dagre",
-  sort: (A: NodeSingular, B: NodeSingular) => {
-    const orderA: number[] = A.data("order") ?? [];
-    const orderB: number[] = B.data("order") ?? [];
-    for (let i = 0; i < Math.min(orderA.length, orderB.length); i++) {
-      if (orderA[i] !== orderB[i]) return orderA[i] - orderB[i];
-    }
-    return orderA.length - orderB.length;
-  },
-} satisfies DagreLayoutOptions;
 
 /**
  * CytoscapeRenderer - A renderer using Cytoscape.js for DAG visualization.
@@ -161,7 +133,7 @@ const CytoscapeRenderer = defineComponent({
     runLayout(): void {
       Promise.resolve().then(() => {
         if (this.cy) {
-          this.cy.layout(layoutOptions).run();
+          this.cy.layout(dagreLayoutOptions).run();
         }
       });
     },
@@ -251,40 +223,7 @@ const CytoscapeRenderer = defineComponent({
       // so Cytoscape's canvas-based exporters capture them natively.
       const ghostIds = this.addGhostNodes();
 
-      // Issue: the svg exporter rasterizes images in the graph.
-      // The workaround for exporting large images is to export a scaled up
-      // raster image and then downscale it in an image editor.
-      // Ideally, this issue should be addressed in the underlying library.
-      // Speculatively, we might be able to swap the image tags in the svg.
-      // Svg export is still a useful starting point for those who want to
-      // manually edit layouts in an svg editor.
-      const scaleFactor = exportOptions.scalingFactor;
-      const imgBlob = match(exportOptions.fileType)
-        .with(ExportFormat.PNG, () => {
-          return this.cy!.png({
-            full: true,
-            scale: scaleFactor,
-            output: "blob",
-          });
-        })
-        .with(ExportFormat.JPG, () => {
-          return this.cy!.jpg({
-            full: true,
-            scale: scaleFactor,
-            output: "blob",
-          });
-        })
-        .with(ExportFormat.SVG, () => {
-          // @ts-expect-error: missing types
-          const svgData = this.cy!.svg({ full: true, scale: scaleFactor });
-          return new Blob([svgData], {
-            type: "image/svg+xml;charset=utf-8",
-          });
-        })
-        .otherwise((format) => {
-          console.error(`Unsupported export format: ${format}`);
-          return null;
-        });
+      const imgBlob = exportCyToBlob(this.cy, exportOptions);
 
       this.removeGhostNodes(ghostIds);
 
