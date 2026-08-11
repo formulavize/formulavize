@@ -2,6 +2,7 @@ allowBuilds:
   "@formulavize/lang-fiz": true
   "@formulavize/lezer-fiz": true
   "@tsparticles/engine": true
+  esbuild: true
 minimumReleaseAgeExclude:
   - "@formulavize/lang-fiz"
   - "@formulavize/lezer-fiz"
