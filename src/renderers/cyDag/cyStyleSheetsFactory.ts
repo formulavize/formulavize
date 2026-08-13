@@ -159,7 +159,7 @@ export function getBaseStylesheet(isDark = false): StylesheetCSS[] {
   const namespaceBackground = isDark ? "#2a2a2a" : "#f0f0f0";
   return [
     {
-      selector: "node",
+      selector: "node[name]",
       css: {
         label: "data(name)",
         color: labelColor,
