@@ -205,6 +205,73 @@ describe("rendererPropertyCompleter", () => {
   });
 });
 
+describe("renderer directive completions", () => {
+  function makeDirectiveIndex(rendererDirectiveName: string): CompletionIndex {
+    return new CompletionIndex(
+      [],
+      [
+        {
+          type: ContextScenarioType.StyleArgList,
+          from: 10,
+          to: 30,
+          rendererDirectiveName: rendererDirectiveName,
+        },
+      ],
+      [],
+    );
+  }
+
+  test("offers only directive properties inside a matching directive", async () => {
+    const source = createRendererPropertyCompletionSource(
+      makeDirectiveIndex("cytoscape"),
+      "cytoscape",
+    );
+    const ctx = createMockContext(15, "^cytoscape{ ra", false);
+    const result = await runSource(source, ctx);
+    expect(result).not.toBeNull();
+    const labels = result!.options.map((o) => o.label);
+    expect(labels).toContain("rankDir");
+    // Stylesheet properties are not directives
+    expect(labels).not.toContain("border-width");
+    expect(labels).not.toContain("line-color");
+  });
+
+  test("offers nothing inside a directive for another renderer", async () => {
+    const source = createRendererPropertyCompletionSource(
+      makeDirectiveIndex("minimal"),
+      "cytoscape",
+    );
+    const ctx = createMockContext(15, "^minimal{ ra", false);
+    const result = await runSource(source, ctx);
+    expect(result!.options).toEqual([]);
+  });
+
+  test("regex fallback handles a directive before the index registers", async () => {
+    // The CompletionIndex lags the debounce, so the completer must recognize
+    // '^rendererName{' from the raw text alone.
+    const source = createRendererPropertyCompletionSource(
+      new CompletionIndex([], [], []),
+      "cytoscape",
+    );
+    const ctx = createMockContext(15, "^cytoscape{ ba", false);
+    const result = await runSource(source, ctx);
+    expect(result).not.toBeNull();
+    const labels = result!.options.map((o) => o.label);
+    expect(labels).toContain("background-color");
+    expect(labels).not.toContain("background-opacity");
+  });
+
+  test("regex fallback offers nothing for another renderer", async () => {
+    const source = createRendererPropertyCompletionSource(
+      new CompletionIndex([], [], []),
+      "cytoscape",
+    );
+    const ctx = createMockContext(15, "^minimal{ ba", false);
+    const result = await runSource(source, ctx);
+    expect(result!.options).toEqual([]);
+  });
+});
+
 describe("rendererPropertyCompletionsByElementType", () => {
   test("node completions include node properties and shared properties", () => {
     const nodeProps = getRendererPropertyCompletionsByElementType(

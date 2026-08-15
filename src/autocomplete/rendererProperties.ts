@@ -1,7 +1,10 @@
 import { Completion } from "@codemirror/autocomplete";
 import {
+  BACKGROUND_COLOR_PROPERTY,
+  CYTOSCAPE_RENDERER_NAME,
   DESCRIPTION_PREFIX,
   DESCRIPTION_PROPERTY,
+  RANK_DIR_PROPERTY,
 } from "../compiler/constants";
 
 // Cytoscape properties sourced from https://js.cytoscape.org/#style
@@ -240,19 +243,30 @@ const cytoscapeEdgeCompletions = buildCompletions([
   ...CYTOSCAPE_SHARED_PROPERTIES,
 ]);
 
+// Properties consumed directly by the cytoscape renderer from a
+// '^cytoscape{ }' directive. These are not cytoscape stylesheet properties:
+// the background fill applies to the drawing surface (editor view and exported
+// images) and rankDir configures the dagre layout.
+const cytoscapeDirectiveCompletions = buildCompletions([
+  BACKGROUND_COLOR_PROPERTY,
+  RANK_DIR_PROPERTY,
+]);
+
 interface RendererPropertyEntry {
   all: Completion[];
   byElementType: Record<string, Completion[]>;
+  directives: Completion[];
 }
 
 const rendererPropertyRegistry: Record<string, RendererPropertyEntry> = {
-  cytoscape: {
+  [CYTOSCAPE_RENDERER_NAME]: {
     all: cytoscapeCompletions,
     byElementType: {
       node: cytoscapeNodeCompletions,
       edge: cytoscapeEdgeCompletions,
       subgraph: cytoscapeNodeCompletions,
     },
+    directives: cytoscapeDirectiveCompletions,
   },
 };
 
@@ -269,4 +283,10 @@ export function getRendererPropertyCompletionsByElementType(
   const entry = rendererPropertyRegistry[rendererId];
   if (!entry) return [];
   return entry.byElementType[elementType] ?? entry.all;
+}
+
+export function getRendererDirectiveCompletions(
+  rendererId: string,
+): Completion[] {
+  return rendererPropertyRegistry[rendererId]?.directives ?? [];
 }

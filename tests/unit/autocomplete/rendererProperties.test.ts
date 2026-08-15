@@ -1,5 +1,8 @@
 import { describe, test, expect } from "vitest";
-import { getRendererPropertyCompletions } from "src/autocomplete/rendererProperties";
+import {
+  getRendererPropertyCompletions,
+  getRendererDirectiveCompletions,
+} from "src/autocomplete/rendererProperties";
 
 describe("rendererProperties", () => {
   test("cytoscape returns a non-empty array", () => {
@@ -23,5 +26,28 @@ describe("rendererProperties", () => {
   test("unknown renderer returns empty array", () => {
     const completions = getRendererPropertyCompletions("nonexistent");
     expect(completions).toEqual([]);
+  });
+});
+
+describe("renderer directive completions", () => {
+  test("cytoscape directives cover the supported keys", () => {
+    const labels = getRendererDirectiveCompletions("cytoscape").map(
+      (c) => c.label,
+    );
+    expect(labels).toContain("rankDir");
+    expect(labels).toContain("background-color");
+  });
+
+  test("directives exclude stylesheet properties", () => {
+    const labels = getRendererDirectiveCompletions("cytoscape").map(
+      (c) => c.label,
+    );
+    expect(labels).not.toContain("border-width");
+    expect(labels).not.toContain("curve-style");
+  });
+
+  test("renderer without directives returns empty array", () => {
+    expect(getRendererDirectiveCompletions("minimal")).toEqual([]);
+    expect(getRendererDirectiveCompletions("nonexistent")).toEqual([]);
   });
 });

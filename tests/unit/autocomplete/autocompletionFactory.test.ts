@@ -13,6 +13,7 @@ import {
   StyleTreeNode as Style,
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
+  RendererDirectiveTreeNode as RendererDirective,
   NamespaceTreeNode as Namespace,
   ValueListTreeNode as ValueList,
   StatementListTreeNode as StatementList,
@@ -205,6 +206,51 @@ describe("makeCompletionIndex captures context scenarios", () => {
       from: 11, // styleArgList.from + 1
       to: 19, // styleArgList.to - 1
     });
+  });
+
+  test("creates context scenario for renderer directive", async () => {
+    const styleArgList = new Style(new Map(), [], pos(10, 20));
+    const directiveNode = new RendererDirective(
+      "cytoscape",
+      styleArgList,
+      pos(0, 25),
+    );
+
+    const index = await makeCompletionIndex([directiveNode]);
+
+    expect(index.contextScenarios).toHaveLength(1);
+    expect(index.contextScenarios[0]).toEqual({
+      type: ContextScenarioType.StyleArgList,
+      from: 11, // styleArgList.from + 1
+      to: 19, // styleArgList.to - 1
+      rendererDirectiveId: "cytoscape",
+    });
+  });
+
+  test("renderer directive carries an unregistered id through", async () => {
+    const directiveNode = new RendererDirective(
+      "madeup",
+      new Style(new Map(), [], pos(10, 20)),
+      pos(0, 25),
+    );
+
+    const index = await makeCompletionIndex([directiveNode]);
+
+    expect(index.contextScenarios[0]).toMatchObject({
+      rendererDirectiveId: "madeup",
+    });
+  });
+
+  test("renderer directive declares no tokens", async () => {
+    const directiveNode = new RendererDirective(
+      "cytoscape",
+      new Style(new Map(), [], pos(10, 20)),
+      pos(0, 25),
+    );
+
+    const index = await makeCompletionIndex([directiveNode]);
+
+    expect(index.tokens).toHaveLength(0);
   });
 
   test("creates multiple context scenarios for namespace", async () => {

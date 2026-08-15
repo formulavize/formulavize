@@ -12,6 +12,7 @@ import {
   createQualifiedVariableCompletionSource,
   createQualifiedStyleCompletionSource,
   createGlobalStyleKeywordCompletionSource,
+  createRendererDirectiveNameCompletionSource,
   getAllDynamicCompletionSources,
 } from "src/autocomplete/autocompleter";
 import {
@@ -939,6 +940,59 @@ describe("autocompleter", () => {
 
     test("returns null when no asterisk", async () => {
       const context = createMockContext(4, "node");
+      const result = await runSource(source, context);
+
+      expect(result).toBeNull();
+    });
+
+    test("canvas is no longer a global style keyword", async () => {
+      const context = createMockContext(4, "*can");
+      const result = await runSource(source, context);
+
+      expect(result!.options.map((o) => o.label)).not.toContain("canvas");
+    });
+  });
+
+  describe("createRendererDirectiveNameCompletionSource", () => {
+    let source: CompletionSource;
+
+    beforeEach(() => {
+      source = createRendererDirectiveNameCompletionSource();
+    });
+
+    test("completes renderer names after caret", async () => {
+      const context = createMockContext(3, "^cy");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.from).toBe(1);
+      expect(result!.options).toContainEqual({
+        label: "cytoscape",
+        type: "keyword",
+      });
+    });
+
+    test("completes with empty prefix after caret", async () => {
+      const context = createMockContext(1, "^");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.from).toBe(1);
+      expect(result!.options.map((o) => o.label)).toContain("cytoscape");
+      expect(result!.options.map((o) => o.label)).toContain("minimal");
+    });
+
+    test("filters renderer names by prefix", async () => {
+      const context = createMockContext(2, "^m");
+      const result = await runSource(source, context);
+
+      expect(result).toBeTruthy();
+      expect(result!.options.map((o) => o.label)).toContain("minimal");
+      expect(result!.options.map((o) => o.label)).not.toContain("cytoscape");
+    });
+
+    test("returns null when no caret", async () => {
+      const context = createMockContext(9, "cytoscape");
       const result = await runSource(source, context);
 
       expect(result).toBeNull();

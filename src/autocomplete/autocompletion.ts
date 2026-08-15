@@ -22,6 +22,9 @@ export interface ContextScenario {
   // Used only by rendererPropertyCompleter to filter Cytoscape properties
   // by element type (node/edge/subgraph) inside global style bindings.
   globalStyleKeyword?: string;
+  // Set inside a '^<rendererName>{ }' block. Directive properties are offered
+  // only when this matches the active renderer.
+  rendererDirectiveName?: string;
 }
 
 // An autocompletion token definition

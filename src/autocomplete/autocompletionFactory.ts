@@ -8,6 +8,7 @@ import {
   NamedStyleTreeNode,
   StyleBindingTreeNode,
   GlobalStyleBindingTreeNode,
+  RendererDirectiveTreeNode,
   NamespaceTreeNode,
   ImportTreeNode,
 } from "../compiler/ast";
@@ -52,6 +53,7 @@ function makeTokenRecords(statement: StatementTreeNode): TokenInfo[] {
       ];
     })
     .with(NodeType.GlobalStyleBinding, () => [])
+    .with(NodeType.RendererDirective, () => [])
     .with(NodeType.Namespace, () => {
       const namespaceNode = statement as NamespaceTreeNode;
       return [
@@ -171,6 +173,18 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
           from: globalStyleBindingNode.StyleNode.Position.from + 1,
           to: globalStyleBindingNode.StyleNode.Position.to - 1,
           globalStyleKeyword: canonicalKeyword,
+        },
+      ];
+    })
+    .with(NodeType.RendererDirective, () => {
+      const rendererDirectiveNode = statement as RendererDirectiveTreeNode;
+      if (!rendererDirectiveNode.StyleNode.Position) return [];
+      return [
+        {
+          type: ContextScenarioType.StyleArgList,
+          from: rendererDirectiveNode.StyleNode.Position.from + 1,
+          to: rendererDirectiveNode.StyleNode.Position.to - 1,
+          rendererDirectiveId: rendererDirectiveNode.RendererName,
         },
       ];
     })
