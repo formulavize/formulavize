@@ -551,4 +551,31 @@ describe("makes cytoscape stylesheets", () => {
     ]);
     expect(makeCyStylesheets(testDag)).toEqual(expectedCyStyles);
   });
+  test("canvas global style binding emits no selector", () => {
+    const testDag = new Dag("DagId");
+    testDag.addGlobalStyleBinding("canvas", {
+      styleTags: [],
+      styleProperties: new Map([["background-color", "#fff"]]),
+    });
+    expect(makeGlobalStyleSheets(testDag)).toEqual([]);
+    expect(makeCyStylesheets(testDag)).toEqual(getBaseStylesheet());
+  });
+  test("canvas global style binding does not hide element bindings", () => {
+    const testDag = new Dag("DagId");
+    testDag.addGlobalStyleBinding("canvas", {
+      styleTags: [],
+      styleProperties: new Map([["background-color", "#fff"]]),
+    });
+    testDag.addGlobalStyleBinding("edge", {
+      styleTags: [],
+      styleProperties: new Map([["color", "blue"]]),
+    });
+    const expectedStyles = [
+      {
+        selector: "edge",
+        css: { color: "blue" },
+      },
+    ];
+    expect(makeGlobalStyleSheets(testDag)).toEqual(expectedStyles);
+  });
 });
