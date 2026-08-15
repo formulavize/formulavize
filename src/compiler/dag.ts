@@ -37,6 +37,7 @@ export class Dag {
   private styleTagNameToFlatStyleMap: Map<string, StyleProperties>;
   private styleBinding: Map<Keyword, DagStyle>;
   private globalStyleBinding: Map<Keyword, DagStyle>;
+  private rendererDirectives: Map<string, DagStyle>;
   private childDags: Map<DagId, Dag>;
   private namespaceNameToDagId: Map<string, DagId>;
   private lineagePath: string;
@@ -66,6 +67,7 @@ export class Dag {
     this.styleTagNameToFlatStyleMap = new Map();
     this.styleBinding = new Map();
     this.globalStyleBinding = new Map();
+    this.rendererDirectives = new Map();
     this.childDags = new Map();
     this.namespaceNameToDagId = new Map();
     if (parent !== null) {
@@ -95,6 +97,10 @@ export class Dag {
 
   addGlobalStyleBinding(keyword: Keyword, dagStyle: DagStyle): void {
     this.globalStyleBinding.set(keyword, dagStyle);
+  }
+
+  addRendererDirective(rendererName: string, dagStyle: DagStyle): void {
+    this.rendererDirectives.set(rendererName, dagStyle);
   }
 
   private addChildDagWithOrder(childDag: Dag, insertionOrder: number): void {
@@ -300,6 +306,10 @@ export class Dag {
     return this.globalStyleBinding;
   }
 
+  getRendererDirectives(): Map<string, DagStyle> {
+    return this.rendererDirectives;
+  }
+
   getChildDags(): Dag[] {
     return Array.from(this.childDags.values());
   }
@@ -373,6 +383,9 @@ export class Dag {
     });
     dag.getGlobalStyleBindings().forEach((dagStyle, keyword) => {
       this.addGlobalStyleBinding(keyword, dagStyle);
+    });
+    dag.getRendererDirectives().forEach((dagStyle, rendererName) => {
+      this.addRendererDirective(rendererName, dagStyle);
     });
     dag.getVarNameToNodeIdMap().forEach((nodeId, varName) => {
       this.setVarNode(varName, nodeId);
@@ -454,6 +467,15 @@ export class Dag {
         childLeftPad +
         "GlobalStyleBinding: " +
         keyword +
+        styleTagDump(dagStyle.styleTags) +
+        stylePropertiesDump(dagStyle.styleProperties) +
+        "\n";
+    });
+    this.rendererDirectives.forEach((dagStyle, rendererName) => {
+      result +=
+        childLeftPad +
+        "RendererDirective: " +
+        rendererName +
         styleTagDump(dagStyle.styleTags) +
         stylePropertiesDump(dagStyle.styleProperties) +
         "\n";

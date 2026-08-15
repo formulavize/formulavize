@@ -288,6 +288,48 @@ describe("merge dag tests", () => {
       new Map([["keyword1", styleNode2]]),
     );
   });
+  test("merge dag renderer directives", () => {
+    // Anonymous imports merge into the importing dag, so a directive carried
+    // by an imported file would be silently dropped without this.
+    const dag1 = new Dag("root1");
+    const directive1 = {
+      styleTags: [],
+      styleProperties: new Map([["rankDir", "LR"]]),
+    };
+    dag1.addRendererDirective("cytoscape", directive1);
+    const dag2 = new Dag("root2");
+    const directive2 = {
+      styleTags: [],
+      styleProperties: new Map([["spacing", "2"]]),
+    };
+    dag2.addRendererDirective("minimal", directive2);
+
+    dag1.mergeDag(dag2);
+    expect(dag1.getRendererDirectives()).toEqual(
+      new Map([
+        ["cytoscape", directive1],
+        ["minimal", directive2],
+      ]),
+    );
+  });
+  test("merge dag renderer directives with conflicting ids", () => {
+    const dag1 = new Dag("root1");
+    dag1.addRendererDirective("cytoscape", {
+      styleTags: [],
+      styleProperties: new Map([["rankDir", "LR"]]),
+    });
+    const dag2 = new Dag("root2");
+    const directive2 = {
+      styleTags: [],
+      styleProperties: new Map([["rankDir", "BT"]]),
+    };
+    dag2.addRendererDirective("cytoscape", directive2);
+
+    dag1.mergeDag(dag2);
+    expect(dag1.getRendererDirectives()).toEqual(
+      new Map([["cytoscape", directive2]]),
+    );
+  });
   test("merge dag var nodes with no conflicts", () => {
     const dag1 = new Dag("root1");
     dag1.setVarNode("x", "node1");

@@ -25,6 +25,7 @@ export enum ErrorCode {
   MismatchedBracket = "SYN_MISMATCHED_BRACKET",
   UnexpectedToken = "SYN_UNEXPECTED_TOKEN",
   InvalidGlobalStyleKeyword = "SYN_INVALID_GLOBAL_STYLE_KEYWORD",
+  RendererDirectiveNotAtTopLevel = "SYN_RENDERER_DIRECTIVE_NOT_TOP_LEVEL",
 
   // Import errors
   ImportFetchFailed = "IMP_FETCH_FAILED",

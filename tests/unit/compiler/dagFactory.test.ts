@@ -10,6 +10,7 @@ import {
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   GlobalStyleBindingTreeNode as GlobalStyleBinding,
+  RendererDirectiveTreeNode as RendererDirective,
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
   ValueListTreeNode as ValueList,
@@ -22,6 +23,8 @@ import { ImportCacher } from "src/compiler/importCacher";
 import {
   DEFAULT_POSITION,
   CompilationError,
+  ErrorCode,
+  ErrorSource,
 } from "src/compiler/compilationErrors";
 
 const dummyImporter = {} as ImportCacher;
@@ -880,6 +883,100 @@ describe("global style binding tests", () => {
     expect(errors).toHaveLength(1);
     expect(errors[0].message).toContain("Invalid global style binding keyword");
     expect(errors[0].message).toContain("foo");
+  });
+});
+
+describe("renderer directive tests", () => {
+  test("no renderer directive", async () => {
+    const recipe = new Recipe([]);
+    const { dag } = await makeDag(recipe, dummyImporter);
+    expect(dag.getRendererDirectives()).toEqual(new Map<string, DagStyle>());
+  });
+  test("renderer directive with inline properties", async () => {
+    const recipe = new Recipe([
+      new RendererDirective(
+        "cytoscape",
+        new Style(new Map([["rankDir", "LR"]]), []),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+    expect(errors).toHaveLength(0);
+    expect(dag.getRendererDirectives()).toEqual(
+      new Map<string, DagStyle>([
+        [
+          "cytoscape",
+          { styleTags: [], styleProperties: new Map([["rankDir", "LR"]]) },
+        ],
+      ]),
+    );
+  });
+  test("renderer directive with style tags", async () => {
+    const recipe = new Recipe([
+      new NamedStyle("compact", new Style(new Map([["rankDir", "LR"]]))),
+      new RendererDirective(
+        "cytoscape",
+        new Style(new Map(), [new StyleTagNode(["compact"])]),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+    expect(errors).toHaveLength(0);
+    expect(dag.getRendererDirectives()).toEqual(
+      new Map<string, DagStyle>([
+        ["cytoscape", { styleTags: [["compact"]], styleProperties: new Map() }],
+      ]),
+    );
+  });
+  test("unknown renderer id is stored without error", async () => {
+    // Renderer ids are deliberately not validated: the compiler has no
+    // knowledge of the renderer registry.
+    const recipe = new Recipe([
+      new RendererDirective("madeup", new Style(new Map([["x", "y"]]), [])),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+    expect(errors).toHaveLength(0);
+    expect(dag.getRendererDirectives().has("madeup")).toBe(true);
+  });
+  test("repeated directives for one renderer are last-wins", async () => {
+    const recipe = new Recipe([
+      new RendererDirective(
+        "cytoscape",
+        new Style(new Map([["rankDir", "LR"]]), []),
+      ),
+      new RendererDirective(
+        "cytoscape",
+        new Style(new Map([["background-color", "#fff"]]), []),
+      ),
+    ]);
+    const { dag } = await makeDag(recipe, dummyImporter);
+    expect(dag.getRendererDirectives().get("cytoscape")).toEqual({
+      styleTags: [],
+      styleProperties: new Map([["background-color", "#fff"]]),
+    });
+  });
+  test("directive inside a namespace produces an error", async () => {
+    const recipe = new Recipe([
+      new Namespace(
+        "ns",
+        new StatementList([
+          new RendererDirective(
+            "cytoscape",
+            new Style(new Map([["rankDir", "LR"]]), []),
+          ),
+        ]),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatchObject({
+      code: ErrorCode.RendererDirectiveNotAtTopLevel,
+      severity: "error",
+      source: ErrorSource.Syntax,
+    });
+    expect(dag.getRendererDirectives()).toEqual(new Map<string, DagStyle>());
+    const childDag = dag.getChildDags()[0];
+    expect(childDag.getRendererDirectives()).toEqual(
+      new Map<string, DagStyle>(),
+    );
   });
 });
 

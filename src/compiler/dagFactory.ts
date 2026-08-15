@@ -11,6 +11,7 @@ import {
   NamedStyleTreeNode,
   StyleBindingTreeNode,
   GlobalStyleBindingTreeNode,
+  RendererDirectiveTreeNode,
   NamespaceTreeNode,
   ValueTreeNode,
   ImportTreeNode,
@@ -528,6 +529,37 @@ function processGlobalStyleBinding(
   workingDag.addGlobalStyleBinding(canonicalKeyword, makeDagStyle(styleNode));
 }
 
+function processRendererDirective(
+  rendererDirectiveStmt: RendererDirectiveTreeNode,
+  workingDag: Dag,
+  errors: Error[],
+): void {
+  // Renderer directives configure the drawing surface and layout, which are
+  // properties of the whole graph. A renderer instantiates one layout for the
+  // root dag, so a directive nested in a namespace could never take effect.
+  if (workingDag.Parent) {
+    const errMsg = makeError(
+      rendererDirectiveStmt,
+      `Renderer directive '^${rendererDirectiveStmt.RendererName}' is only ` +
+        `allowed at the top level, not inside namespace '${workingDag.Name}'`,
+      ErrorSource.Syntax,
+      ErrorCode.RendererDirectiveNotAtTopLevel,
+    );
+    errors.push(errMsg);
+    console.debug(errMsg);
+    return;
+  }
+  // The renderer name is deliberately not validated. The compiler has no
+  // knowledge of the renderer registry, and a directive addressed to a
+  // renderer that is not active is simply never read.
+  const styleNode = rendererDirectiveStmt.StyleNode;
+  checkStyleTagsInStyleNode(styleNode, workingDag, errors);
+  workingDag.addRendererDirective(
+    rendererDirectiveStmt.RendererName,
+    makeDagStyle(styleNode),
+  );
+}
+
 async function processStatement(
   stmt: BaseTreeNode,
   workingDag: Dag,
@@ -559,6 +591,13 @@ async function processStatement(
     .with(NodeType.GlobalStyleBinding, () => {
       processGlobalStyleBinding(
         stmt as GlobalStyleBindingTreeNode,
+        workingDag,
+        errors,
+      );
+    })
+    .with(NodeType.RendererDirective, () => {
+      processRendererDirective(
+        stmt as RendererDirectiveTreeNode,
         workingDag,
         errors,
       );
