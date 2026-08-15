@@ -23,12 +23,16 @@ export function exportCyToBlob(
   // Svg export is still a useful starting point for those who want to
   // manually edit layouts in an svg editor.
   const scaleFactor = exportOptions.scalingFactor;
+  // Leaving bg undefined keeps each exporter's own default:
+  // transparent for png and svg, white for jpg.
+  const bgColor = exportOptions.backgroundColor;
   return match(exportOptions.fileType)
     .with(ExportFormat.PNG, () => {
       return cy.png({
         full: true,
         scale: scaleFactor,
         output: "blob",
+        bg: bgColor,
       });
     })
     .with(ExportFormat.JPG, () => {
@@ -36,11 +40,12 @@ export function exportCyToBlob(
         full: true,
         scale: scaleFactor,
         output: "blob",
+        bg: bgColor,
       });
     })
     .with(ExportFormat.SVG, () => {
       // @ts-expect-error: missing types
-      const svgData = cy.svg({ full: true, scale: scaleFactor });
+      const svgData = cy.svg({ full: true, scale: scaleFactor, bg: bgColor });
       return new Blob([svgData], {
         type: "image/svg+xml;charset=utf-8",
       });

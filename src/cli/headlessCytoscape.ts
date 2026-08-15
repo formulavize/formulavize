@@ -4,7 +4,7 @@ import { Dag } from "../compiler/dag";
 import { ExportFormat } from "../compiler/constants";
 import { makeCyElements } from "../renderers/cyDag/cyGraphFactory";
 import { makeCyStylesheets } from "../renderers/cyDag/cyStyleSheetsFactory";
-import { dagreLayoutOptions } from "../renderers/cyDag/cyLayout";
+import { getCanvasBackgroundColor } from "../renderers/cyDag/cyRendererDirectives";
 import { exportCyToBlob } from "../renderers/cyDag/cyExport";
 import { addDescriptionGhostNodes } from "../renderers/cyDag/cyPopperExtender";
 
@@ -223,6 +223,7 @@ export async function renderDagToBytes(
       fileName: "formulavize",
       fileType: options.fileType,
       scalingFactor: options.scalingFactor,
+      backgroundColor: getCanvasBackgroundColor(dag),
     });
 
     for (const id of ghostIds) cy.getElementById(id).remove();

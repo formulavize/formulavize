@@ -1,4 +1,5 @@
 import { describe, test, expect } from "vitest";
+import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { Compiler } from "src/compiler/driver";
 import { ExportFormat } from "src/compiler/constants";
 import {
@@ -19,6 +20,15 @@ async function render(
 ): Promise<Buffer> {
   const { DAG } = await new Compiler().compileFromSource(source);
   return renderDagToBytes(DAG, { ...baseOptions, ...overrides });
+}
+
+// Decode PNG bytes and read the top-left pixel as [r, g, b, a].
+async function getCornerPixel(bytes: Buffer): Promise<number[]> {
+  const image = await loadImage(bytes);
+  const canvas = createCanvas(image.width, image.height);
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(image, 0, 0);
+  return [...ctx.getImageData(0, 0, 1, 1).data];
 }
 
 describe("headless CLI rendering", () => {
@@ -47,6 +57,27 @@ describe("headless CLI rendering", () => {
     expect(svg).toContain("<svg");
     expect(svg).toContain("alpha");
     expect(svg).toContain("beta");
+  });
+
+  test("canvas background color fills the exported PNG", async () => {
+    const bytes = await render(
+      '^cytoscape{ background-color: "#ff0000" }\na = load()\nprocess(a)\n',
+    );
+    expect(await getCornerPixel(bytes)).toEqual([0xff, 0x00, 0x00, 0xff]);
+  });
+
+  test("PNG stays transparent without a canvas binding", async () => {
+    const bytes = await render("a = load()\nprocess(a)\n");
+    const [, , , alpha] = await getCornerPixel(bytes);
+    expect(alpha).toBe(0);
+  });
+
+  test("canvas background color fills the exported SVG", async () => {
+    const bytes = await render(
+      '^cytoscape{ background-color: "#ff0000" }\na = alpha()\nbeta(a)\n',
+      { fileType: ExportFormat.SVG, includeDescriptions: false },
+    );
+    expect(bytes.toString("utf8")).toContain("#ff0000");
   });
 
   test("scaling factor increases the rendered image size", async () => {

@@ -1,3 +1,4 @@
+import { CYTOSCAPE_RENDERER_NAME } from "./compiler/constants";
 import { VersionedStore } from "./versionedStore";
 
 export type ThemeMode = "light" | "dark" | "system";
@@ -12,7 +13,7 @@ export interface Options {
 const DEFAULTS: Options = {
   enableTabbingInEditor: false, // off by default to avoid focus trapping
   debugMode: false,
-  selectedRenderer: "cytoscape",
+  selectedRenderer: CYTOSCAPE_RENDERER_NAME,
 };
 
 export class OptionsStore extends VersionedStore<Options> {

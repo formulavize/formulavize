@@ -23,7 +23,7 @@ import {
 import svg from "cytoscape-svg";
 import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
-import { dagreLayoutOptions } from "./cyLayout";
+import { getCanvasBackgroundColor } from "./cyRendererDirectives";
 import { exportCyToBlob } from "./cyExport";
 import {
   setupCyPoppers,
@@ -148,10 +148,21 @@ const CytoscapeRenderer = defineComponent({
       }
     },
 
+    // Paint the container with the '^cytoscape' background so the editor shows
+    // what an export will contain. Clearing the inline style hands the
+    // background back to the themed --fviz-bg rule.
+    applyCanvasBackground(): void {
+      const container = this.$refs.container as HTMLElement | undefined;
+      if (!container) return;
+      container.style.backgroundColor =
+        getCanvasBackgroundColor(this.dag) ?? "";
+    },
+
     applyThemeStyles(): void {
       if (!this.cy) return;
       const newStylesheets = makeCyStylesheets(this.dag, this.isDark);
       this.applyStyles(newStylesheets);
+      this.applyCanvasBackground();
     },
 
     updateDag(dag: Dag): void {
@@ -198,6 +209,7 @@ const CytoscapeRenderer = defineComponent({
         if (diff.topologyChanged) this.runLayout();
       }
 
+      this.applyCanvasBackground();
       this.previousElements = newElements;
     },
 
@@ -223,7 +235,10 @@ const CytoscapeRenderer = defineComponent({
       // so Cytoscape's canvas-based exporters capture them natively.
       const ghostIds = this.addGhostNodes();
 
-      const imgBlob = exportCyToBlob(this.cy, exportOptions);
+      const imgBlob = exportCyToBlob(this.cy, {
+        ...exportOptions,
+        backgroundColor: getCanvasBackgroundColor(this.dag),
+      });
 
       this.removeGhostNodes(ghostIds);
 

@@ -9,6 +9,9 @@ export interface FileExportOptions {
   fileName: string;
   fileType: ExportFormat;
   scalingFactor: number;
+  // Background fill for the exported image. When omitted, the underlying
+  // exporter's default applies (transparent for png/svg, white for jpg).
+  backgroundColor?: string;
 }
 
 /**

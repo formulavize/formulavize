@@ -1,11 +1,15 @@
 import { ref, shallowRef, computed, watch, markRaw } from "vue";
-import { ExportFormat } from "../compiler/constants";
+import {
+  CYTOSCAPE_RENDERER_NAME,
+  ExportFormat,
+  MINIMAL_RENDERER_NAME,
+} from "../compiler/constants";
 import { RendererComponent } from "../compiler/rendererTypes";
 import CytoscapeRenderer from "../renderers/cyDag/CytoscapeRenderer.vue";
 import MinimalExampleRenderer from "../renderers/minExample/MinimalExampleRenderer.vue";
 
 export function useRendererRegistry(
-  initialRenderer: string = "cytoscape",
+  initialRenderer: string = CYTOSCAPE_RENDERER_NAME,
   onRendererChanged?: () => void,
 ) {
   const registeredRenderers = new Map<string, RendererComponent>();
@@ -20,11 +24,11 @@ export function useRendererRegistry(
 
   // Register default renderers
   registerRenderer(
-    "cytoscape",
+    CYTOSCAPE_RENDERER_NAME,
     markRaw(CytoscapeRenderer) as RendererComponent,
   );
   registerRenderer(
-    "minimal",
+    MINIMAL_RENDERER_NAME,
     markRaw(MinimalExampleRenderer) as RendererComponent,
   );
 
