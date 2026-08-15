@@ -5,6 +5,7 @@ import { ExportFormat } from "../compiler/constants";
 import { makeCyElements } from "../renderers/cyDag/cyGraphFactory";
 import { makeCyStylesheets } from "../renderers/cyDag/cyStyleSheetsFactory";
 import { getCanvasBackgroundColor } from "../renderers/cyDag/cyRendererDirectives";
+import { makeDagreLayoutOptions } from "../renderers/cyDag/cyLayout";
 import { exportCyToBlob } from "../renderers/cyDag/cyExport";
 import { addDescriptionGhostNodes } from "../renderers/cyDag/cyPopperExtender";
 
@@ -210,7 +211,7 @@ export async function renderDagToBytes(
     // Run the dagre layout and wait for it to settle before exporting.
     await new Promise<void>((resolve) => {
       cy.one("layoutstop", () => resolve());
-      cy.layout(dagreLayoutOptions).run();
+      cy.layout(makeDagreLayoutOptions(dag)).run();
     });
 
     // Description text is captured by invisible ghost nodes, mirroring the app's

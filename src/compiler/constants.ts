@@ -3,6 +3,9 @@ export const DESCRIPTION_PROPERTY: string = "description";
 export const DESCRIPTION_PREFIX: string = DESCRIPTION_PROPERTY + "-";
 export const BACKGROUND_COLOR_PROPERTY: string = "background-color";
 
+// Renderer directive property consumed by the cytoscape renderer's layout
+export const RANK_DIR_PROPERTY: string = "rankDir";
+
 // Renderer names. These are the identifiers usable in a '^<rendererName>{ }'
 // directive and the keys used by useRendererRegistry and
 // rendererPropertyRegistry. Keeping them here keeps that agreement typed.

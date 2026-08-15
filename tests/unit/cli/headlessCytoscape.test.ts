@@ -80,6 +80,50 @@ describe("headless CLI rendering", () => {
     expect(bytes.toString("utf8")).toContain("#ff0000");
   });
 
+  test("rankDir directive changes the rendered layout", async () => {
+    const recipe = "a = alpha()\nbeta(a)\n";
+    const svgOptions = {
+      fileType: ExportFormat.SVG,
+      includeDescriptions: false,
+    };
+    const topToBottom = await render(recipe, svgOptions);
+    const leftToRight = await render(
+      `^cytoscape{ rankDir: "LR" }\n${recipe}`,
+      svgOptions,
+    );
+    expect(leftToRight.toString("utf8")).not.toEqual(
+      topToBottom.toString("utf8"),
+    );
+  });
+
+  test("unrecognized rankDir falls back to the default layout", async () => {
+    const recipe = "a = alpha()\nbeta(a)\n";
+    const svgOptions = {
+      fileType: ExportFormat.SVG,
+      includeDescriptions: false,
+    };
+    const baseline = await render(recipe, svgOptions);
+    const typo = await render(
+      `^cytoscape{ rankDir: "sideways" }\n${recipe}`,
+      svgOptions,
+    );
+    expect(typo.toString("utf8")).toEqual(baseline.toString("utf8"));
+  });
+
+  test("directive for another renderer does not affect cytoscape", async () => {
+    const recipe = "a = alpha()\nbeta(a)\n";
+    const svgOptions = {
+      fileType: ExportFormat.SVG,
+      includeDescriptions: false,
+    };
+    const baseline = await render(recipe, svgOptions);
+    const otherRenderer = await render(
+      `^minimal{ rankDir: "LR" }\n${recipe}`,
+      svgOptions,
+    );
+    expect(otherRenderer.toString("utf8")).toEqual(baseline.toString("utf8"));
+  });
+
   test("scaling factor increases the rendered image size", async () => {
     const small = await render("a = load()\nprocess(a)\n", {
       scalingFactor: 1,
