@@ -12,6 +12,7 @@ import {
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   GlobalStyleBindingTreeNode as GlobalStyleBinding,
+  RendererDirectiveTreeNode as RendererDirective,
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
   BaseTreeNode,
@@ -340,6 +341,50 @@ describe("global style bindings", () => {
     const input = "*node{";
     expect(makeTree(input)).toEqual(
       new Recipe([new GlobalStyleBinding("node", new Style(new Map(), []))]),
+    );
+  });
+});
+
+describe("renderer directives", () => {
+  test("empty renderer directive", () => {
+    const input = "^cytoscape{}";
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new RendererDirective("cytoscape", new Style(new Map(), [])),
+      ]),
+    );
+  });
+  test("renderer directive with mixed types", () => {
+    const input = '^cytoscape{rankDir:"LR";a:2\n#d #e}';
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new RendererDirective(
+          "cytoscape",
+          new Style(
+            new Map([
+              ["rankDir", "LR"],
+              ["a", "2"],
+            ]),
+            [new StyleTag(["d"]), new StyleTag(["e"])],
+          ),
+        ),
+      ]),
+    );
+  });
+  test("renderer directive for an unregistered renderer parses", () => {
+    const input = '^madeup{x:"y"}';
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new RendererDirective("madeup", new Style(new Map([["x", "y"]]), [])),
+      ]),
+    );
+  });
+  test("incomplete renderer directive", () => {
+    const input = "^cytoscape{";
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new RendererDirective("cytoscape", new Style(new Map(), [])),
+      ]),
     );
   });
 });

@@ -11,6 +11,7 @@ export enum NodeType {
   NamedStyle,
   StyleBinding,
   GlobalStyleBinding,
+  RendererDirective,
   StyleTag,
   Namespace,
   Import,
@@ -68,6 +69,7 @@ export type StatementTreeNode =
   | NamedStyleTreeNode
   | StyleBindingTreeNode
   | GlobalStyleBindingTreeNode
+  | RendererDirectiveTreeNode
   | NamespaceTreeNode
   | ImportTreeNode;
 
@@ -410,6 +412,37 @@ export class GlobalStyleBindingTreeNode extends BaseTreeNode {
 
   get Keyword(): string {
     return this.keyword;
+  }
+
+  get StyleNode(): StyleTreeNode {
+    return this.styleNode;
+  }
+}
+
+export class RendererDirectiveTreeNode extends BaseTreeNode {
+  private rendererName: string;
+  private styleNode: StyleTreeNode;
+
+  constructor(
+    rendererName: string = "",
+    styleNode: StyleTreeNode = new StyleTreeNode(new Map(), [], null),
+    position: Position | null = null,
+  ) {
+    super(NodeType.RendererDirective, position);
+    this.rendererName = rendererName;
+    this.styleNode = styleNode;
+  }
+
+  getChildren(): BaseTreeNode[] {
+    return [this.styleNode];
+  }
+
+  debugDump(): string {
+    return "RendererDirective: " + this.rendererName;
+  }
+
+  get RendererName(): string {
+    return this.rendererName;
   }
 
   get StyleNode(): StyleTreeNode {
