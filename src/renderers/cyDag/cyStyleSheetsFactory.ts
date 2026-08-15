@@ -192,13 +192,16 @@ const GLOBAL_STYLE_SELECTOR_MAP: Record<string, string> = {
 };
 
 export function makeGlobalStyleSheets(dag: Dag): StylesheetCSS[] {
+  const elementBindings = new Map(
+    Array.from(dag.getGlobalStyleBindings()).filter(
+      ([keyword, _]) => keyword in GLOBAL_STYLE_SELECTOR_MAP,
+    ),
+  );
   return makeBindingStyleSheets(
     dag,
-    dag.getGlobalStyleBindings(),
-    (keyword, lineageSelector) => {
-      const baseSelector = GLOBAL_STYLE_SELECTOR_MAP[keyword] ?? keyword;
-      return `${baseSelector}${lineageSelector}`;
-    },
+    elementBindings,
+    (keyword, lineageSelector) =>
+      `${GLOBAL_STYLE_SELECTOR_MAP[keyword]}${lineageSelector}`,
   );
 }
 

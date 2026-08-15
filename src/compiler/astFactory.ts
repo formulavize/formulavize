@@ -191,12 +191,12 @@ function makeRendererDirective(
   t: Text,
   e: Error[],
 ): RendererDirectiveTreeNode {
-  const rendererId = getTextFromChild("Identifier", c, t);
+  const rendererName = getTextFromChild("Identifier", c, t);
   const styleArgList =
     makeNullableChild("StyleArgList", makeStyle, c, t, e) ??
     new StyleTreeNode(new Map(), [], getPosition(c));
   return new RendererDirectiveTreeNode(
-    rendererId,
+    rendererName,
     styleArgList,
     getPosition(c),
   );
