@@ -5,12 +5,14 @@ import { ExportFormat } from "../compiler/constants";
 import { makeCyElements } from "../renderers/cyDag/cyGraphFactory";
 import { makeCyStylesheets } from "../renderers/cyDag/cyStyleSheetsFactory";
 import { getCanvasBackgroundColor } from "../renderers/cyDag/cyRendererDirectives";
-import { makeDagreLayoutOptions } from "../renderers/cyDag/cyLayout";
+import { makeLayoutOptions } from "../renderers/cyDag/cyLayout";
+import { ensureLayoutRegistered } from "../renderers/cyDag/cyLayoutExtensions";
 import { exportCyToBlob } from "../renderers/cyDag/cyExport";
 import { addDescriptionGhostNodes } from "../renderers/cyDag/cyPopperExtender";
 
 const CONTAINER_WIDTH = 1024;
 const CONTAINER_HEIGHT = 768;
+const LAYOUT_TIMEOUT_MS = 60_000;
 
 function setGlobal(key: string, value: unknown): void {
   try {
@@ -91,9 +93,27 @@ function installCanvasShim(window: Window & typeof globalThis): void {
   const mimeToNapi = (mime: string) =>
     mime === "image/jpeg" ? "image/jpeg" : "image/png";
 
+  // Cytoscape's texture cache draws offscreen <canvas> elements onto the main
+  // one. Those elements are jsdom nodes, which @napi-rs/canvas rejects, so
+  // swap each one for the Skia canvas backing it before handing it over.
+  const patchedContexts = new WeakSet<object>();
+  const unwrapCanvas = (image: unknown): unknown =>
+    image instanceof window.HTMLCanvasElement ? ensure(image) : image;
+  const withCanvasUnwrapping = (context: object): object => {
+    if (patchedContexts.has(context)) return context;
+    patchedContexts.add(context);
+    const ctx = context as {
+      drawImage: (image: unknown, ...rest: number[]) => void;
+    };
+    const drawImage = ctx.drawImage.bind(ctx);
+    ctx.drawImage = (image: unknown, ...rest: number[]) =>
+      drawImage(unwrapCanvas(image), ...rest);
+    return context;
+  };
+
   proto.getContext = function (this: object, type: string) {
     if (type !== "2d") return null;
-    return ensure(this).getContext("2d");
+    return withCanvasUnwrapping(ensure(this).getContext("2d"));
   };
   proto.toDataURL = function (
     this: object,
@@ -171,7 +191,7 @@ export interface HeadlessRenderOptions {
 /**
  * Render a compiled Dag to image bytes headlessly (no browser).
  *
- * Reuses the exact same element/stylesheet factories, dagre layout options, and
+ * Reuses the exact same element/stylesheet factories, layout options, and
  * export logic as the web renderer so CLI output matches the app.
  */
 export async function renderDagToBytes(
@@ -183,11 +203,12 @@ export async function renderDagToBytes(
   // Dynamically import Cytoscape and its extensions AFTER the DOM globals are in
   // place; static imports would evaluate before the DOM exists.
   const cytoscape = (await import("cytoscape")).default;
-  const dagre = (await import("cytoscape-dagre")).default;
   // @ts-expect-error: cytoscape-svg ships no types
   const svg = (await import("cytoscape-svg")).default;
-  cytoscape.use(dagre);
   cytoscape.use(svg);
+
+  const layoutOptions = makeLayoutOptions(dag);
+  await ensureLayoutRegistered(cytoscape, layoutOptions.name);
 
   const container = document.createElement("div");
   document.body.appendChild(container);
@@ -197,21 +218,37 @@ export async function renderDagToBytes(
   });
   container.getBoundingClientRect = () =>
     getRect(CONTAINER_WIDTH, CONTAINER_HEIGHT);
+  // cy.size() subtracts the computed padding from clientWidth/clientHeight, and
+  // jsdom reports no padding at all for an unstyled div, which parses to NaN.
+  // Layouts that read the viewport (breadthfirst) then compute NaN positions.
+  container.style.padding = "0px";
 
   const cy = cytoscape({
     container,
     elements: makeCyElements(dag),
     style: makeCyStylesheets(dag, options.isDark),
     // Skip the default grid layout at construction (it reads the viewport, which
-    // is inert headless); we run dagre explicitly below.
+    // is inert headless); we run the selected layout explicitly below.
     layout: { name: "preset" },
   });
 
   try {
-    // Run the dagre layout and wait for it to settle before exporting.
-    await new Promise<void>((resolve) => {
-      cy.one("layoutstop", () => resolve());
-      cy.layout(makeDagreLayoutOptions(dag)).run();
+    // Run the layout and wait for it to settle before exporting. elk
+    // position nodes asynchronously, so the timeout keeps a layout that never
+    // reports back from hanging the CLI forever.
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(
+          new Error(
+            `Layout '${layoutOptions.name}' did not finish within ${LAYOUT_TIMEOUT_MS}ms`,
+          ),
+        );
+      }, LAYOUT_TIMEOUT_MS);
+      cy.one("layoutstop", () => {
+        clearTimeout(timer);
+        resolve();
+      });
+      cy.layout(layoutOptions).run();
     });
 
     // Description text is captured by invisible ghost nodes, mirroring the app's

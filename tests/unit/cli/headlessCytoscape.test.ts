@@ -124,6 +124,71 @@ describe("headless CLI rendering", () => {
     expect(otherRenderer.toString("utf8")).toEqual(baseline.toString("utf8"));
   });
 
+  test.each(["breadthfirst", "elk"])(
+    "the %s layout renders headlessly and moves nodes",
+    async (layoutName) => {
+      const recipe = "a = alpha()\nbeta(a)\n";
+      const svgOptions = {
+        fileType: ExportFormat.SVG,
+        includeDescriptions: false,
+      };
+      const baseline = await render(recipe, svgOptions);
+      const rendered = await render(
+        `^cytoscape{ layout: "${layoutName}" }\n${recipe}`,
+        svgOptions,
+      );
+      const svg = rendered.toString("utf8");
+      expect(svg).toContain("<svg");
+      expect(svg).toContain("alpha");
+      expect(svg).not.toEqual(baseline.toString("utf8"));
+    },
+    30_000,
+  );
+
+  test("the manual layout leaves nodes unarranged headlessly", async () => {
+    const recipe = "a = alpha()\nbeta(a)\n";
+    const svgOptions = {
+      fileType: ExportFormat.SVG,
+      includeDescriptions: false,
+    };
+    const baseline = await render(recipe, svgOptions);
+    const manual = await render(
+      `^cytoscape{ layout: "manual" }\n${recipe}`,
+      svgOptions,
+    );
+    const manualSvg = manual.toString("utf8");
+    expect(manualSvg).not.toEqual(baseline.toString("utf8"));
+    expect(manualSvg).toMatch(/<svg[^>]*width="46" height="50"/);
+  });
+
+  test("a layout option changes the rendered layout", async () => {
+    const recipe = "a = alpha()\nbeta(a)\n";
+    const svgOptions = {
+      fileType: ExportFormat.SVG,
+      includeDescriptions: false,
+    };
+    const baseline = await render(recipe, svgOptions);
+    const spaced = await render(
+      `^cytoscape{ rankSep: 300 }\n${recipe}`,
+      svgOptions,
+    );
+    expect(spaced.toString("utf8")).not.toEqual(baseline.toString("utf8"));
+  });
+
+  test("unrecognized layout falls back to the default layout", async () => {
+    const recipe = "a = alpha()\nbeta(a)\n";
+    const svgOptions = {
+      fileType: ExportFormat.SVG,
+      includeDescriptions: false,
+    };
+    const baseline = await render(recipe, svgOptions);
+    const typo = await render(
+      `^cytoscape{ layout: "elkk" }\n${recipe}`,
+      svgOptions,
+    );
+    expect(typo.toString("utf8")).toEqual(baseline.toString("utf8"));
+  });
+
   test("scaling factor increases the rendered image size", async () => {
     const small = await render("a = load()\nprocess(a)\n", {
       scalingFactor: 1,
