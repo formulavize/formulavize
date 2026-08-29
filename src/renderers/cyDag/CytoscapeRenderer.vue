@@ -7,8 +7,12 @@
 
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
-import cytoscape, { Core, ElementsDefinition, StylesheetCSS } from "cytoscape";
-import dagre from "cytoscape-dagre";
+import cytoscape, {
+  Core,
+  ElementsDefinition,
+  Layouts,
+  StylesheetCSS,
+} from "cytoscape";
 import cytoscapePopper, {
   PopperFactory,
   PopperInstance,
@@ -25,10 +29,12 @@ import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
 import { getCanvasBackgroundColor } from "./cyRendererDirectives";
 import {
-  makeDagreLayoutOptions,
-  getRankDirection,
-  RankDirection,
+  makeLayoutOptions,
+  getLayoutSignature,
+  getDagLayoutProvider,
 } from "./cyLayout";
+import { ensureLayoutRegistered } from "./cyLayoutExtensions";
+import { captureNodePositions, applyNodePositions } from "./cyNodePositions";
 import { exportCyToBlob } from "./cyExport";
 import {
   setupCyPoppers,
@@ -73,7 +79,8 @@ const popperFactory: PopperFactory = (
   return { update };
 };
 
-cytoscape.use(dagre);
+// Layout extensions register lazily in runLayout so the large elk bundle
+// are only fetched by recipes that ask for them.
 cytoscape.use(cytoscapePopper(popperFactory));
 cytoscape.use(svg);
 
@@ -87,10 +94,6 @@ const CytoscapeRenderer = defineComponent({
       type: Object as PropType<Dag>,
       required: true,
     },
-    lockPositions: {
-      type: Boolean,
-      default: true,
-    },
     isDark: {
       type: Boolean,
       default: false,
@@ -101,7 +104,8 @@ const CytoscapeRenderer = defineComponent({
       cy: null as Core | null,
       previousElements: null as ElementsDefinition | null,
       previousStylesheetsJson: null as string | null,
-      previousRankDir: undefined as RankDirection | undefined,
+      previousLayoutSignature: null as string | null,
+      runningLayout: null as Layouts | null,
       popperCleanup: null as PopperCleanup | null,
     };
   },
@@ -112,11 +116,6 @@ const CytoscapeRenderer = defineComponent({
     isDark() {
       this.applyThemeStyles();
     },
-    lockPositions(newValue: boolean) {
-      if (this.cy) {
-        this.cy.autoungrabify(newValue);
-      }
-    },
   },
   mounted(): void {
     this.initializeCytoscape();
@@ -124,6 +123,8 @@ const CytoscapeRenderer = defineComponent({
   beforeUnmount(): void {
     if (this.cy) {
       this.cy.destroy();
+      // A layout awaiting its extension checks this before touching the core.
+      this.cy = null;
     }
   },
   methods: {
@@ -131,17 +132,36 @@ const CytoscapeRenderer = defineComponent({
       this.cy = cytoscape({
         container: this.$refs.container as HTMLElement,
       });
-      this.cy.autoungrabify(this.lockPositions);
+      this.applyGrabbability();
       this.updateDag(this.dag);
     },
 
+    // A layout that places nothing needs its nodes draggable; otherwise the
+    // user could never manually arrange them.
+    applyGrabbability(): void {
+      if (!this.cy) return;
+      const { nodesAlwaysGrabbable } = getDagLayoutProvider(this.dag);
+      this.cy.autoungrabify(!nodesAlwaysGrabbable);
+    },
+
     // Layout is an expensive operation regardless of a change's size.
-    runLayout(): void {
-      Promise.resolve().then(() => {
-        if (this.cy) {
-          this.cy.layout(makeDagreLayoutOptions(this.dag)).run();
-        }
-      });
+    async runLayout(): Promise<void> {
+      const layoutOptions = makeLayoutOptions(this.dag);
+      try {
+        // Awaiting registration also keeps layout off the synchronous update
+        // path. elk is only downloaded when a recipe asks for it.
+        await ensureLayoutRegistered(cytoscape, layoutOptions.name);
+      } catch (error) {
+        console.error(`Failed to load the ${layoutOptions.name} layout`, error);
+        return;
+      }
+      // The component may have unmounted while the extension was downloading.
+      if (!this.cy) return;
+      // elk positions nodes asynchronously, so a superseded run has to
+      // be stopped or it would overwrite the newer layout's positions.
+      this.runningLayout?.stop();
+      this.runningLayout = this.cy.layout(layoutOptions);
+      this.runningLayout.run();
     },
 
     applyStyles(newStylesheets: StylesheetCSS[]): void {
@@ -177,6 +197,8 @@ const CytoscapeRenderer = defineComponent({
       const newElements = makeCyElements(dag);
       const newStylesheets = makeCyStylesheets(dag, this.isDark);
 
+      this.applyGrabbability();
+
       if (!this.previousElements) {
         // First render: full build
         this.cy.add(newElements);
@@ -187,12 +209,19 @@ const CytoscapeRenderer = defineComponent({
           dag,
           this.$refs.popperContainer as HTMLElement,
         );
-        this.previousRankDir = getRankDirection(dag);
+        this.previousLayoutSignature = getLayoutSignature(dag);
         this.runLayout();
       } else {
         const diff = diffCyElements(this.previousElements, newElements);
 
         if (diff.topologyChanged) {
+          // Layouts that preserve positions (such as manual mode) store node
+          // coordinates only in the Cytoscape graph instance, not in the DAG model.
+          // Capture current node positions by element ID so they survive the graph
+          // element rebuild below and are retained during the layout run.
+          const manualPositions = getDagLayoutProvider(dag).preservesPositions
+            ? captureNodePositions(this.cy)
+            : null;
           // Full replace to preserve elements' visual ordering in Dagre layout.
           // Re-added nodes would otherwise appear at the end of Cytoscape's
           // internal collection, causing Dagre's sort hint to lose to its
@@ -200,6 +229,7 @@ const CytoscapeRenderer = defineComponent({
           // This ensures we get consistent layouts for the same DAG structure.
           this.cy.elements().remove();
           this.cy.add(newElements);
+          if (manualPositions) applyNodePositions(this.cy, manualPositions);
         } else {
           applyDataUpdates(this.cy, diff);
         }
@@ -212,16 +242,16 @@ const CytoscapeRenderer = defineComponent({
           this.$refs.popperContainer as HTMLElement,
         );
 
-        // Editing only a '^cytoscape{ rankDir }' line leaves the element set
+        // Editing only a '^cytoscape{ layout }' line leaves the element set
         // identical, so the topology check alone would never relayout and the
-        // directive would appear to do nothing. Compare the resolved direction
-        // so an unrecognized value doesn't trigger a pointless relayout.
-        const rankDir = getRankDirection(dag);
-        const rankDirChanged = rankDir !== this.previousRankDir;
-        this.previousRankDir = rankDir;
+        // directive would appear to do nothing. Compare the resolved options so
+        // an unrecognized value doesn't trigger a pointless relayout.
+        const layoutSignature = getLayoutSignature(dag);
+        const layoutChanged = layoutSignature !== this.previousLayoutSignature;
+        this.previousLayoutSignature = layoutSignature;
 
         // Avoid unnecessary layout runs by checking if the topology has changed
-        if (diff.topologyChanged || rankDirChanged) this.runLayout();
+        if (diff.topologyChanged || layoutChanged) this.runLayout();
       }
 
       this.applyCanvasBackground();

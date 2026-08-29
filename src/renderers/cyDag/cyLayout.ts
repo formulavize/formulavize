@@ -1,55 +1,96 @@
-import { LayoutOptions, NodeSingular } from "cytoscape";
+import {
+  BreadthFirstLayoutOptions,
+  LayoutOptions,
+  NodeSingular,
+  PresetLayoutOptions,
+} from "cytoscape";
 import { Dag } from "../../compiler/dag";
-import { RANK_DIR_PROPERTY } from "../../compiler/constants";
+import {
+  DEFAULT_CYTOSCAPE_LAYOUT,
+  CYTOSCAPE_LAYOUT_NAMES,
+  LAYOUT_PROPERTY,
+  MANUAL_CYTOSCAPE_LAYOUT,
+} from "../../compiler/constants";
 import { getCytoscapeDirectiveProperties } from "./cyRendererDirectives";
+import { buildLayoutOptions } from "./cyLayoutSchema";
+import { CyLayoutName, CyLayoutProvider, getLayoutProvider } from "./layouts";
 
-export const RANK_DIRECTIONS = ["TB", "BT", "LR", "RL"] as const;
-export type RankDirection = (typeof RANK_DIRECTIONS)[number];
+export type { CyLayoutName };
 
-// Dagre layout options type - refer to dagre documentation and cytoscape-dagre typings
-// https://github.com/cytoscape/cytoscape.js-dagre?tab=readme-ov-file#api
-// cytoscape's LayoutOptions has no rankDir and cytoscape-dagre ships no
-// typings, so the dagre-specific members are declared here.
+// cytoscape's LayoutOptions covers neither dagre's nor the elk extension's
+// members. None of those three ship typings, so they are declared here.
+// Refer to each layout's documentation for the full option set:
+// https://github.com/cytoscape/cytoscape.js-dagre#api
+// https://github.com/cytoscape/cytoscape.js-elk
 export type DagreLayoutOptions = LayoutOptions & {
   name: "dagre";
   sort: (a: NodeSingular, b: NodeSingular) => number;
-  rankDir?: RankDirection;
 };
 
-// We define a custom sort function to encourage the layout manager
-// to follow the insertion order of nodes in the DAG.
-// However, Dagre's crossing minimization may still rearrange nodes in a way
-// that doesn't preserve the insertion order.
-const sortByInsertionOrder = (A: NodeSingular, B: NodeSingular): number => {
-  const orderA: number[] = A.data("order") ?? [];
-  const orderB: number[] = B.data("order") ?? [];
-  for (let i = 0; i < Math.min(orderA.length, orderB.length); i++) {
-    if (orderA[i] !== orderB[i]) return orderA[i] - orderB[i];
-  }
-  return orderA.length - orderB.length;
+export type ElkLayoutOptions = LayoutOptions & {
+  name: "elk";
+  // Passed straight through to ELK as its layoutOptions map.
+  elk: Record<string, string>;
 };
+
+export type CyLayoutOptions =
+  | DagreLayoutOptions
+  | (BreadthFirstLayoutOptions & { name: "breadthfirst" })
+  | ElkLayoutOptions
+  // Preset is what the 'manual' layout runs; see layouts/manual.ts.
+  | PresetLayoutOptions;
 
 /**
- * Rank direction from a '^cytoscape{ rankDir: "LR" }' directive.
+ * Layout selected by a '^cytoscape{ layout: "elk" }' directive.
  *
- * Unrecognized values resolve to undefined so the key is omitted entirely and
- * dagre applies its own default ('TB'). Renderer directives are never
- * validated at compile time, so a typo silently changes nothing.
+ * Unrecognized layout names fall back to the default layout rather than erring:
+ * renderer directives are never validated at compile time, so a typo silently
+ * changes nothing.
  */
-export function getRankDirection(dag: Dag): RankDirection | undefined {
-  const value = getCytoscapeDirectiveProperties(dag).get(RANK_DIR_PROPERTY);
-  if (!value) return undefined;
-  const normalized = value.trim().toUpperCase();
-  return (RANK_DIRECTIONS as readonly string[]).includes(normalized)
-    ? (normalized as RankDirection)
-    : undefined;
+export function getLayoutName(dag: Dag): CyLayoutName {
+  const value = getCytoscapeDirectiveProperties(dag).get(LAYOUT_PROPERTY);
+  if (!value) return DEFAULT_CYTOSCAPE_LAYOUT;
+  const normalized = value.trim().toLowerCase();
+  return (CYTOSCAPE_LAYOUT_NAMES as readonly string[]).includes(normalized)
+    ? (normalized as CyLayoutName)
+    : DEFAULT_CYTOSCAPE_LAYOUT;
 }
 
-export function makeDagreLayoutOptions(dag: Dag): DagreLayoutOptions {
-  const rankDir = getRankDirection(dag);
-  return {
-    name: "dagre",
-    sort: sortByInsertionOrder,
-    ...(rankDir ? { rankDir } : {}),
-  } satisfies DagreLayoutOptions;
+/**
+ * Get the layout provider selected by the dag's renderer directive.
+ */
+export function getDagLayoutProvider(dag: Dag): CyLayoutProvider {
+  return getLayoutProvider(getLayoutName(dag));
+}
+
+/**
+ * Whether or not the dag allows users to manually position nodes instead
+ * of using a layout algorithm.
+ */
+export function isManualLayout(dag: Dag): boolean {
+  return getLayoutName(dag) === MANUAL_CYTOSCAPE_LAYOUT;
+}
+
+/**
+ * Cytoscape layout options for the layout selected by the dag's directive,
+ * with that layout's own options applied on top of our defaults.
+ */
+export function makeLayoutOptions(dag: Dag): CyLayoutOptions {
+  const layoutName = getLayoutName(dag);
+  const properties = getCytoscapeDirectiveProperties(dag);
+  // The schema builds a plain bag; each layout's shape is enforced by its table.
+  return buildLayoutOptions(
+    layoutName,
+    properties,
+  ) as unknown as CyLayoutOptions;
+}
+
+/**
+ * Value fingerprint of a dag's layout options, used to decide whether editing a
+ * directive needs a re-layout. JSON.stringify drops the function-valued options
+ * (the sort hints), so this signature compares only the serializable layout
+ * state and ignores comparator callbacks that do not affect the layout value.
+ */
+export function getLayoutSignature(dag: Dag): string {
+  return JSON.stringify(makeLayoutOptions(dag));
 }
