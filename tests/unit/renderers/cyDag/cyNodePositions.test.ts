@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import cytoscape, { Core, ElementsDefinition } from "cytoscape";
+import cytoscape, { Core, ElementsDefinition, NodeSingular } from "cytoscape";
 import {
   captureNodePositions,
   applyNodePositions,
@@ -14,6 +14,12 @@ function chain(): ElementsDefinition {
     nodes: [{ data: { id: "a" } }, { data: { id: "b" } }],
     edges: [{ data: { id: "a->b", source: "a", target: "b" } }],
   };
+}
+
+function overlap(first: NodeSingular, second: NodeSingular): boolean {
+  const a = first.boundingBox();
+  const b = second.boundingBox();
+  return a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
 }
 
 describe("capturing node positions", () => {
@@ -166,7 +172,60 @@ describe("applying node positions", () => {
     const first = cy.getElementById("a").position();
     const second = cy.getElementById("b").position();
     expect(first).toEqual({ x: 200, y: 200 });
-    // Cascaded so a batch of unconnected nodes is not one unclickable stack.
+    // Stepped aside so a batch of unconnected nodes is not one unclickable stack.
     expect(second).not.toEqual(first);
+  });
+
+  test("keeps an unconnected new node off the nodes already placed", () => {
+    const cy = makeCy({
+      nodes: [
+        { data: { id: "a" } },
+        { data: { id: "b" } },
+        { data: { id: "c" } },
+      ],
+      edges: [{ data: { id: "b->a", source: "b", target: "a" } }],
+    });
+    // A fitted graph sits in the middle of the viewport, so the centre an
+    // unanchored node falls back to is the one spot already occupied. Dropping
+    // it there hides the labels of whatever it covers.
+    cy.extent = () => ({ x1: -85, x2: 115, y1: 20, y2: 170, w: 200, h: 150 });
+
+    applyNodePositions(
+      cy,
+      new Map([
+        ["a", { x: 15, y: 95 }],
+        ["b", { x: 15, y: 15 }],
+      ]),
+    );
+
+    const added = cy.getElementById("c");
+    expect(overlap(added, cy.getElementById("a"))).toBe(false);
+    expect(overlap(added, cy.getElementById("b"))).toBe(false);
+  });
+
+  test("keeps a new successor off a sibling already sitting below", () => {
+    const cy = makeCy({
+      nodes: [
+        { data: { id: "a" } },
+        { data: { id: "b" } },
+        { data: { id: "c" } },
+      ],
+      edges: [
+        { data: { id: "a->b", source: "a", target: "b" } },
+        { data: { id: "a->c", source: "a", target: "c" } },
+      ],
+    });
+
+    // 'b' is parked exactly one successor gap below 'a', which is where 'c'
+    // would otherwise be dropped.
+    applyNodePositions(
+      cy,
+      new Map([
+        ["a", { x: 0, y: 0 }],
+        ["b", { x: 0, y: 100 }],
+      ]),
+    );
+
+    expect(overlap(cy.getElementById("c"), cy.getElementById("b"))).toBe(false);
   });
 });

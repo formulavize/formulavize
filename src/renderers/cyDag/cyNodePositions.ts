@@ -1,12 +1,16 @@
-import { Core, NodeSingular, Position } from "cytoscape";
+import { BoundingBox12, Core, NodeSingular, Position } from "cytoscape";
 
 export type NodePositions = Map<string, Position>;
 
-// How far below its predecessors a newly appeared node is dropped, and how far
-// each further new node is cascaded so a batch of them never lands in one pile.
-// Both are arbitrary pixel amounts chosen to clear a default-sized node.
+// How far below its predecessors a newly appeared node is dropped. An arbitrary
+// pixel amount chosen to clear a default-sized node.
 const SUCCESSOR_GAP = 100;
-const CASCADE_STEP = 30;
+// How far a new node is shifted, and how many times, when its first choice of
+// spot is already occupied. Diagonal so it escapes a column of nodes as
+// readily as a row of them, and small enough that it settles beside the
+// arrangement rather than being flung out of the viewport.
+const NUDGE_STEP = 30;
+const MAX_NUDGES = 200;
 
 /**
  * Positions of the graph's leaf nodes, keyed by element id.
@@ -64,6 +68,39 @@ function anchorToNeighbors(
   return undefined;
 }
 
+function boxesOverlap(a: BoundingBox12, b: BoundingBox12): boolean {
+  return a.x1 < b.x2 && b.x1 < a.x2 && a.y1 < b.y2 && b.y1 < a.y2;
+}
+
+/**
+ * Move a node to `anchor`, then step it away until it covers nothing.
+ *
+ * Labels sit under their node body (`text-valign: bottom`), so a new node
+ * dropped on an occupied spot hides the label of whatever is underneath it —
+ * from the outside that looks like labels vanishing, not like an overlap. The
+ * boxes therefore include labels, so a node clears the text as well as the
+ * bodies. Obstacles are the nodes placed so far, which is also what keeps a
+ * batch of new nodes from landing in one pile.
+ */
+function placeClearOfObstacles(
+  node: NodeSingular,
+  anchor: Position,
+  obstacles: NodeSingular[],
+): void {
+  const boxOf = (n: NodeSingular): BoundingBox12 =>
+    n.boundingBox({ includeLabels: true });
+  const isOccupied = (): boolean =>
+    obstacles.some((other) => boxesOverlap(boxOf(node), boxOf(other)));
+
+  node.position(anchor);
+  for (let nudge = 1; nudge <= MAX_NUDGES && isOccupied(); nudge++) {
+    node.position({
+      x: anchor.x + nudge * NUDGE_STEP,
+      y: anchor.y + nudge * NUDGE_STEP,
+    });
+  }
+}
+
 /**
  * Put nodes back where they were, by id, and give any node that has no recorded
  * position a visible one.
@@ -76,9 +113,13 @@ function anchorToNeighbors(
  * node sees all of its surviving neighbors. New nodes are then visited in
  * cytoscape's collection order, which is the dag's insertion order, so a chain
  * of them anchors off the node before it rather than all landing in one spot.
+ * Each is finally stepped clear of everything placed before it, since neither
+ * the viewport centre nor a fixed gap below a predecessor is guaranteed to be
+ * free.
  */
 export function applyNodePositions(cy: Core, positions: NodePositions): void {
   const placed: NodePositions = new Map();
+  const obstacles: NodeSingular[] = [];
   const unplaced: NodeSingular[] = [];
 
   cy.nodes().forEach((node) => {
@@ -90,17 +131,13 @@ export function applyNodePositions(cy: Core, positions: NodePositions): void {
     }
     node.position(remembered);
     placed.set(node.id(), remembered);
+    obstacles.push(node);
   });
 
-  unplaced.forEach((node, cascade) => {
+  unplaced.forEach((node) => {
     const anchor = anchorToNeighbors(node, placed) ?? viewportCenter(cy);
-    // Cascaded so that new nodes sharing an anchor (siblings off one
-    // predecessor, or nothing to anchor to at all) do not stack up.
-    const position = {
-      x: anchor.x + cascade * CASCADE_STEP,
-      y: anchor.y + cascade * CASCADE_STEP,
-    };
-    node.position(position);
-    placed.set(node.id(), position);
+    placeClearOfObstacles(node, anchor, obstacles);
+    placed.set(node.id(), node.position());
+    obstacles.push(node);
   });
 }
