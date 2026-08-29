@@ -9,7 +9,7 @@
         :completion-index="curCompletionIndex"
         :debug-mode="debugMode"
         :tutorial-mode="tutorialMode"
-        :selected-renderer="selectedRenderer"
+        :active-renderer="activeRendererName"
         :is-dark="resolvedTheme === 'dark'"
         @update-editorstate="updateEditorState"
       />
@@ -74,8 +74,6 @@
     v-model:enable-tabbing-in-editor="enableTabbingInEditor"
     v-model:debug-mode="debugMode"
     v-model:theme-mode="themeMode"
-    v-model:selected-renderer="selectedRenderer"
-    :renderer-options="rendererOptions"
   />
   <TutorialLevelSelect
     v-model:show-dialog="showTutorialLevelSelect"
@@ -152,12 +150,8 @@ const {
   },
 );
 
-const {
-  selectedRenderer,
-  rendererComponent,
-  rendererOptions,
-  supportedExportFormats,
-} = useRendererRegistry("cytoscape", repaint);
+const { activeRendererName, rendererComponent, supportedExportFormats } =
+  useRendererRegistry(() => curDag.value as Dag);
 
 // Tutorial computed properties
 const tutorialModules = computed(() =>
@@ -175,7 +169,6 @@ function persistOptions() {
   optionsStore.save({
     enableTabbingInEditor: enableTabbingInEditor.value,
     debugMode: debugMode.value,
-    selectedRenderer: selectedRenderer.value,
     themeMode: themeMode.value,
   });
 }
@@ -188,7 +181,6 @@ watch(debugMode, (newVal: boolean) => {
 });
 watch(resolvedTheme, (newTheme) => applyTheme(newTheme));
 watch(themeMode, () => persistOptions());
-watch(selectedRenderer, () => persistOptions());
 
 watch(tutorialMode, (newVal: boolean) => {
   try {
@@ -246,7 +238,6 @@ onMounted(() => {
   const savedOptions = optionsStore.load();
   enableTabbingInEditor.value = savedOptions.enableTabbingInEditor;
   debugMode.value = savedOptions.debugMode;
-  selectedRenderer.value = savedOptions.selectedRenderer;
   themeMode.value = savedOptions.themeMode ?? "system";
 
   applyTheme(resolvedTheme.value);

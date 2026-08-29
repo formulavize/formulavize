@@ -1,25 +1,31 @@
-import { ref, shallowRef, computed, watch, markRaw } from "vue";
+import { shallowRef, computed, markRaw } from "vue";
 import {
   CYTOSCAPE_RENDERER_NAME,
   ExportFormat,
   MINIMAL_RENDERER_NAME,
 } from "../compiler/constants";
+import { Dag } from "../compiler/dag";
 import { RendererComponent } from "../compiler/rendererTypes";
 import CytoscapeRenderer from "../renderers/cyDag/CytoscapeRenderer.vue";
 import MinimalExampleRenderer from "../renderers/minExample/MinimalExampleRenderer.vue";
 
-export function useRendererRegistry(
-  initialRenderer: string = CYTOSCAPE_RENDERER_NAME,
-  onRendererChanged?: () => void,
-) {
-  const registeredRenderers = new Map<string, RendererComponent>();
-  const selectedRenderer = ref(initialRenderer);
-  const rendererComponent = shallowRef<RendererComponent>(
-    markRaw(CytoscapeRenderer) as RendererComponent,
-  );
+/**
+ * Resolves which renderer draws the dag from the dag itself.
+ *
+ * A recipe selects its renderer with a '^<rendererName>{ }' directive. The
+ * compiler does not validate the name against this registry, so directives
+ * addressed to renderers that are not registered here are ignored. When a
+ * recipe names several registered renderers, the last one declared wins,
+ * matching the "later declarations override earlier" precedence used for
+ * style properties.
+ */
+export function useRendererRegistry(getDag: () => Dag) {
+  const registeredRenderers = shallowRef(new Map<string, RendererComponent>());
 
   function registerRenderer(id: string, renderer: RendererComponent): void {
-    registeredRenderers.set(id, renderer);
+    const updatedRenderers = new Map(registeredRenderers.value);
+    updatedRenderers.set(id, markRaw(renderer) as RendererComponent);
+    registeredRenderers.value = updatedRenderers;
   }
 
   // Register default renderers
@@ -32,11 +38,18 @@ export function useRendererRegistry(
     markRaw(MinimalExampleRenderer) as RendererComponent,
   );
 
-  const rendererOptions = computed(() =>
-    Array.from(registeredRenderers, ([id, renderer]) => ({
-      id,
-      name: renderer.displayName,
-    })),
+  const activeRendererName = computed<string>(() => {
+    const directiveNames = Array.from(getDag().getRendererDirectives().keys());
+    const selectedName = directiveNames.findLast((rendererName) =>
+      registeredRenderers.value.has(rendererName),
+    );
+    return selectedName ?? CYTOSCAPE_RENDERER_NAME;
+  });
+
+  const rendererComponent = computed<RendererComponent>(
+    () =>
+      registeredRenderers.value.get(activeRendererName.value) ??
+      (markRaw(CytoscapeRenderer) as RendererComponent),
   );
 
   const supportedExportFormats = computed<readonly ExportFormat[]>(
@@ -45,20 +58,9 @@ export function useRendererRegistry(
       Object.values(ExportFormat),
   );
 
-  watch(selectedRenderer, (newRendererId: string) => {
-    const renderer = registeredRenderers.get(newRendererId);
-    if (renderer) {
-      rendererComponent.value = renderer;
-      onRendererChanged?.();
-    } else {
-      console.error(`Renderer with id "${newRendererId}" not found`);
-    }
-  });
-
   return {
-    selectedRenderer,
+    activeRendererName,
     rendererComponent,
-    rendererOptions,
     supportedExportFormats,
     registerRenderer,
   };

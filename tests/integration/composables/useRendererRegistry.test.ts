@@ -1,6 +1,7 @@
 import { describe, test, expect, vi } from "vitest";
-import { effectScope, nextTick } from "vue";
+import { effectScope, shallowRef, nextTick } from "vue";
 import { ExportFormat } from "src/compiler/constants";
+import { Dag, DagStyle } from "src/compiler/dag";
 
 // Mock the renderer components to avoid cytoscape-svg requiring window
 vi.mock("src/renderers/cyDag/CytoscapeRenderer.vue", () => ({
@@ -21,182 +22,151 @@ vi.mock("src/renderers/minExample/MinimalExampleRenderer.vue", () => ({
 
 import { useRendererRegistry } from "src/composables/useRendererRegistry";
 
+const EMPTY_STYLE: DagStyle = {
+  styleTags: [],
+  styleProperties: new Map<string, string>(),
+};
+
+// Build a dag carrying the renderer directives a recipe would declare,
+// in the order they appear in the source.
+function makeDagWithDirectives(...rendererNames: string[]): Dag {
+  const dag = new Dag("test-dag");
+  rendererNames.forEach((rendererName) =>
+    dag.addRendererDirective(rendererName, EMPTY_STYLE),
+  );
+  return dag;
+}
+
 describe("useRendererRegistry", () => {
   let scope: ReturnType<typeof effectScope>;
 
-  test("initializes with cytoscape as default renderer", () => {
-    scope = effectScope();
-    scope.run(() => {
-      const { selectedRenderer } = useRendererRegistry();
-      expect(selectedRenderer.value).toBe("cytoscape");
-    });
-    scope.stop();
-  });
-
-  test("initializes with custom default renderer", () => {
-    scope = effectScope();
-    scope.run(() => {
-      const { selectedRenderer } = useRendererRegistry("minimal");
-      expect(selectedRenderer.value).toBe("minimal");
-    });
-    scope.stop();
-  });
-
-  test("registers default renderers with display names", () => {
-    scope = effectScope();
-    scope.run(() => {
-      const { rendererOptions } = useRendererRegistry();
-      const options = rendererOptions.value;
-      expect(options).toHaveLength(2);
-      expect(options.map((o) => o.id)).toContain("cytoscape");
-      expect(options.map((o) => o.id)).toContain("minimal");
-      options.forEach((opt) => {
-        expect(opt.name).toBeTruthy();
+  describe("renderer selection from renderer directives", () => {
+    test("defaults to cytoscape when the dag declares no directive", () => {
+      scope = effectScope();
+      scope.run(() => {
+        const { activeRendererName, rendererComponent } = useRendererRegistry(
+          () => new Dag("empty-dag"),
+        );
+        expect(activeRendererName.value).toBe("cytoscape");
+        expect(rendererComponent.value.name).toBe("CytoscapeRenderer");
       });
+      scope.stop();
     });
-    scope.stop();
+
+    test("selects the renderer named by the directive", () => {
+      scope = effectScope();
+      scope.run(() => {
+        const { activeRendererName, rendererComponent } = useRendererRegistry(
+          () => makeDagWithDirectives("minimal"),
+        );
+        expect(activeRendererName.value).toBe("minimal");
+        expect(rendererComponent.value.name).toBe("MinimalExampleRenderer");
+      });
+      scope.stop();
+    });
+
+    test("falls back to cytoscape for an unregistered renderer name", () => {
+      scope = effectScope();
+      scope.run(() => {
+        const { activeRendererName, rendererComponent } = useRendererRegistry(
+          () => makeDagWithDirectives("madeup"),
+        );
+        expect(activeRendererName.value).toBe("cytoscape");
+        expect(rendererComponent.value.name).toBe("CytoscapeRenderer");
+      });
+      scope.stop();
+    });
+
+    test("last declared registered renderer wins", () => {
+      scope = effectScope();
+      scope.run(() => {
+        const { activeRendererName } = useRendererRegistry(() =>
+          makeDagWithDirectives("cytoscape", "minimal"),
+        );
+        expect(activeRendererName.value).toBe("minimal");
+      });
+      scope.stop();
+    });
+
+    test("ignores unregistered names declared after a registered one", () => {
+      scope = effectScope();
+      scope.run(() => {
+        const { activeRendererName } = useRendererRegistry(() =>
+          makeDagWithDirectives("minimal", "madeup"),
+        );
+        expect(activeRendererName.value).toBe("minimal");
+      });
+      scope.stop();
+    });
+
+    test("tracks the renderer as the dag changes", async () => {
+      scope = effectScope();
+      await scope.run(async () => {
+        const curDag = shallowRef<Dag>(new Dag("empty-dag"));
+        const { activeRendererName, rendererComponent } = useRendererRegistry(
+          () => curDag.value,
+        );
+        expect(rendererComponent.value.name).toBe("CytoscapeRenderer");
+
+        curDag.value = makeDagWithDirectives("minimal");
+        await nextTick();
+
+        expect(activeRendererName.value).toBe("minimal");
+        expect(rendererComponent.value.name).toBe("MinimalExampleRenderer");
+      });
+      scope.stop();
+    });
   });
 
-  test("renderer display names are correct", () => {
-    scope = effectScope();
-    scope.run(() => {
-      const { rendererOptions } = useRendererRegistry();
-      const cytoscape = rendererOptions.value.find((o) => o.id === "cytoscape");
-      const minimal = rendererOptions.value.find((o) => o.id === "minimal");
-      expect(cytoscape?.name).toBe("Cytoscape");
-      expect(minimal?.name).toBe("Minimal Example");
+  describe("supportedExportFormats", () => {
+    test("returns the active renderer's formats", () => {
+      scope = effectScope();
+      scope.run(() => {
+        const { supportedExportFormats } = useRendererRegistry(
+          () => new Dag("empty-dag"),
+        );
+        expect(supportedExportFormats.value).toEqual([
+          ExportFormat.PNG,
+          ExportFormat.SVG,
+        ]);
+      });
+      scope.stop();
     });
-    scope.stop();
+
+    test("follows the renderer the directive selects", () => {
+      scope = effectScope();
+      scope.run(() => {
+        const { supportedExportFormats } = useRendererRegistry(() =>
+          makeDagWithDirectives("minimal"),
+        );
+        expect(supportedExportFormats.value).toEqual([ExportFormat.PNG]);
+      });
+      scope.stop();
+    });
   });
 
-  test("switching renderer updates rendererComponent", async () => {
-    scope = effectScope();
-    await scope.run(async () => {
-      const { selectedRenderer, rendererComponent } = useRendererRegistry();
-      const initialComponent = rendererComponent.value;
+  describe("registerRenderer", () => {
+    test("makes a new renderer name selectable by directive", async () => {
+      scope = effectScope();
+      await scope.run(async () => {
+        const curDag = shallowRef<Dag>(makeDagWithDirectives("custom"));
+        const { activeRendererName, rendererComponent, registerRenderer } =
+          useRendererRegistry(() => curDag.value);
 
-      selectedRenderer.value = "minimal";
-      await nextTick();
+        // Not registered yet, so the directive is ignored
+        expect(activeRendererName.value).toBe("cytoscape");
 
-      expect(rendererComponent.value).not.toBe(initialComponent);
+        registerRenderer("custom", {
+          name: "CustomRenderer",
+          displayName: "Custom",
+          supportedExportFormats: [ExportFormat.TXT],
+        });
+        await nextTick();
+
+        expect(activeRendererName.value).toBe("custom");
+        expect(rendererComponent.value.name).toBe("CustomRenderer");
+      });
+      scope.stop();
     });
-    scope.stop();
-  });
-
-  test("switching renderer calls onRendererChanged callback", async () => {
-    scope = effectScope();
-    await scope.run(async () => {
-      const callback = vi.fn();
-      const { selectedRenderer } = useRendererRegistry("cytoscape", callback);
-
-      selectedRenderer.value = "minimal";
-      await nextTick();
-
-      expect(callback).toHaveBeenCalledTimes(1);
-    });
-    scope.stop();
-  });
-
-  test("switching to invalid renderer logs error and keeps current", async () => {
-    scope = effectScope();
-    await scope.run(async () => {
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const { selectedRenderer, rendererComponent } = useRendererRegistry();
-      const initialComponent = rendererComponent.value;
-
-      selectedRenderer.value = "nonexistent";
-      await nextTick();
-
-      expect(errorSpy).toHaveBeenCalledWith(
-        'Renderer with id "nonexistent" not found',
-      );
-      expect(rendererComponent.value).toBe(initialComponent);
-      errorSpy.mockRestore();
-    });
-    scope.stop();
-  });
-
-  test("invalid renderer does not call onRendererChanged", async () => {
-    scope = effectScope();
-    await scope.run(async () => {
-      const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const callback = vi.fn();
-      const { selectedRenderer } = useRendererRegistry("cytoscape", callback);
-
-      selectedRenderer.value = "nonexistent";
-      await nextTick();
-
-      expect(callback).not.toHaveBeenCalled();
-      errorSpy.mockRestore();
-    });
-    scope.stop();
-  });
-
-  test("supportedExportFormats reflects current renderer", () => {
-    scope = effectScope();
-    scope.run(() => {
-      const { supportedExportFormats } = useRendererRegistry();
-      expect(supportedExportFormats.value).toEqual([
-        ExportFormat.PNG,
-        ExportFormat.SVG,
-      ]);
-    });
-    scope.stop();
-  });
-
-  test("supportedExportFormats updates when renderer changes", async () => {
-    scope = effectScope();
-    await scope.run(async () => {
-      const { selectedRenderer, supportedExportFormats } =
-        useRendererRegistry();
-      expect(supportedExportFormats.value).toEqual([
-        ExportFormat.PNG,
-        ExportFormat.SVG,
-      ]);
-
-      selectedRenderer.value = "minimal";
-      await nextTick();
-
-      expect(supportedExportFormats.value).toEqual([ExportFormat.PNG]);
-    });
-    scope.stop();
-  });
-
-  test("registerRenderer adds a new renderer option", () => {
-    scope = effectScope();
-    scope.run(() => {
-      const { registerRenderer, rendererOptions } = useRendererRegistry();
-      const mockRenderer = {
-        displayName: "Test Renderer",
-        supportedExportFormats: [],
-      };
-      registerRenderer("test", mockRenderer as never);
-
-      expect(rendererOptions.value).toHaveLength(3);
-      expect(rendererOptions.value.map((o) => o.id)).toContain("test");
-    });
-    scope.stop();
-  });
-
-  test("switching to newly registered renderer works", async () => {
-    scope = effectScope();
-    await scope.run(async () => {
-      const callback = vi.fn();
-      const { registerRenderer, selectedRenderer, rendererComponent } =
-        useRendererRegistry("cytoscape", callback);
-
-      const mockRenderer = {
-        displayName: "Custom",
-        supportedExportFormats: [],
-      };
-      registerRenderer("custom", mockRenderer as never);
-
-      selectedRenderer.value = "custom";
-      await nextTick();
-
-      expect(rendererComponent.value).toBe(mockRenderer);
-      expect(callback).toHaveBeenCalledTimes(1);
-    });
-    scope.stop();
   });
 });

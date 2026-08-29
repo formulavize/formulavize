@@ -148,7 +148,7 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    selectedRenderer: {
+    activeRenderer: {
       type: String,
       default: "",
     },
@@ -171,17 +171,17 @@ export default defineComponent({
 
     const createAutocompletion = (
       completionIndex?: CompletionIndex,
-      selectedRenderer?: string,
+      activeRenderer?: string,
     ) => {
       if (!completionIndex) {
         return autocompletion();
       }
       const sources = getAllDynamicCompletionSources(completionIndex);
-      if (selectedRenderer) {
+      if (activeRenderer) {
         sources.push(
           createRendererPropertyCompletionSource(
             completionIndex,
-            selectedRenderer,
+            activeRenderer,
           ),
         );
       }
@@ -302,7 +302,7 @@ export default defineComponent({
         }),
         keymapCompartment.of(getKeymap(this.enableTabbingInEditor)),
         autocompletionCompartment.of(
-          createAutocompletion(this.completionIndex, this.selectedRenderer),
+          createAutocompletion(this.completionIndex, this.activeRenderer),
         ),
         cursorTooltipCompartment.of(createCursorTooltip(this.debugMode)),
         readOnlyHeaderLengthField,
@@ -352,18 +352,18 @@ export default defineComponent({
       (completionIndex) => {
         view.dispatch({
           effects: autocompletionCompartment.reconfigure(
-            createAutocompletion(completionIndex, this.selectedRenderer),
+            createAutocompletion(completionIndex, this.activeRenderer),
           ),
         });
       },
     );
 
     watch(
-      () => this.selectedRenderer,
-      (selectedRenderer) => {
+      () => this.activeRenderer,
+      (activeRenderer) => {
         view.dispatch({
           effects: autocompletionCompartment.reconfigure(
-            createAutocompletion(this.completionIndex, selectedRenderer),
+            createAutocompletion(this.completionIndex, activeRenderer),
           ),
         });
       },

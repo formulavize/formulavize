@@ -43,18 +43,6 @@
           ]"
           @update:model-value="$emit('update:themeMode', $event)"
         />
-        <v-select
-          label="Renderer"
-          hide-details="auto"
-          :model-value="selectedRenderer"
-          :items="
-            rendererOptions.map((opt) => ({
-              title: opt.name,
-              value: opt.id,
-            }))
-          "
-          @update:model-value="$emit('update:selectedRenderer', $event)"
-        />
       </v-card-text>
       <v-card-actions>
         <v-btn @click="$emit('update:showOptions', false)">
@@ -67,7 +55,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
+import { defineComponent } from "vue";
 import { mdiCloseCircleOutline, mdiCogOutline } from "@mdi/js";
 export default defineComponent({
   name: "OptionsPopup",
@@ -88,21 +76,12 @@ export default defineComponent({
       type: String,
       required: true,
     },
-    selectedRenderer: {
-      type: String,
-      required: true,
-    },
-    rendererOptions: {
-      type: Array as PropType<Array<{ id: string; name: string }>>,
-      required: true,
-    },
   },
   emits: [
     "update:showOptions",
     "update:enableTabbingInEditor",
     "update:debugMode",
     "update:themeMode",
-    "update:selectedRenderer",
   ],
   setup() {
     return {

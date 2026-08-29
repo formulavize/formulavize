@@ -19,16 +19,11 @@ describe("OptionsStore", () => {
     expect(new OptionsStore().load().debugMode).toBe(false);
   });
 
-  test("defaults to cytoscape renderer", () => {
-    expect(new OptionsStore().load().selectedRenderer).toBe("cytoscape");
-  });
-
   test("round-trips all option fields", () => {
     const store = new OptionsStore();
     const options = {
       enableTabbingInEditor: true,
       debugMode: true,
-      selectedRenderer: "minimal",
     };
     store.save(options);
     expect(store.load()).toEqual(options);
