@@ -9,6 +9,7 @@ import {
   SelectorDescriptionPair,
   makeCyPopperMapFromDag,
   setupCyPoppers,
+  getPopperReferencePosition,
 } from "src/renderers/cyDag/cyPopperExtender";
 import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
 import { Dag, StyleProperties } from "src/compiler/dag";
@@ -464,6 +465,49 @@ describe("subdag descriptions", () => {
       ["node[id = 'childId2']", makeDescriptionData("d1")],
     ];
     expect(getNodeDescriptions(childDag2)).toEqual(expectedDescs);
+  });
+});
+
+describe("popper reference position", () => {
+  const NODE_BOX = { x1: 100, y1: 200, x2: 160, y2: 260 };
+  const LABEL_OVERHANG = 20;
+  const OVERLAY_PADDING = 10;
+
+  // Stands in for a cytoscape element whose ':active' overlay grows its
+  // bounding box, which is what a grabbed node looks like mid-drag.
+  function makeElement(overlayPadding: number) {
+    const boxes = vi.fn(
+      (options: { includeLabels?: boolean; includeOverlays?: boolean }) => {
+        const pad = options.includeOverlays === false ? 0 : overlayPadding;
+        return {
+          x1: NODE_BOX.x1 - pad,
+          y1: NODE_BOX.y1 - pad,
+          x2: NODE_BOX.x2 + pad,
+          y2: NODE_BOX.y2 + pad + (options.includeLabels ? LABEL_OVERHANG : 0),
+        };
+      },
+    );
+    return { renderedBoundingBox: boxes };
+  }
+
+  type Element = Parameters<typeof getPopperReferencePosition>[0];
+
+  test("anchors below the label", () => {
+    const ele = makeElement(0) as unknown as Element;
+
+    expect(getPopperReferencePosition(ele)).toEqual({
+      x: NODE_BOX.x1,
+      y: NODE_BOX.y1 + LABEL_OVERHANG,
+    });
+  });
+
+  test("a grabbed element's overlay does not move the reference point", () => {
+    const grabbed = makeElement(OVERLAY_PADDING) as unknown as Element;
+    const free = makeElement(0) as unknown as Element;
+
+    expect(getPopperReferencePosition(grabbed)).toEqual(
+      getPopperReferencePosition(free),
+    );
   });
 });
 

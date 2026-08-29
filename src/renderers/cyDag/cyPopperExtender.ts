@@ -232,6 +232,36 @@ function makePopperDiv(descriptionData: DescriptionData): HTMLDivElement {
   return outerDiv;
 }
 
+/**
+ * Top-left reference point poppers are anchored to, in rendered coordinates.
+ *
+ * Shifted down past the element's label so descriptions sit below it rather
+ * than overlapping it. Overlays are excluded from both boxes: cytoscape's
+ * default stylesheet gives an ':active' element an overlay, so a grabbed node's
+ * bounding box would otherwise grow by 'overlay-padding' on every side mid-drag
+ * and move the popper up and to the left until the next pan or zoom.
+ */
+export function getPopperReferencePosition(
+  ele: cytoscape.SingularElementReturnValue,
+): { x: number; y: number } {
+  const boundingBoxOptions = { includeOverlays: false };
+  const withLabels = ele.renderedBoundingBox({
+    ...boundingBoxOptions,
+    includeLabels: true,
+  });
+  const withoutLabels = ele.renderedBoundingBox({
+    ...boundingBoxOptions,
+    includeLabels: false,
+  });
+  // The label extends below the node body; shift the reference
+  // point down by that overhang so the popper clears the label.
+  const labelOverhang = withLabels.y2 - withoutLabels.y2;
+  return {
+    x: withoutLabels.x1,
+    y: withoutLabels.y1 + labelOverhang,
+  };
+}
+
 function makeDescriptionPoppers(
   cy: cytoscape.Core,
   canvasElement: HTMLElement,
@@ -245,20 +275,10 @@ function makeDescriptionPoppers(
         canvasElement.appendChild(popperDiv);
         return popperDiv;
       },
-      // Shift the reference point down so descriptions position below the
-      // label rather than overlapping it.
-      renderedPosition: (el) => {
-        const ele = el as unknown as cytoscape.SingularElementReturnValue;
-        const withLabels = ele.renderedBoundingBox({ includeLabels: true });
-        const withoutLabels = ele.renderedBoundingBox({ includeLabels: false });
-        // The label extends below the node body; shift the reference
-        // point down by that overhang so the popper clears the label.
-        const labelOverhang = withLabels.y2 - withoutLabels.y2;
-        return {
-          x: withoutLabels.x1,
-          y: withoutLabels.y1 + labelOverhang,
-        };
-      },
+      renderedPosition: (el) =>
+        getPopperReferencePosition(
+          el as unknown as cytoscape.SingularElementReturnValue,
+        ),
     });
     return [cyElement.id(), popperElement] as [string, PopperInstance];
   });
