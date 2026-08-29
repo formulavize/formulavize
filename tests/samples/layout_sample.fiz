@@ -1,0 +1,19 @@
+// Layout selection and per-layout options live in the '^cytoscape' directive.
+// Swap the layout name to compare dagre, breadthfirst, and elk, or use
+// "manual" to turn the layout manager off and drag the nodes around yourself.
+^cytoscape{
+  layout: "elk"
+  elk-direction: "RIGHT"
+  elk-spacing-nodeNode: 40
+  padding: 30
+  // Booleans are written as 1/0 or "true"/"false": bare identifiers are not
+  // valid style values.
+  nodeDimensionsIncludeLabels: 1
+}
+
+raw = a()
+ingest[
+  cleaned = b(raw)
+  c(cleaned)
+]
+d(ingest.cleaned)
