@@ -25,6 +25,10 @@ export interface ContextScenario {
   // Set inside a '^<rendererName>{ }' block. Directive properties are offered
   // only when this matches the active renderer.
   rendererDirectiveName?: string;
+  // The layout the same directive block selects, used to narrow the offered
+  // properties to that layout's options. Undefined when the block does not
+  // declare a layout inline.
+  rendererDirectiveLayout?: string;
 }
 
 // An autocompletion token definition

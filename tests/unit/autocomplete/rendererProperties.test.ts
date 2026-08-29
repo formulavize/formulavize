@@ -31,7 +31,7 @@ describe("rendererProperties", () => {
 
 describe("renderer directive completions", () => {
   test("cytoscape directives cover the supported keys", () => {
-    const labels = getRendererDirectiveCompletions("cytoscape").map(
+    const labels = getRendererDirectiveCompletions("cytoscape", "dagre").map(
       (c) => c.label,
     );
     expect(labels).toContain("rankDir");
@@ -49,5 +49,46 @@ describe("renderer directive completions", () => {
   test("renderer without directives returns empty array", () => {
     expect(getRendererDirectiveCompletions("minimal")).toEqual([]);
     expect(getRendererDirectiveCompletions("nonexistent")).toEqual([]);
+  });
+
+  test("an unknown layout offers only base properties", () => {
+    const labels = getRendererDirectiveCompletions("cytoscape").map(
+      (c) => c.label,
+    );
+    expect(labels).toEqual(["background-color", "layout"]);
+  });
+
+  test("a declared layout narrows the offered options", () => {
+    const labels = getRendererDirectiveCompletions("cytoscape", "elk").map(
+      (c) => c.label,
+    );
+    expect(labels).toContain("elk-direction");
+    expect(labels).toContain("layout");
+    expect(labels).not.toContain("rankDir");
+    expect(labels).not.toContain("thoroughness");
+  });
+
+  test("the manual layout offers only what it can honour", () => {
+    const labels = getRendererDirectiveCompletions("cytoscape", "manual").map(
+      (c) => c.label,
+    );
+    expect(labels).toContain("layout");
+    expect(labels).toContain("padding");
+    // Nothing that would imply the renderer positions nodes for you.
+    expect(labels).not.toContain("rankDir");
+    expect(labels).not.toContain("spacingFactor");
+    expect(labels).not.toContain("nodeDimensionsIncludeLabels");
+  });
+
+  test("layout names are matched case-insensitively", () => {
+    expect(getRendererDirectiveCompletions("cytoscape", " ELK ")).toEqual(
+      getRendererDirectiveCompletions("cytoscape", "elk"),
+    );
+  });
+
+  test("an unrecognized layout falls back to base properties", () => {
+    expect(getRendererDirectiveCompletions("cytoscape", "elkk")).toEqual(
+      getRendererDirectiveCompletions("cytoscape"),
+    );
   });
 });

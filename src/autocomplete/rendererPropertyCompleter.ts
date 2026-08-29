@@ -52,7 +52,10 @@ export function createRendererPropertyCompletionSource(
       // A block addressed to another renderer has nothing we can suggest.
       activeProperties =
         contextScenario.rendererDirectiveName === rendererName
-          ? getRendererDirectiveCompletions(rendererName)
+          ? getRendererDirectiveCompletions(
+              rendererName,
+              contextScenario.rendererDirectiveLayout,
+            )
           : [];
     } else if (contextScenario?.globalStyleKeyword) {
       // Context scenario registered — use its element keyword
@@ -73,9 +76,11 @@ export function createRendererPropertyCompletionSource(
           );
         }
       } else if (directiveMatch) {
+        // The block's own 'layout:' declaration narrows what we can offer.
+        const layoutMatch = /\blayout\s*:\s*"?([\w-]+)"?/.exec(match.text);
         activeProperties =
           directiveMatch[1] === rendererName
-            ? getRendererDirectiveCompletions(rendererName)
+            ? getRendererDirectiveCompletions(rendererName, layoutMatch?.[1])
             : [];
       }
     }

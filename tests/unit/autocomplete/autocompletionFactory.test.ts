@@ -223,11 +223,12 @@ describe("makeCompletionIndex captures context scenarios", () => {
       type: ContextScenarioType.StyleArgList,
       from: 11, // styleArgList.from + 1
       to: 19, // styleArgList.to - 1
-      rendererDirectiveId: "cytoscape",
+      rendererDirectiveName: "cytoscape",
+      rendererDirectiveLayout: undefined,
     });
   });
 
-  test("renderer directive carries an unregistered id through", async () => {
+  test("renderer directive carries an unregistered name through", async () => {
     const directiveNode = new RendererDirective(
       "madeup",
       new Style(new Map(), [], pos(10, 20)),
@@ -237,7 +238,21 @@ describe("makeCompletionIndex captures context scenarios", () => {
     const index = await makeCompletionIndex([directiveNode]);
 
     expect(index.contextScenarios[0]).toMatchObject({
-      rendererDirectiveId: "madeup",
+      rendererDirectiveName: "madeup",
+    });
+  });
+
+  test("renderer directive carries its declared layout", async () => {
+    const directiveNode = new RendererDirective(
+      "cytoscape",
+      new Style(new Map([["layout", "elk"]]), [], pos(10, 20)),
+      pos(0, 25),
+    );
+
+    const index = await makeCompletionIndex([directiveNode]);
+
+    expect(index.contextScenarios[0]).toMatchObject({
+      rendererDirectiveLayout: "elk",
     });
   });
 

@@ -206,7 +206,10 @@ describe("rendererPropertyCompleter", () => {
 });
 
 describe("renderer directive completions", () => {
-  function makeDirectiveIndex(rendererDirectiveName: string): CompletionIndex {
+  function makeDirectiveIndex(
+    rendererDirectiveName: string,
+    rendererDirectiveLayout?: string,
+  ): CompletionIndex {
     return new CompletionIndex(
       [],
       [
@@ -215,6 +218,7 @@ describe("renderer directive completions", () => {
           from: 10,
           to: 30,
           rendererDirectiveName: rendererDirectiveName,
+          rendererDirectiveLayout: rendererDirectiveLayout,
         },
       ],
       [],
@@ -259,6 +263,50 @@ describe("renderer directive completions", () => {
     const labels = result!.options.map((o) => o.label);
     expect(labels).toContain("background-color");
     expect(labels).not.toContain("background-opacity");
+  });
+
+  test("a declared layout narrows the indexed directive properties", async () => {
+    const completionIndex = new CompletionIndex(
+      [],
+      [
+        {
+          type: ContextScenarioType.StyleArgList,
+          from: 10,
+          to: 60,
+          rendererDirectiveName: "cytoscape",
+          rendererDirectiveLayout: "elk",
+        },
+      ],
+      [],
+    );
+    const source = createRendererPropertyCompletionSource(
+      completionIndex,
+      "cytoscape",
+    );
+    const text = '^cytoscape{ layout:"elk"; elk-';
+    const result = await runSource(
+      source,
+      createMockContext(text.length, text, false),
+    );
+    expect(result).not.toBeNull();
+    const labels = result!.options.map((o) => o.label);
+    expect(labels).toContain("elk-direction");
+  });
+
+  test("regex fallback reads the layout from the raw text", async () => {
+    const source = createRendererPropertyCompletionSource(
+      new CompletionIndex([], [], []),
+      "cytoscape",
+    );
+    const text = '^cytoscape{ layout:"elk"; elk-';
+    const result = await runSource(
+      source,
+      createMockContext(text.length, text, false),
+    );
+    expect(result).not.toBeNull();
+    const labels = result!.options.map((o) => o.label);
+    expect(labels).toContain("elk-direction");
+    expect(labels).not.toContain("rankDir");
   });
 
   test("regex fallback offers nothing for another renderer", async () => {
