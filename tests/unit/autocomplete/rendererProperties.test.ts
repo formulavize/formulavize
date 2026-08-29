@@ -3,6 +3,7 @@ import {
   getRendererPropertyCompletions,
   getRendererDirectiveCompletions,
 } from "src/autocomplete/rendererProperties";
+import { DEFAULT_CYTOSCAPE_LAYOUT } from "src/compiler/constants";
 
 describe("rendererProperties", () => {
   test("cytoscape returns a non-empty array", () => {
@@ -51,11 +52,19 @@ describe("renderer directive completions", () => {
     expect(getRendererDirectiveCompletions("nonexistent")).toEqual([]);
   });
 
-  test("an unknown layout offers only base properties", () => {
+  test("an absent layout offers the default layout's properties", () => {
+    // A directive block that names no layout still gets one: the renderer
+    // resolves the missing name to the default layout, so those are the
+    // options the block will really honour.
+    expect(getRendererDirectiveCompletions("cytoscape")).toEqual(
+      getRendererDirectiveCompletions("cytoscape", DEFAULT_CYTOSCAPE_LAYOUT),
+    );
     const labels = getRendererDirectiveCompletions("cytoscape").map(
       (c) => c.label,
     );
-    expect(labels).toEqual(["background-color", "layout"]);
+    expect(labels).toContain("background-color");
+    expect(labels).toContain("layout");
+    expect(labels).toContain("rankDir");
   });
 
   test("a declared layout narrows the offered options", () => {
@@ -86,7 +95,7 @@ describe("renderer directive completions", () => {
     );
   });
 
-  test("an unrecognized layout falls back to base properties", () => {
+  test("an unrecognized layout falls back to the default layout", () => {
     expect(getRendererDirectiveCompletions("cytoscape", "elkk")).toEqual(
       getRendererDirectiveCompletions("cytoscape"),
     );

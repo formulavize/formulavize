@@ -3,6 +3,7 @@ import {
   BACKGROUND_COLOR_PROPERTY,
   CYTOSCAPE_LAYOUT_NAMES,
   CYTOSCAPE_RENDERER_NAME,
+  DEFAULT_CYTOSCAPE_LAYOUT,
   DESCRIPTION_PREFIX,
   DESCRIPTION_PROPERTY,
   LAYOUT_PROPERTY,
@@ -269,11 +270,11 @@ const cytoscapeDirectiveCompletionsByLayout: Record<string, Completion[]> =
     ]),
   );
 
-// Offered when the active layout is unknown: base properties only, since
-// layout-specific option keys can't be resolved without a known layout.
-const cytoscapeDirectiveCompletions = buildCompletions(
-  CYTOSCAPE_DIRECTIVE_BASE_PROPERTIES,
-);
+// Offered when the directive names no layout, or names one that isn't
+// recognized. getLayoutName() resolves both of those cases to the default
+// layout, so those are the options the block will really accept.
+const cytoscapeDirectiveCompletions =
+  cytoscapeDirectiveCompletionsByLayout[DEFAULT_CYTOSCAPE_LAYOUT];
 
 interface RendererPropertyEntry {
   all: Completion[];
@@ -313,8 +314,8 @@ export function getRendererPropertyCompletionsByElementType(
 /**
  * Directive properties for a renderer, narrowed to a single layout's options
  * when the directive block names one. An unrecognized or absent layout falls
- * back to base properties only, since layout-specific options can't be
- * resolved without a known layout.
+ * back to the renderer's default-layout options, matching how the renderer
+ * itself resolves the layout name.
  */
 export function getRendererDirectiveCompletions(
   rendererName: string,
