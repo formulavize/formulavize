@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach } from "vitest";
+import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
 import { effectScope, nextTick } from "vue";
 import { flushPromises } from "@vue/test-utils";
 import { EditorState } from "@codemirror/state";
@@ -18,240 +18,189 @@ function createEditorStateFromSource(source: string): EditorState {
 describe("useCompilation", () => {
   let scope: ReturnType<typeof effectScope>;
 
+  // Watchers must be created inside an effect scope so their reactive
+  // effects are disposed with the test rather than leaking into the next one.
+  function setupCompilation(...args: Parameters<typeof useCompilation>) {
+    const compilation = scope.run(() => useCompilation(...args));
+    if (!compilation) throw new Error("effect scope was stopped before setup");
+    return compilation;
+  }
+
+  // Compilation is watcher driven and asynchronous, so let both the reactive
+  // update and the compiler promise resolve before asserting.
+  async function settle(): Promise<void> {
+    await nextTick();
+    await flushPromises();
+  }
+
   beforeEach(() => {
     scope = effectScope();
   });
 
-  test("initializes with default values", () => {
-    scope.run(() => {
-      const { curAst, curDag, curErrors, curDiagnostics, curImportDump } =
-        useCompilation(() => false);
-
-      expect(curAst.value).toBeInstanceOf(RecipeTreeNode);
-      expect(curDag.value).toBeInstanceOf(Dag);
-      expect(curErrors.value).toEqual([]);
-      expect(curDiagnostics.value).toEqual([]);
-      expect(curImportDump.value).toBe("(no imports)");
-    });
+  afterEach(() => {
     scope.stop();
+  });
+
+  test("initializes with default values", () => {
+    const { curAst, curDag, curErrors, curDiagnostics, curImportDump } =
+      setupCompilation(() => false);
+
+    expect(curAst.value).toBeInstanceOf(RecipeTreeNode);
+    expect(curDag.value).toBeInstanceOf(Dag);
+    expect(curErrors.value).toEqual([]);
+    expect(curDiagnostics.value).toEqual([]);
+    expect(curImportDump.value).toBe("(no imports)");
   });
 
   test("updateEditorState triggers compilation", async () => {
-    await scope.run(async () => {
-      const { updateEditorState, curDag } = useCompilation(() => false);
+    const { updateEditorState, curDag } = setupCompilation(() => false);
 
-      const editorState = createEditorStateFromSource("f()");
-      updateEditorState(editorState);
-      await nextTick();
-      await flushPromises();
+    updateEditorState(createEditorStateFromSource("f()"));
+    await settle();
 
-      expect(curDag.value.getNodeList()).toHaveLength(1);
-      expect(curDag.value.getNodeList()[0].name).toBe("f");
-    });
-    scope.stop();
+    expect(curDag.value.getNodeList()).toHaveLength(1);
+    expect(curDag.value.getNodeList()[0].name).toBe("f");
   });
 
   test("compilation with multiple nodes produces correct DAG", async () => {
-    await scope.run(async () => {
-      const { updateEditorState, curDag } = useCompilation(() => false);
+    const { updateEditorState, curDag } = setupCompilation(() => false);
 
-      const editorState = createEditorStateFromSource("a = f(); b = g(a);");
-      updateEditorState(editorState);
-      await nextTick();
-      await flushPromises();
+    updateEditorState(createEditorStateFromSource("a = f(); b = g(a);"));
+    await settle();
 
-      expect(curDag.value.getNodeList()).toHaveLength(2);
-      expect(curDag.value.getEdgeList()).toHaveLength(1);
-    });
-    scope.stop();
+    expect(curDag.value.getNodeList()).toHaveLength(2);
+    expect(curDag.value.getEdgeList()).toHaveLength(1);
   });
 
   test("compilation errors produce diagnostics", async () => {
-    await scope.run(async () => {
-      const { updateEditorState, curErrors, curDiagnostics } = useCompilation(
-        () => false,
-      );
+    const { updateEditorState, curErrors, curDiagnostics } = setupCompilation(
+      () => false,
+    );
 
-      // Reference an undefined variable
-      const editorState = createEditorStateFromSource("f(undefinedVar)");
-      updateEditorState(editorState);
-      await nextTick();
-      await flushPromises();
+    // Reference an undefined variable
+    updateEditorState(createEditorStateFromSource("f(undefinedVar)"));
+    await settle();
 
-      expect(curErrors.value.length).toBeGreaterThan(0);
-      expect(curDiagnostics.value.length).toBeGreaterThan(0);
-    });
-    scope.stop();
+    expect(curErrors.value.length).toBeGreaterThan(0);
+    expect(curDiagnostics.value.length).toBeGreaterThan(0);
   });
 
   test("onCompilationComplete callback is called", async () => {
-    await scope.run(async () => {
-      const callback = vi.fn();
-      const { updateEditorState } = useCompilation(() => false, callback);
+    const callback = vi.fn();
+    const { updateEditorState } = setupCompilation(() => false, callback);
 
-      const editorState = createEditorStateFromSource("f()");
-      updateEditorState(editorState);
-      await nextTick();
-      await flushPromises();
+    updateEditorState(createEditorStateFromSource("f()"));
+    await settle();
 
-      expect(callback).toHaveBeenCalledTimes(1);
-      expect(callback.mock.calls[0][0].DAG.getNodeList()).toHaveLength(1);
-    });
-    scope.stop();
+    expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback.mock.calls[0][0].DAG.getNodeList()).toHaveLength(1);
   });
 
   test("repaint re-triggers compilation with same content", async () => {
-    await scope.run(async () => {
-      const callback = vi.fn();
-      const { updateEditorState, repaint } = useCompilation(
-        () => false,
-        callback,
-      );
+    const callback = vi.fn();
+    const { updateEditorState, repaint } = setupCompilation(
+      () => false,
+      callback,
+    );
 
-      const editorState = createEditorStateFromSource("f()");
-      updateEditorState(editorState);
-      await nextTick();
-      await flushPromises();
+    updateEditorState(createEditorStateFromSource("f()"));
+    await settle();
 
-      expect(callback).toHaveBeenCalledTimes(1);
+    expect(callback).toHaveBeenCalledTimes(1);
 
-      repaint();
-      await nextTick();
-      await flushPromises();
+    repaint();
+    await settle();
 
-      expect(callback).toHaveBeenCalledTimes(2);
-    });
-    scope.stop();
+    expect(callback).toHaveBeenCalledTimes(2);
   });
 
   test("shouldDumpImports controls import dump generation", async () => {
-    await scope.run(async () => {
-      // When shouldDumpImports returns false, import dump stays at default
-      const resultFalse = useCompilation(() => false);
-      const editorState1 = createEditorStateFromSource("f()");
-      resultFalse.updateEditorState(editorState1);
-      await nextTick();
-      await flushPromises();
-      expect(resultFalse.curImportDump.value).toBe("(no imports)");
-    });
-    scope.stop();
+    // When shouldDumpImports returns false, import dump stays at default
+    const resultFalse = setupCompilation(() => false);
+    resultFalse.updateEditorState(createEditorStateFromSource("f()"));
+    await settle();
+    expect(resultFalse.curImportDump.value).toBe("(no imports)");
 
     // When shouldDumpImports returns true, dumpImportTree is called
     // (still returns "(no imports)" for source with no imports, but the
     // code path is exercised)
-    scope = effectScope();
-    await scope.run(async () => {
-      const resultTrue = useCompilation(() => true);
-      const editorState2 = createEditorStateFromSource("f()");
-      resultTrue.updateEditorState(editorState2);
-      await nextTick();
-      await flushPromises();
-      // dumpImportTree returns "(no imports)" for source without imports
-      expect(resultTrue.curImportDump.value).toBe("(no imports)");
-    });
-    scope.stop();
+    const resultTrue = setupCompilation(() => true);
+    resultTrue.updateEditorState(createEditorStateFromSource("f()"));
+    await settle();
+    expect(resultTrue.curImportDump.value).toBe("(no imports)");
   });
 
   test("completion index is updated after compilation", async () => {
-    await scope.run(async () => {
-      const { updateEditorState, curCompletionIndex } = useCompilation(
-        () => false,
-      );
+    const { updateEditorState, curCompletionIndex } = setupCompilation(
+      () => false,
+    );
 
-      expect(curCompletionIndex.value).toBeInstanceOf(CompletionIndex);
+    expect(curCompletionIndex.value).toBeInstanceOf(CompletionIndex);
 
-      const editorState = createEditorStateFromSource("a = f()");
-      updateEditorState(editorState);
-      await nextTick();
-      await flushPromises();
+    updateEditorState(createEditorStateFromSource("a = f()"));
+    await settle();
 
-      // After compilation, the completion index should be rebuilt
-      expect(curCompletionIndex.value).toBeInstanceOf(CompletionIndex);
-    });
-    scope.stop();
+    // After compilation, the completion index should be rebuilt
+    expect(curCompletionIndex.value).toBeInstanceOf(CompletionIndex);
   });
 
   test("error reporter is updated with new document", async () => {
-    await scope.run(async () => {
-      const { updateEditorState, curErrorReporter } = useCompilation(
-        () => false,
-      );
+    const { updateEditorState, curErrorReporter } = setupCompilation(
+      () => false,
+    );
 
-      const editorState = createEditorStateFromSource("f()");
-      updateEditorState(editorState);
-      await nextTick();
-      await flushPromises();
+    updateEditorState(createEditorStateFromSource("f()"));
+    await settle();
 
-      // Error reporter should be created with the new document
-      expect(curErrorReporter.value).toBeDefined();
-    });
-    scope.stop();
+    // Error reporter should be created with the new document
+    expect(curErrorReporter.value).toBeDefined();
   });
 
   test("completion index is reused when AST structure is unchanged", async () => {
-    await scope.run(async () => {
-      const { updateEditorState, curCompletionIndex } = useCompilation(
-        () => false,
-      );
+    const { updateEditorState, curCompletionIndex } = setupCompilation(
+      () => false,
+    );
 
-      // First compilation
-      const editorState1 = createEditorStateFromSource("f()");
-      updateEditorState(editorState1);
-      await nextTick();
-      await flushPromises();
+    // First compilation
+    updateEditorState(createEditorStateFromSource("f()"));
+    await settle();
 
-      const firstIndex = curCompletionIndex.value;
+    const firstIndex = curCompletionIndex.value;
 
-      // Second compilation with trailing space — same AST structure
-      const editorState2 = createEditorStateFromSource("f() ");
-      updateEditorState(editorState2);
-      await nextTick();
-      await flushPromises();
+    // Second compilation with trailing space — same AST structure
+    updateEditorState(createEditorStateFromSource("f() "));
+    await settle();
 
-      // Reference identity should be preserved (no rebuild)
-      expect(curCompletionIndex.value).toBe(firstIndex);
-    });
-    scope.stop();
+    // Reference identity should be preserved (no rebuild)
+    expect(curCompletionIndex.value).toBe(firstIndex);
   });
 
   test("completion index is rebuilt when AST structure changes", async () => {
-    await scope.run(async () => {
-      const { updateEditorState, curCompletionIndex } = useCompilation(
-        () => false,
-      );
+    const { updateEditorState, curCompletionIndex } = setupCompilation(
+      () => false,
+    );
 
-      const editorState1 = createEditorStateFromSource("f()");
-      updateEditorState(editorState1);
-      await nextTick();
-      await flushPromises();
+    updateEditorState(createEditorStateFromSource("f()"));
+    await settle();
 
-      const firstIndex = curCompletionIndex.value;
+    const firstIndex = curCompletionIndex.value;
 
-      // Different AST structure — new node added
-      const editorState2 = createEditorStateFromSource("f(); g()");
-      updateEditorState(editorState2);
-      await nextTick();
-      await flushPromises();
+    // Different AST structure — new node added
+    updateEditorState(createEditorStateFromSource("f(); g()"));
+    await settle();
 
-      expect(curCompletionIndex.value).not.toBe(firstIndex);
-    });
-    scope.stop();
+    expect(curCompletionIndex.value).not.toBe(firstIndex);
   });
 
   test("empty source compiles without errors", async () => {
-    await scope.run(async () => {
-      const { updateEditorState, curErrors, curDag } = useCompilation(
-        () => false,
-      );
+    const { updateEditorState, curErrors, curDag } = setupCompilation(
+      () => false,
+    );
 
-      const editorState = createEditorStateFromSource("");
-      updateEditorState(editorState);
-      await nextTick();
-      await flushPromises();
+    updateEditorState(createEditorStateFromSource(""));
+    await settle();
 
-      expect(curErrors.value).toEqual([]);
-      expect(curDag.value.getNodeList()).toHaveLength(0);
-    });
-    scope.stop();
+    expect(curErrors.value).toEqual([]);
+    expect(curDag.value.getNodeList()).toHaveLength(0);
   });
 });
