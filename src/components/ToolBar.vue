@@ -90,6 +90,16 @@ export default defineComponent({
   align-items: center;
   gap: 0.5em;
   padding: 1em;
+  /* let clicks through the toolbar's empty padding and gaps
+     so nodes underneath stay draggable */
+  pointer-events: none;
+}
+.toolbar > * {
+  pointer-events: auto;
+}
+.toolbar h1 {
+  /* default heading margins inflate the toolbar's hit area */
+  margin: 0;
 }
 #logo {
   height: 2em;
