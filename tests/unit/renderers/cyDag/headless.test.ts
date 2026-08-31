@@ -1,11 +1,8 @@
 import { describe, test, expect } from "vitest";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
 import { Compiler } from "src/compiler/driver";
-import { ExportFormat } from "src/compiler/constants";
-import {
-  renderDagToBytes,
-  HeadlessRenderOptions,
-} from "src/cli/headlessCytoscape";
+import { ExportFormat, HeadlessRenderOptions } from "src/rendererApi";
+import { renderDagToBytes } from "src/renderers/cyDag/headless";
 
 const baseOptions: HeadlessRenderOptions = {
   fileType: ExportFormat.PNG,

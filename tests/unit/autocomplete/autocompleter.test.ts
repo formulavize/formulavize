@@ -957,7 +957,10 @@ describe("autocompleter", () => {
     let source: CompletionSource;
 
     beforeEach(() => {
-      source = createRendererDirectiveNameCompletionSource();
+      source = createRendererDirectiveNameCompletionSource([
+        "cytoscape",
+        "minimal",
+      ]);
     });
 
     test("completes renderer names after caret", async () => {

@@ -1,7 +1,7 @@
 import { describe, test, expect, vi } from "vitest";
 import { Core } from "cytoscape";
 import { exportCyToBlob } from "src/renderers/cyDag/cyExport";
-import { ExportFormat } from "src/compiler/constants";
+import { ExportFormat } from "src/rendererApi";
 
 function makeStubCy() {
   const png = vi.fn(() => new Blob(["png"]));

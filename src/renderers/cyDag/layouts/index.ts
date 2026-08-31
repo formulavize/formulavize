@@ -1,4 +1,9 @@
-import { CyLayoutName, CyLayoutProvider } from "./types";
+import {
+  CYTOSCAPE_LAYOUT_NAMES,
+  CyLayoutName,
+  CyLayoutProvider,
+  DEFAULT_CYTOSCAPE_LAYOUT,
+} from "./types";
 import { dagreLayout } from "./dagre";
 import { breadthfirstLayout } from "./breadthfirst";
 import { elkLayout } from "./elk";
@@ -29,6 +34,22 @@ export function getLayoutProvider(name: CyLayoutName): CyLayoutProvider {
   return LAYOUT_PROVIDERS[name];
 }
 
+/**
+ * Fold a raw layout name written in a directive onto a selectable layout.
+ *
+ * An absent or unrecognized name resolves to the default rather than erring:
+ * renderer directives are never validated at compile time, so a typo silently
+ * changes nothing. Shared by the renderer and by autocomplete so both agree on
+ * which layout a given directive block really selects.
+ */
+export function resolveLayoutName(value: string | undefined): CyLayoutName {
+  if (!value) return DEFAULT_CYTOSCAPE_LAYOUT;
+  const normalized = value.trim().toLowerCase();
+  return (CYTOSCAPE_LAYOUT_NAMES as readonly string[]).includes(normalized)
+    ? (normalized as CyLayoutName)
+    : DEFAULT_CYTOSCAPE_LAYOUT;
+}
+
 // A layout options bag carries the cytoscape name, which is not always the name
 // a recipe writes (e.g. 'manual' runs the built-in 'preset' layout),
 // so extension registration looks providers up by their cytoscape name.
@@ -45,3 +66,8 @@ export function getLayoutProviderByCyName(
 }
 
 export type { CyLayoutName, CyLayoutProvider };
+export {
+  CYTOSCAPE_LAYOUT_NAMES,
+  DEFAULT_CYTOSCAPE_LAYOUT,
+  MANUAL_CYTOSCAPE_LAYOUT,
+} from "./types";

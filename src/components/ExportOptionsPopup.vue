@@ -63,7 +63,7 @@
 <script lang="ts">
 import { defineComponent, ref, PropType } from "vue";
 import { mdiExport, mdiCloseCircleOutline, mdiDownload } from "@mdi/js";
-import { ExportFormat } from "../compiler/constants";
+import { ExportFormat } from "../rendererApi";
 import { VForm } from "vuetify/components";
 
 const fileNameRules = [
@@ -111,7 +111,9 @@ export default defineComponent({
   data() {
     return {
       fileName: "formulavize",
-      fileType: ExportFormat.PNG,
+      // Widened from the literal: the active renderer decides the format list,
+      // and a renderer may offer a format of its own.
+      fileType: ExportFormat.PNG as ExportFormat,
       scalingPct: 100,
     };
   },

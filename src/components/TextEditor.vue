@@ -61,6 +61,7 @@ import { fizLanguage } from "@formulavize/lang-fiz";
 import { CompletionIndex } from "../autocomplete/autocompletion";
 import { getAllDynamicCompletionSources } from "../autocomplete/autocompleter";
 import { createRendererPropertyCompletionSource } from "../autocomplete/rendererPropertyCompleter";
+import { RendererDescriptor } from "../rendererApi";
 
 // Tutorial header protection logic
 // This logic ensures that the tutorial header (a section of the editor
@@ -148,9 +149,17 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    activeRenderer: {
-      type: String,
-      default: "",
+    // The renderer drawing the dag, whose vocabulary is offered inside style
+    // and directive blocks.
+    activeRendererPlugin: {
+      type: Object as () => RendererDescriptor | undefined,
+      required: false,
+      default: undefined,
+    },
+    // Names offered after a '^'.
+    rendererNames: {
+      type: Array as () => readonly string[],
+      default: () => [],
     },
     isDark: {
       type: Boolean,
@@ -171,17 +180,20 @@ export default defineComponent({
 
     const createAutocompletion = (
       completionIndex?: CompletionIndex,
-      activeRenderer?: string,
+      activeRendererPlugin?: RendererDescriptor,
     ) => {
       if (!completionIndex) {
         return autocompletion();
       }
-      const sources = getAllDynamicCompletionSources(completionIndex);
-      if (activeRenderer) {
+      const sources = getAllDynamicCompletionSources(
+        completionIndex,
+        this.rendererNames,
+      );
+      if (activeRendererPlugin) {
         sources.push(
           createRendererPropertyCompletionSource(
             completionIndex,
-            activeRenderer,
+            activeRendererPlugin,
           ),
         );
       }
@@ -302,7 +314,7 @@ export default defineComponent({
         }),
         keymapCompartment.of(getKeymap(this.enableTabbingInEditor)),
         autocompletionCompartment.of(
-          createAutocompletion(this.completionIndex, this.activeRenderer),
+          createAutocompletion(this.completionIndex, this.activeRendererPlugin),
         ),
         cursorTooltipCompartment.of(createCursorTooltip(this.debugMode)),
         readOnlyHeaderLengthField,
@@ -352,18 +364,18 @@ export default defineComponent({
       (completionIndex) => {
         view.dispatch({
           effects: autocompletionCompartment.reconfigure(
-            createAutocompletion(completionIndex, this.activeRenderer),
+            createAutocompletion(completionIndex, this.activeRendererPlugin),
           ),
         });
       },
     );
 
     watch(
-      () => this.activeRenderer,
-      (activeRenderer) => {
+      () => this.activeRendererPlugin,
+      (activeRendererPlugin) => {
         view.dispatch({
           effects: autocompletionCompartment.reconfigure(
-            createAutocompletion(this.completionIndex, activeRenderer),
+            createAutocompletion(this.completionIndex, activeRendererPlugin),
           ),
         });
       },

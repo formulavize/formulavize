@@ -5,15 +5,16 @@ import {
   PresetLayoutOptions,
 } from "cytoscape";
 import { Dag } from "../../compiler/dag";
-import {
-  DEFAULT_CYTOSCAPE_LAYOUT,
-  CYTOSCAPE_LAYOUT_NAMES,
-  LAYOUT_PROPERTY,
-  MANUAL_CYTOSCAPE_LAYOUT,
-} from "../../compiler/constants";
+import { LAYOUT_PROPERTY } from "./constants";
 import { getCytoscapeDirectiveProperties } from "./cyRendererDirectives";
 import { buildLayoutOptions } from "./cyLayoutSchema";
-import { CyLayoutName, CyLayoutProvider, getLayoutProvider } from "./layouts";
+import {
+  CyLayoutName,
+  CyLayoutProvider,
+  getLayoutProvider,
+  MANUAL_CYTOSCAPE_LAYOUT,
+  resolveLayoutName,
+} from "./layouts";
 
 export type { CyLayoutName };
 
@@ -48,12 +49,9 @@ export type CyLayoutOptions =
  * changes nothing.
  */
 export function getLayoutName(dag: Dag): CyLayoutName {
-  const value = getCytoscapeDirectiveProperties(dag).get(LAYOUT_PROPERTY);
-  if (!value) return DEFAULT_CYTOSCAPE_LAYOUT;
-  const normalized = value.trim().toLowerCase();
-  return (CYTOSCAPE_LAYOUT_NAMES as readonly string[]).includes(normalized)
-    ? (normalized as CyLayoutName)
-    : DEFAULT_CYTOSCAPE_LAYOUT;
+  return resolveLayoutName(
+    getCytoscapeDirectiveProperties(dag).get(LAYOUT_PROPERTY),
+  );
 }
 
 /**

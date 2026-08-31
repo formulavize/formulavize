@@ -12,10 +12,7 @@ import {
   NamespaceTreeNode,
   ImportTreeNode,
 } from "../compiler/ast";
-import {
-  GLOBAL_STYLE_KEYWORD_MAP,
-  LAYOUT_PROPERTY,
-} from "../compiler/constants";
+import { GLOBAL_STYLE_KEYWORD_MAP } from "../compiler/constants";
 import {
   CompletionIndex,
   TokenInfo,
@@ -188,8 +185,7 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
           from: rendererDirectiveNode.StyleNode.Position.from + 1,
           to: rendererDirectiveNode.StyleNode.Position.to - 1,
           rendererDirectiveName: rendererDirectiveNode.RendererName,
-          rendererDirectiveLayout:
-            rendererDirectiveNode.StyleNode.KeyValueMap.get(LAYOUT_PROPERTY),
+          rendererDirectiveProps: rendererDirectiveNode.StyleNode.KeyValueMap,
         },
       ];
     })

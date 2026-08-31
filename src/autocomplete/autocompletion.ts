@@ -19,16 +19,16 @@ export interface ContextScenario {
   type: ContextScenarioType;
   from: number;
   to: number;
-  // Used only by rendererPropertyCompleter to filter Cytoscape properties
-  // by element type (node/edge/subgraph) inside global style bindings.
+  // Used only by rendererPropertyCompleter to filter the active renderer's
+  // properties by element type (node/edge/subgraph) inside global style bindings.
   globalStyleKeyword?: string;
   // Set inside a '^<rendererName>{ }' block. Directive properties are offered
   // only when this matches the active renderer.
   rendererDirectiveName?: string;
-  // The layout the same directive block selects, used to narrow the offered
-  // properties to that layout's options. Undefined when the block does not
-  // declare a layout inline.
-  rendererDirectiveLayout?: string;
+  // What is already declared in the same directive block. Renderers narrow the
+  // properties they offer based on these; what a given key means is the
+  // renderer's concern, not this layer's.
+  rendererDirectiveProps?: ReadonlyMap<string, string>;
 }
 
 // An autocompletion token definition

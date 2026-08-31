@@ -3,7 +3,7 @@ export {
   type FileExportOptions,
   type HeadlessRenderOptions,
   type IRenderer,
-  type PropertyCompletion as PropertyInfo,
+  type PropertyCompletion,
   type RendererCompletions,
   type RendererDescriptor,
   type RendererComponent,

@@ -224,7 +224,7 @@ describe("makeCompletionIndex captures context scenarios", () => {
       from: 11, // styleArgList.from + 1
       to: 19, // styleArgList.to - 1
       rendererDirectiveName: "cytoscape",
-      rendererDirectiveLayout: undefined,
+      rendererDirectiveProps: new Map(),
     });
   });
 
@@ -242,17 +242,29 @@ describe("makeCompletionIndex captures context scenarios", () => {
     });
   });
 
-  test("renderer directive carries its declared layout", async () => {
+  test("renderer directive carries what the block declares", async () => {
+    // Passed through whole rather than picked apart: which keys matter is the
+    // renderer's concern, not this layer's.
     const directiveNode = new RendererDirective(
       "cytoscape",
-      new Style(new Map([["layout", "elk"]]), [], pos(10, 20)),
+      new Style(
+        new Map([
+          ["layout", "elk"],
+          ["background-color", "#fff"],
+        ]),
+        [],
+        pos(10, 20),
+      ),
       pos(0, 25),
     );
 
     const index = await makeCompletionIndex([directiveNode]);
 
     expect(index.contextScenarios[0]).toMatchObject({
-      rendererDirectiveLayout: "elk",
+      rendererDirectiveProps: new Map([
+        ["layout", "elk"],
+        ["background-color", "#fff"],
+      ]),
     });
   });
 

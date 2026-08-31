@@ -43,12 +43,8 @@ import {
 } from "./cyPopperExtender";
 import { diffCyElements, applyDataUpdates } from "./cyDiffer";
 import { Dag } from "../../compiler/dag";
-import { ExportFormat } from "../../compiler/constants";
 import { saveAs } from "file-saver";
-import {
-  FileExportOptions,
-  RendererComponent,
-} from "../../compiler/rendererTypes";
+import { FileExportOptions } from "../../rendererApi";
 
 declare module "cytoscape-popper" {
   // PopperOptions extends ComputePositionConfig from @floating-ui/dom
@@ -294,14 +290,7 @@ const CytoscapeRenderer = defineComponent({
   },
 });
 
-export default Object.assign(CytoscapeRenderer, {
-  displayName: "Cytoscape Renderer",
-  supportedExportFormats: [
-    ExportFormat.PNG,
-    ExportFormat.JPG,
-    ExportFormat.SVG,
-  ],
-}) as RendererComponent;
+export default CytoscapeRenderer;
 </script>
 
 <style scoped>

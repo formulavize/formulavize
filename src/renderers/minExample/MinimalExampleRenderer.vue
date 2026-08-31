@@ -17,11 +17,8 @@
 <script lang="ts">
 import { defineComponent, PropType } from "vue";
 import { Dag } from "../../compiler/dag";
-import {
-  RendererComponent,
-  FileExportOptions,
-} from "../../compiler/rendererTypes";
-import { ExportFormat } from "../../compiler/constants";
+import { ExportFormat, FileExportOptions } from "../../rendererApi";
+import { makeDagSummaryText } from "./minimalExport";
 import { saveAs } from "file-saver";
 
 /**
@@ -71,12 +68,7 @@ const MinimalExampleRenderer = defineComponent({
         return;
       }
 
-      const content = `
-Basic DAG Statistics
---------------------
-Node Count: ${this.nodeCount}
-Edge Count: ${this.edgeCount}
-      `.trim();
+      const content = makeDagSummaryText(this.dag);
 
       const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
       saveAs(blob, `${exportOptions.fileName}.txt`);
@@ -84,10 +76,7 @@ Edge Count: ${this.edgeCount}
   },
 });
 
-export default Object.assign(MinimalExampleRenderer, {
-  displayName: "Minimal Example Renderer",
-  supportedExportFormats: [ExportFormat.TXT],
-}) as RendererComponent;
+export default MinimalExampleRenderer;
 </script>
 
 <style scoped>

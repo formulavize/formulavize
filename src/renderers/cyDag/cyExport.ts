@@ -1,7 +1,6 @@
 import { match } from "ts-pattern";
 import { Core } from "cytoscape";
-import { ExportFormat } from "../../compiler/constants";
-import { FileExportOptions } from "../../compiler/rendererTypes";
+import { ExportFormat, FileExportOptions } from "../../rendererApi";
 
 /**
  * Export a Cytoscape instance to an image Blob using the format and scaling

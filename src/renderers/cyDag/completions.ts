@@ -1,17 +1,11 @@
-import { Completion } from "@codemirror/autocomplete";
+import { PropertyCompletion, RendererCompletions } from "../../rendererApi";
 import {
-  BACKGROUND_COLOR_PROPERTY,
-  CYTOSCAPE_LAYOUT_NAMES,
-  CYTOSCAPE_RENDERER_NAME,
-  DEFAULT_CYTOSCAPE_LAYOUT,
   DESCRIPTION_PREFIX,
   DESCRIPTION_PROPERTY,
-  LAYOUT_PROPERTY,
-} from "../compiler/constants";
-import {
-  CyLayoutName,
-  getLayoutOptionKeys,
-} from "../renderers/cyDag/cyLayoutSchema";
+} from "../../compiler/constants";
+import { BACKGROUND_COLOR_PROPERTY, LAYOUT_PROPERTY } from "./constants";
+import { getLayoutOptionKeys } from "./cyLayoutSchema";
+import { CYTOSCAPE_LAYOUT_NAMES, resolveLayoutName } from "./layouts";
 
 // Cytoscape properties sourced from https://js.cytoscape.org/#style
 
@@ -209,23 +203,10 @@ const DESCRIPTION_PROPERTIES = [
   ...DESCRIPTION_VISIBILITY_PROPERTIES.map((p) => DESCRIPTION_PREFIX + p),
 ];
 
-function buildCompletions(properties: string[]): Completion[] {
-  const unique = [...new Set(properties)].sort();
-  return unique.map((label) => ({ label, type: "property" }));
+function toPropertyCompletions(propertyNames: string[]): PropertyCompletion[] {
+  const unique = [...new Set(propertyNames)].sort();
+  return unique.map((name) => ({ name }));
 }
-
-const cytoscapeCompletions = buildCompletions([
-  ...CYTOSCAPE_NODE_BODY_PROPERTIES,
-  ...CYTOSCAPE_NODE_BORDER_PROPERTIES,
-  ...CYTOSCAPE_NODE_OUTLINE_PROPERTIES,
-  ...CYTOSCAPE_BACKGROUND_IMAGE_PROPERTIES,
-  ...CYTOSCAPE_LABEL_PROPERTIES,
-  ...CYTOSCAPE_LABEL_STYLE_PROPERTIES,
-  ...CYTOSCAPE_VISIBILITY_PROPERTIES,
-  ...CYTOSCAPE_EDGE_LINE_PROPERTIES,
-  ...CYTOSCAPE_EDGE_ARROW_PROPERTIES,
-  ...DESCRIPTION_PROPERTIES,
-]);
 
 // Shared properties applicable to both nodes and edges
 const CYTOSCAPE_SHARED_PROPERTIES = [
@@ -235,7 +216,20 @@ const CYTOSCAPE_SHARED_PROPERTIES = [
   ...DESCRIPTION_PROPERTIES,
 ];
 
-const cytoscapeNodeCompletions = buildCompletions([
+const allProperties = toPropertyCompletions([
+  ...CYTOSCAPE_NODE_BODY_PROPERTIES,
+  ...CYTOSCAPE_NODE_BORDER_PROPERTIES,
+  ...CYTOSCAPE_NODE_OUTLINE_PROPERTIES,
+  ...CYTOSCAPE_BACKGROUND_IMAGE_PROPERTIES,
+  ...CYTOSCAPE_LABEL_PROPERTIES,
+  ...CYTOSCAPE_LABEL_STYLE_PROPERTIES,
+  ...CYTOSCAPE_VISIBILITY_PROPERTIES,
+  ...CYTOSCAPE_EDGE_LINE_PROPERTIES,
+  ...CYTOSCAPE_EDGE_ARROW_PROPERTIES,
+  ...DESCRIPTION_PROPERTIES,
+]);
+
+const nodeProperties = toPropertyCompletions([
   ...CYTOSCAPE_NODE_BODY_PROPERTIES,
   ...CYTOSCAPE_NODE_BORDER_PROPERTIES,
   ...CYTOSCAPE_NODE_OUTLINE_PROPERTIES,
@@ -243,93 +237,55 @@ const cytoscapeNodeCompletions = buildCompletions([
   ...CYTOSCAPE_SHARED_PROPERTIES,
 ]);
 
-const cytoscapeEdgeCompletions = buildCompletions([
+const edgeProperties = toPropertyCompletions([
   ...CYTOSCAPE_EDGE_LINE_PROPERTIES,
   ...CYTOSCAPE_EDGE_ARROW_PROPERTIES,
   ...CYTOSCAPE_SHARED_PROPERTIES,
 ]);
 
-// Properties consumed directly by the cytoscape renderer from a
-// '^cytoscape{ }' directive. These are not cytoscape stylesheet properties:
-// the background fill applies to the drawing surface (editor view and exported
-// images) and the rest select and configure the layout. The layout option keys
-// come from the renderer's own schema so the two can never drift apart.
-const CYTOSCAPE_DIRECTIVE_BASE_PROPERTIES = [
-  BACKGROUND_COLOR_PROPERTY,
-  LAYOUT_PROPERTY,
-];
+const propertiesByElementType: Record<string, PropertyCompletion[]> = {
+  node: nodeProperties,
+  edge: edgeProperties,
+  subgraph: nodeProperties,
+};
 
-const cytoscapeDirectiveCompletionsByLayout: Record<string, Completion[]> =
+// Properties this renderer consumes directly from a '^cytoscape{ }' directive.
+// These are not cytoscape stylesheet properties: the background fill applies to
+// the drawing surface (editor view and exported images) and the rest select and
+// configure the layout. The layout option keys come from the renderer's own
+// schema so the two can never drift apart.
+const DIRECTIVE_BASE_PROPERTIES = [BACKGROUND_COLOR_PROPERTY, LAYOUT_PROPERTY];
+
+const directivePropertiesByLayout: Record<string, PropertyCompletion[]> =
   Object.fromEntries(
     CYTOSCAPE_LAYOUT_NAMES.map((layoutName) => [
       layoutName,
-      buildCompletions([
-        ...CYTOSCAPE_DIRECTIVE_BASE_PROPERTIES,
+      toPropertyCompletions([
+        ...DIRECTIVE_BASE_PROPERTIES,
         ...getLayoutOptionKeys(layoutName),
       ]),
     ]),
   );
 
-// Offered when the directive names no layout, or names one that isn't
-// recognized. getLayoutName() resolves both of those cases to the default
-// layout, so those are the options the block will really accept.
-const cytoscapeDirectiveCompletions =
-  cytoscapeDirectiveCompletionsByLayout[DEFAULT_CYTOSCAPE_LAYOUT];
+/**
+ * The cytoscape renderer's editor vocabulary.
+ */
+export const cytoscapeCompletions: RendererCompletions = {
+  styleProperties(elementType?: string): PropertyCompletion[] {
+    if (elementType === undefined) return allProperties;
+    return propertiesByElementType[elementType] ?? allProperties;
+  },
 
-interface RendererPropertyEntry {
-  all: Completion[];
-  byElementType: Record<string, Completion[]>;
-  directives: Completion[];
-  directivesByLayout?: Record<string, Completion[]>;
-}
-
-const rendererPropertyRegistry: Record<string, RendererPropertyEntry> = {
-  [CYTOSCAPE_RENDERER_NAME]: {
-    all: cytoscapeCompletions,
-    byElementType: {
-      node: cytoscapeNodeCompletions,
-      edge: cytoscapeEdgeCompletions,
-      subgraph: cytoscapeNodeCompletions,
-    },
-    directives: cytoscapeDirectiveCompletions,
-    directivesByLayout: cytoscapeDirectiveCompletionsByLayout,
+  /**
+   * A directive block only accepts the options of the layout it selects.
+   * resolveLayoutName folds an absent or unrecognized layout onto the default,
+   * exactly as the renderer does when it reads the same directive, so the
+   * offered keys are always the ones the block will really accept.
+   */
+  directiveProperties(
+    declared: ReadonlyMap<string, string>,
+  ): PropertyCompletion[] {
+    const layoutName = resolveLayoutName(declared.get(LAYOUT_PROPERTY));
+    return directivePropertiesByLayout[layoutName];
   },
 };
-
-export function getRendererPropertyCompletions(
-  rendererName: string,
-): Completion[] {
-  return rendererPropertyRegistry[rendererName]?.all ?? [];
-}
-
-export function getRendererPropertyCompletionsByElementType(
-  rendererName: string,
-  elementType: string,
-): Completion[] {
-  const entry = rendererPropertyRegistry[rendererName];
-  if (!entry) return [];
-  return entry.byElementType[elementType] ?? entry.all;
-}
-
-/**
- * Directive properties for a renderer, narrowed to a single layout's options
- * when the directive block names one. An unrecognized or absent layout falls
- * back to the renderer's default-layout options, matching how the renderer
- * itself resolves the layout name.
- */
-export function getRendererDirectiveCompletions(
-  rendererName: string,
-  layoutName?: string,
-): Completion[] {
-  const entry = rendererPropertyRegistry[rendererName];
-  if (!entry) return [];
-  const normalizedLayout = layoutName?.trim().toLowerCase();
-  const isKnownLayout = (CYTOSCAPE_LAYOUT_NAMES as readonly string[]).includes(
-    normalizedLayout ?? "",
-  );
-  if (!isKnownLayout) return entry.directives;
-  return (
-    entry.directivesByLayout?.[normalizedLayout as CyLayoutName] ??
-    entry.directives
-  );
-}

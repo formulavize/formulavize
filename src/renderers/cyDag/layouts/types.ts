@@ -1,5 +1,19 @@
 import type cytoscape from "cytoscape";
-import { CYTOSCAPE_LAYOUT_NAMES } from "../../../compiler/constants";
+
+// Layouts selectable with '^cytoscape{ layout: "<name>" }'. All but 'manual'
+// are hierarchical layouts that position every node automatically.
+// https://blog.js.cytoscape.org/2020/05/11/layouts/#hierarchical-layouts
+export const CYTOSCAPE_LAYOUT_NAMES = [
+  "dagre",
+  "breadthfirst",
+  "elk",
+  "manual",
+] as const;
+export const DEFAULT_CYTOSCAPE_LAYOUT = "dagre";
+
+// 'manual' is not a layout algorithm: it turns the layout manager off and hands
+// node placement to the user, who drags nodes around in the rendered graph.
+export const MANUAL_CYTOSCAPE_LAYOUT = "manual";
 
 export type CyLayoutName = (typeof CYTOSCAPE_LAYOUT_NAMES)[number];
 

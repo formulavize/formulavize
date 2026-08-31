@@ -1,26 +1,30 @@
-import { describe, test, expect, vi, beforeEach, afterEach } from "vitest";
+import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { effectScope, shallowRef, nextTick } from "vue";
-import { ExportFormat } from "src/compiler/constants";
+import { ExportFormat, RendererPlugin } from "src/rendererApi";
 import { Dag, DagStyle } from "src/compiler/dag";
-
-// Mock the renderer components to avoid cytoscape-svg requiring window
-vi.mock("src/renderers/cyDag/CytoscapeRenderer.vue", () => ({
-  default: {
-    name: "CytoscapeRenderer",
-    displayName: "Cytoscape",
-    supportedExportFormats: [ExportFormat.PNG, ExportFormat.SVG],
-  },
-}));
-
-vi.mock("src/renderers/minExample/MinimalExampleRenderer.vue", () => ({
-  default: {
-    name: "MinimalExampleRenderer",
-    displayName: "Minimal Example",
-    supportedExportFormats: [ExportFormat.PNG],
-  },
-}));
-
 import { useRendererRegistry } from "src/composables/useRendererRegistry";
+
+// Plain stand-ins for the shipped renderers. The composable only ever reads a
+// plugin, never mounts it, so nothing here needs to be a real Vue component --
+// which also keeps cytoscape (and its need for a window) out of this test.
+function makePlugin(
+  name: string,
+  supportedExportFormats: readonly ExportFormat[],
+): RendererPlugin {
+  return {
+    name,
+    displayName: name,
+    component: { name: `${name}-component` },
+    supportedExportFormats,
+  };
+}
+
+const cytoscapeStub = makePlugin("cytoscape", [
+  ExportFormat.PNG,
+  ExportFormat.SVG,
+]);
+const minimalStub = makePlugin("minimal", [ExportFormat.PNG]);
+const testPlugins = [cytoscapeStub, minimalStub];
 
 const EMPTY_STYLE: DagStyle = {
   styleTags: [],
@@ -43,7 +47,7 @@ describe("useRendererRegistry", () => {
   // Computeds must be created inside an effect scope so their reactive
   // effects are disposed with the test rather than leaking into the next one.
   function setupRegistry(getDag: () => Dag) {
-    const registry = scope.run(() => useRendererRegistry(getDag));
+    const registry = scope.run(() => useRendererRegistry(getDag, testPlugins));
     if (!registry) throw new Error("effect scope was stopped before setup");
     return registry;
   }
@@ -57,12 +61,12 @@ describe("useRendererRegistry", () => {
   });
 
   describe("renderer selection from renderer directives", () => {
-    test("defaults to cytoscape when the dag declares no directive", () => {
+    test("defaults to the first plugin when the dag declares no directive", () => {
       const { activeRendererName, rendererComponent } = setupRegistry(
         () => new Dag("empty-dag"),
       );
       expect(activeRendererName.value).toBe("cytoscape");
-      expect(rendererComponent.value.name).toBe("CytoscapeRenderer");
+      expect(rendererComponent.value).toBe(cytoscapeStub.component);
     });
 
     test("selects the renderer named by the directive", () => {
@@ -70,15 +74,15 @@ describe("useRendererRegistry", () => {
         makeDagWithDirectives("minimal"),
       );
       expect(activeRendererName.value).toBe("minimal");
-      expect(rendererComponent.value.name).toBe("MinimalExampleRenderer");
+      expect(rendererComponent.value).toBe(minimalStub.component);
     });
 
-    test("falls back to cytoscape for an unregistered renderer name", () => {
+    test("falls back to the default for an unregistered renderer name", () => {
       const { activeRendererName, rendererComponent } = setupRegistry(() =>
         makeDagWithDirectives("madeup"),
       );
       expect(activeRendererName.value).toBe("cytoscape");
-      expect(rendererComponent.value.name).toBe("CytoscapeRenderer");
+      expect(rendererComponent.value).toBe(cytoscapeStub.component);
     });
 
     test("last declared registered renderer wins", () => {
@@ -100,13 +104,27 @@ describe("useRendererRegistry", () => {
       const { activeRendererName, rendererComponent } = setupRegistry(
         () => curDag.value,
       );
-      expect(rendererComponent.value.name).toBe("CytoscapeRenderer");
+      expect(rendererComponent.value).toBe(cytoscapeStub.component);
 
       curDag.value = makeDagWithDirectives("minimal");
       await nextTick();
 
       expect(activeRendererName.value).toBe("minimal");
-      expect(rendererComponent.value.name).toBe("MinimalExampleRenderer");
+      expect(rendererComponent.value).toBe(minimalStub.component);
+    });
+
+    test("exposes the active plugin itself", () => {
+      const { activePlugin } = setupRegistry(() =>
+        makeDagWithDirectives("minimal"),
+      );
+      expect(activePlugin.value).toBe(minimalStub);
+    });
+  });
+
+  describe("rendererNames", () => {
+    test("lists every registered renderer", () => {
+      const { rendererNames } = setupRegistry(() => new Dag("empty-dag"));
+      expect(rendererNames.value).toEqual(["cytoscape", "minimal"]);
     });
   });
 
@@ -132,21 +150,23 @@ describe("useRendererRegistry", () => {
   describe("registerRenderer", () => {
     test("makes a new renderer name selectable by directive", async () => {
       const curDag = shallowRef<Dag>(makeDagWithDirectives("custom"));
-      const { activeRendererName, rendererComponent, registerRenderer } =
-        setupRegistry(() => curDag.value);
+      const {
+        activeRendererName,
+        rendererComponent,
+        rendererNames,
+        registerRenderer,
+      } = setupRegistry(() => curDag.value);
 
       // Not registered yet, so the directive is ignored
       expect(activeRendererName.value).toBe("cytoscape");
 
-      registerRenderer("custom", {
-        name: "CustomRenderer",
-        displayName: "Custom",
-        supportedExportFormats: [ExportFormat.TXT],
-      });
+      const customPlugin = makePlugin("custom", [ExportFormat.TXT]);
+      registerRenderer(customPlugin);
       await nextTick();
 
       expect(activeRendererName.value).toBe("custom");
-      expect(rendererComponent.value.name).toBe("CustomRenderer");
+      expect(rendererComponent.value).toBe(customPlugin.component);
+      expect(rendererNames.value).toContain("custom");
     });
   });
 });

@@ -94,7 +94,7 @@ export interface RendererCompletions {
 }
 
 /**
- * What a renderer is, independent of how it draws.
+ * A renderer definition, independent of how it draws.
  *
  * Everything here is plain data or pure functions, so a node-side entry point
  * can describe a renderer without loading the browser component that draws it.

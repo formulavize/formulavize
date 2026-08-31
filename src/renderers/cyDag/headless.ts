@@ -1,14 +1,15 @@
 import { JSDOM } from "jsdom";
 import { createCanvas, GlobalFonts, type Canvas } from "@napi-rs/canvas";
-import { Dag } from "../compiler/dag";
-import { ExportFormat } from "../compiler/constants";
-import { makeCyElements } from "../renderers/cyDag/cyGraphFactory";
-import { makeCyStylesheets } from "../renderers/cyDag/cyStyleSheetsFactory";
-import { getCanvasBackgroundColor } from "../renderers/cyDag/cyRendererDirectives";
-import { makeLayoutOptions } from "../renderers/cyDag/cyLayout";
-import { ensureLayoutRegistered } from "../renderers/cyDag/cyLayoutExtensions";
-import { exportCyToBlob } from "../renderers/cyDag/cyExport";
-import { addDescriptionGhostNodes } from "../renderers/cyDag/cyPopperExtender";
+import { Dag } from "../../compiler/dag";
+import { HeadlessRenderOptions, RendererDescriptor } from "../../rendererApi";
+import { cytoscapeRendererMeta } from "./meta";
+import { makeCyElements } from "./cyGraphFactory";
+import { makeCyStylesheets } from "./cyStyleSheetsFactory";
+import { getCanvasBackgroundColor } from "./cyRendererDirectives";
+import { makeLayoutOptions } from "./cyLayout";
+import { ensureLayoutRegistered } from "./cyLayoutExtensions";
+import { exportCyToBlob } from "./cyExport";
+import { addDescriptionGhostNodes } from "./cyPopperExtender";
 
 const CONTAINER_WIDTH = 1024;
 const CONTAINER_HEIGHT = 768;
@@ -181,13 +182,6 @@ function installHeadlessDom(): Document {
   return window.document;
 }
 
-export interface HeadlessRenderOptions {
-  fileType: ExportFormat;
-  scalingFactor: number;
-  isDark: boolean;
-  includeDescriptions: boolean;
-}
-
 /**
  * Render a compiled Dag to image bytes headlessly (no browser).
  *
@@ -274,3 +268,16 @@ export async function renderDagToBytes(
     cy.destroy();
   }
 }
+
+/**
+ * The cytoscape renderer with node-side export attached.
+ *
+ * Kept apart from ./index so the jsdom and canvas machinery above never reaches
+ * the browser bundle: only the CLI imports this module. It describes the
+ * renderer without carrying the Vue component, which no headless caller needs.
+ */
+export const cytoscapeHeadlessPlugin: RendererDescriptor = {
+  ...cytoscapeRendererMeta,
+  renderHeadless: (dag: Dag, options: HeadlessRenderOptions) =>
+    renderDagToBytes(dag, options),
+};

@@ -9,7 +9,8 @@
         :completion-index="curCompletionIndex"
         :debug-mode="debugMode"
         :tutorial-mode="tutorialMode"
-        :active-renderer="activeRendererName"
+        :active-renderer-plugin="activePlugin"
+        :renderer-names="rendererNames"
         :is-dark="resolvedTheme === 'dark'"
         @update-editorstate="updateEditorState"
       />
@@ -88,7 +89,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from "vue";
-import { ExportFormat } from "./compiler/constants";
+import { ExportFormat } from "./rendererApi";
 import TextEditor from "./components/TextEditor.vue";
 import GraphView from "./components/GraphView.vue";
 import TextDumpView from "./components/TextDumpView.vue";
@@ -104,6 +105,7 @@ import { defaultCubic } from "./tutorial/defaultExample";
 import { useAppTheme } from "./composables/useAppTheme";
 import { useCompilation } from "./composables/useCompilation";
 import { useRendererRegistry } from "./composables/useRendererRegistry";
+import { defaultRendererPlugins } from "./renderers/defaultRenderers";
 import { Splitpanes, Pane } from "splitpanes";
 import "splitpanes/dist/splitpanes.css";
 import "./tabs-component.css";
@@ -150,8 +152,12 @@ const {
   },
 );
 
-const { activeRendererName, rendererComponent, supportedExportFormats } =
-  useRendererRegistry(() => curDag.value as Dag);
+const {
+  activePlugin,
+  rendererComponent,
+  rendererNames,
+  supportedExportFormats,
+} = useRendererRegistry(() => curDag.value as Dag, defaultRendererPlugins);
 
 // Tutorial computed properties
 const tutorialModules = computed(() =>

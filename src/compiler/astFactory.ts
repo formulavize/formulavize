@@ -134,7 +134,7 @@ function makeStyle(c: TreeCursor, t: Text, e: Error[]): StyleTreeNode {
       .map((styleVal) => t.sliceString(styleVal.from, styleVal.to))
       .join(",") // comma delimit multiple values
       .replace(/(^"|^'|"$|'$)/g, "") // remove captured bounding quotes
-      .replace(/\\n/g, "\n"); // for enabling cytoscape text-wrap
+      .replace(/\\n/g, "\n"); // so renderers can wrap labels on explicit newlines
     styleDeclaredPropertyValues.set(propName, styleVals);
   });
 

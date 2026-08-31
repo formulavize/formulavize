@@ -2,6 +2,7 @@
   <div id="canvas" ref="canvas">
     <component
       :is="rendererComponent"
+      v-if="rendererComponent"
       ref="renderer"
       :dag="curDag"
       :is-dark="isDark"
@@ -16,7 +17,7 @@ import {
   FileExportOptions,
   RendererComponent,
   IRenderer,
-} from "../compiler/rendererTypes";
+} from "../rendererApi";
 
 // GraphView - Component for rendering the DAG visualization
 // Uses a pluggable renderer component to display the graph enabling flexibility
@@ -28,9 +29,11 @@ export default defineComponent({
       type: Object as PropType<Dag>,
       default: () => new Dag(""),
     },
+    // Absent only when no renderer is registered at all; the canvas then
+    // stays empty rather than the app failing to mount.
     rendererComponent: {
       type: Object as PropType<RendererComponent>,
-      required: true,
+      default: undefined,
     },
     isDark: {
       type: Boolean,
