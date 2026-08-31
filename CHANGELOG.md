@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.14.0](https://github.com/formulavize/formulavize/compare/v1.13.0...v1.14.0) (2026-08-31)
+
+
+### Features
+
+* add RendererDirective support ([#74](https://github.com/formulavize/formulavize/issues/74)) ([d70871e](https://github.com/formulavize/formulavize/commit/d70871ef53ed36bccce994b97e42720f75913d34))
+* **cli:** add CLI for headless renders ([#73](https://github.com/formulavize/formulavize/issues/73)) ([9468362](https://github.com/formulavize/formulavize/commit/946836241ff6eb50ee27a7d2820d411627495ee5))
+* **compiler:** enhance error handling and syntax checks in compiler ([#68](https://github.com/formulavize/formulavize/issues/68)) ([ae08236](https://github.com/formulavize/formulavize/commit/ae08236d083d57bea8df161cfdab86c49d2adba0))
+* **CytoscapeRenderer:** Add additional layout options to Cytoscape renderer ([#75](https://github.com/formulavize/formulavize/issues/75)) ([ddb4c5d](https://github.com/formulavize/formulavize/commit/ddb4c5d9cae5199fa4f4d01aae7a0a3d3171c407))
+
+
+### Bug Fixes
+
+* **confetti:** restore missing confetti blast ([#72](https://github.com/formulavize/formulavize/issues/72)) ([1913e13](https://github.com/formulavize/formulavize/commit/1913e13354f3e49a1f60225dc60135b476535011))
+
 ## [1.13.0](https://github.com/formulavize/formulavize/compare/v1.12.3...v1.13.0) (2026-08-03)
 
 
