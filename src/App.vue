@@ -81,6 +81,7 @@
     :modules="tutorialModules"
     :highest-completed-index="tutorialHighestCompleted"
     :module-start-indices="tutorialModuleStartIndices"
+    :debug-mode="debugMode"
     @select-puzzlet="onSelectPuzzlet"
     @restart-tutorial="onRestartTutorial"
   />
@@ -220,7 +221,7 @@ function handleExport(exportOptions: {
 function onTutorialClicked() {
   if (tutorialMode.value) {
     tutorialMode.value = false;
-  } else if (tutorialManager.hasProgress()) {
+  } else if (debugMode.value || tutorialManager.hasProgress()) {
     showTutorialLevelSelect.value = true;
   } else {
     tutorialMode.value = true;

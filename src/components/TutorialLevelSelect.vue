@@ -105,6 +105,10 @@ export default defineComponent({
       type: Array as PropType<number[]>,
       required: true,
     },
+    debugMode: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ["update:showDialog", "select-puzzlet", "restart-tutorial"],
   setup() {
@@ -131,6 +135,7 @@ export default defineComponent({
       );
     },
     isPuzzletSelectable(moduleIdx: number, puzzletIdx: number): boolean {
+      if (this.debugMode) return true;
       const flatIdx = this.getFlatIndex(moduleIdx, puzzletIdx);
       return flatIdx <= this.highestCompletedIndex + 1;
     },
