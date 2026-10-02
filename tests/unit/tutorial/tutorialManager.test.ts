@@ -1,6 +1,7 @@
 import { describe, test, expect, beforeEach, afterEach, vi } from "vitest";
 import { TutorialManager } from "src/tutorial/tutorialManager";
 import { createMockLocalStorage } from "../versionedStoreTestHelpers";
+import { TUTORIAL_PROGRESS_VERSION } from "src/tutorial/tutorialProgressStore";
 
 const STORAGE_KEY = "formulavize-tutorial-progress";
 
@@ -55,7 +56,10 @@ describe("TutorialManager", () => {
     test("loads existing progress from localStorage", () => {
       mockStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ version: 1, highestCompleted: 3 }),
+        JSON.stringify({
+          version: TUTORIAL_PROGRESS_VERSION,
+          highestCompleted: 3,
+        }),
       );
       const manager = new TutorialManager();
       expect(manager.hasProgress()).toBe(true);
@@ -91,7 +95,10 @@ describe("TutorialManager", () => {
     test("clearProgress resets cached value and localStorage", () => {
       mockStorage.setItem(
         STORAGE_KEY,
-        JSON.stringify({ version: 1, highestCompleted: 5 }),
+        JSON.stringify({
+          version: TUTORIAL_PROGRESS_VERSION,
+          highestCompleted: 5,
+        }),
       );
       const manager = new TutorialManager();
       expect(manager.cachedHighestCompleted).toBe(5);
