@@ -8,9 +8,13 @@ const DEFAULTS: TutorialProgress = {
   highestCompleted: -1,
 };
 
+// Progress is a single flat puzzlet index, so inserting or reordering a module
+// changes what a saved index means. Bump this to discard stale progress.
+export const TUTORIAL_PROGRESS_VERSION = 2;
+
 export class TutorialProgressStore extends VersionedStore<TutorialProgress> {
   constructor() {
-    super("formulavize-tutorial-progress", 1, DEFAULTS);
+    super("formulavize-tutorial-progress", TUTORIAL_PROGRESS_VERSION, DEFAULTS);
   }
 
   getHighestCompletedIndex(): number {
