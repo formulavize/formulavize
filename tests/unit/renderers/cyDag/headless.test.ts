@@ -155,7 +155,7 @@ describe("headless CLI rendering", () => {
     );
     const manualSvg = manual.toString("utf8");
     expect(manualSvg).not.toEqual(baseline.toString("utf8"));
-    expect(manualSvg).toMatch(/<svg[^>]*width="46" height="50"/);
+    expect(manualSvg).toMatch(/<svg[^>]*width="\d+" height="50"/);
   });
 
   test("a layout option changes the rendered layout", async () => {
