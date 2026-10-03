@@ -36,8 +36,8 @@ importers:
         specifier: ^1.8.0
         version: 1.8.0
       '@formulavize/lang-fiz':
-        specifier: ^2.2.0
-        version: 2.2.0
+        specifier: ^2.3.0
+        version: 2.3.0
       '@lezer/common':
         specifier: ^1.5.2
         version: 1.5.2
@@ -621,12 +621,12 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
-  '@formulavize/lang-fiz@2.2.0':
-    resolution: {integrity: sha512-4Ir9IoQSXM1z+zTINCCHPFqvYrrWK+nXmBvTvfenBS184VS7XP9P00YspYkXHuh86OEhRsdZGdZ9D3nKXlQNew==}
+  '@formulavize/lang-fiz@2.3.0':
+    resolution: {integrity: sha512-BXbjB2eub+UzxHj3NmLuIyt5vtTifhkw91PoG+tXy+0wdb6MTSqF1N/xkkkWGsbnyBcxOD9EMuZPqg8SH0tbgQ==}
     engines: {node: '>=26', pnpm: '>=11'}
 
-  '@formulavize/lezer-fiz@2.2.0':
-    resolution: {integrity: sha512-qHSGpfWfBOO/xeSCagDc7DNkaBUIRV1AI3p3IRYQ0cj4nJ1Nbj2704slUtVMkXJQgmX7OvA7E4FFx3MxRWGYyw==}
+  '@formulavize/lezer-fiz@2.3.0':
+    resolution: {integrity: sha512-QnXKK619bASc+IX399dWlcgzndXsayAhkuoVnGWFM+qKUHCMSCE76fkScHEwUTggQDMhNadSTPMRMQUoT6bXSg==}
     engines: {node: '>=26.0', pnpm: '>=11'}
 
   '@humanfs/core@0.19.2':
@@ -3374,12 +3374,12 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
-  '@formulavize/lang-fiz@2.2.0':
+  '@formulavize/lang-fiz@2.3.0':
     dependencies:
       '@codemirror/language': 6.12.4
-      '@formulavize/lezer-fiz': 2.2.0
+      '@formulavize/lezer-fiz': 2.3.0
 
-  '@formulavize/lezer-fiz@2.2.0':
+  '@formulavize/lezer-fiz@2.3.0':
     dependencies:
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.10
