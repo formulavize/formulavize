@@ -7,6 +7,7 @@ import {
   QualifiedVarTreeNode as QualifiedVariable,
   StyleTreeNode as Style,
   NamedStyleTreeNode as NamedStyle,
+  AboutNoteTreeNode as AboutNote,
   NamespaceTreeNode as Namespace,
   ValueListTreeNode as ValueList,
   StatementListTreeNode as StatementList,
@@ -25,7 +26,12 @@ describe("debugDumpTree consistency", () => {
       "n",
       new StatementList([assignCallNode, assignVarNode]),
     );
-    const recipeNode = new Recipe([namespaceNode, namedStyleNode]);
+    const aboutNoteNode = new AboutNote("about", new Style(new Map()));
+    const recipeNode = new Recipe([
+      aboutNoteNode,
+      namespaceNode,
+      namedStyleNode,
+    ]);
 
     const firstDump = recipeNode.debugDumpTree();
     const secondDump = recipeNode.debugDumpTree();

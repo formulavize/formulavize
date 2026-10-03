@@ -16,6 +16,7 @@ export enum NodeType {
   Namespace,
   Import,
   StatementList,
+  AboutNote,
 }
 
 export abstract class BaseTreeNode {
@@ -70,6 +71,7 @@ export type StatementTreeNode =
   | StyleBindingTreeNode
   | GlobalStyleBindingTreeNode
   | RendererDirectiveTreeNode
+  | AboutNoteTreeNode
   | NamespaceTreeNode
   | ImportTreeNode;
 
@@ -443,6 +445,37 @@ export class RendererDirectiveTreeNode extends BaseTreeNode {
 
   get RendererName(): string {
     return this.rendererName;
+  }
+
+  get StyleNode(): StyleTreeNode {
+    return this.styleNode;
+  }
+}
+
+export class AboutNoteTreeNode extends BaseTreeNode {
+  private noteName: string;
+  private styleNode: StyleTreeNode;
+
+  constructor(
+    noteName: string = "",
+    styleNode: StyleTreeNode = new StyleTreeNode(new Map(), [], null),
+    position: Position | null = null,
+  ) {
+    super(NodeType.AboutNote, position);
+    this.noteName = noteName;
+    this.styleNode = styleNode;
+  }
+
+  getChildren(): BaseTreeNode[] {
+    return [this.styleNode];
+  }
+
+  debugDump(): string {
+    return "AboutNote: " + this.noteName;
+  }
+
+  get NoteName(): string {
+    return this.noteName;
   }
 
   get StyleNode(): StyleTreeNode {
