@@ -14,6 +14,7 @@ import {
   NamedStyleTreeNode as NamedStyle,
   StyleBindingTreeNode as StyleBinding,
   RendererDirectiveTreeNode as RendererDirective,
+  AboutNoteTreeNode as AboutNote,
   NamespaceTreeNode as Namespace,
   ValueListTreeNode as ValueList,
   StatementListTreeNode as StatementList,
@@ -276,6 +277,47 @@ describe("makeCompletionIndex captures context scenarios", () => {
     );
 
     const index = await makeCompletionIndex([directiveNode]);
+
+    expect(index.tokens).toHaveLength(0);
+  });
+
+  test("creates context scenario for about note", async () => {
+    const styleArgList = new Style(new Map(), [], pos(10, 20));
+    const aboutNoteNode = new AboutNote("about", styleArgList, pos(0, 25));
+
+    const index = await makeCompletionIndex([aboutNoteNode]);
+
+    expect(index.contextScenarios).toHaveLength(1);
+    expect(index.contextScenarios[0]).toEqual({
+      type: ContextScenarioType.StyleArgList,
+      from: 11, // styleArgList.from + 1
+      to: 19, // styleArgList.to - 1
+      aboutNoteName: "about",
+    });
+  });
+
+  test("an unnamed about note carries the empty name through", async () => {
+    // '' is a name the key lookup can match, so it must survive as a string
+    // rather than being dropped for being falsy.
+    const aboutNoteNode = new AboutNote(
+      "",
+      new Style(new Map(), [], pos(10, 20)),
+      pos(0, 25),
+    );
+
+    const index = await makeCompletionIndex([aboutNoteNode]);
+
+    expect(index.contextScenarios[0]).toMatchObject({ aboutNoteName: "" });
+  });
+
+  test("about note declares no tokens", async () => {
+    const aboutNoteNode = new AboutNote(
+      "about",
+      new Style(new Map(), [], pos(10, 20)),
+      pos(0, 25),
+    );
+
+    const index = await makeCompletionIndex([aboutNoteNode]);
 
     expect(index.tokens).toHaveLength(0);
   });

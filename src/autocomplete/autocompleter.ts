@@ -10,7 +10,11 @@ import {
   ScenarioToTokenTypes,
   TokenType,
 } from "./autocompletion";
-import { GLOBAL_STYLE_KEYWORD_MAP } from "../compiler/constants";
+import {
+  ABOUT_NOTE_KEYS,
+  ABOUT_NOTE_NAMES,
+  GLOBAL_STYLE_KEYWORD_MAP,
+} from "../compiler/constants";
 
 export function createCompletions(
   completionIndex: CompletionIndex,
@@ -439,6 +443,86 @@ export function createRendererDirectiveNameCompletionSource(
   };
 }
 
+export function createAboutNoteNameCompletionSource(
+  noteNames: readonly string[] = ABOUT_NOTE_NAMES,
+): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
+    const match = context.matchBefore(/~\w*/);
+    if (!match || (match.from === match.to && !context.explicit)) {
+      return null;
+    }
+
+    const word = match.text.slice(1); // Remove the leading '~'
+    const from = match.from + 1;
+
+    const options = noteNames
+      .filter((noteName) => noteName.startsWith(word))
+      .map((noteName) => ({
+        label: noteName,
+        type: "keyword",
+      }));
+
+    return { from, options };
+  };
+}
+
+/**
+ * Offers the keys established for an about note, inside its '{ }' block.
+ *
+ * Which keys make sense depends on what the note is about, so they are looked
+ * up by the note's name. The compiler validates neither, so this only suggests
+ * the conventional keys and never constrains what may be typed. The map is
+ * empty for now, which makes the source silently offer nothing.
+ */
+export function createAboutNoteKeyCompletionSource(
+  completionIndex: CompletionIndex,
+  noteKeys: ReadonlyMap<string, readonly string[]> = ABOUT_NOTE_KEYS,
+): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
+    const contextScenario = completionIndex.getContextScenarioAt(context.pos);
+    const indexedNoteName = contextScenario?.aboutNoteName;
+    const isNoteContext = indexedNoteName !== undefined;
+
+    // Style tag and property value positions belong to other sources
+    const hashMatch = isNoteContext
+      ? context.matchBefore(/#[\w-]*/)
+      : context.matchBefore(/\{[^{}]*#[\w-]*/);
+    if (hashMatch) return null;
+    if (context.matchBefore(/:\s*[^\n;{}]*/)) return null;
+
+    let noteName: string;
+    let word: string;
+    let from: number;
+    if (isNoteContext) {
+      const match = context.matchBefore(/[\w-]*/);
+      if (!match || (match.from === match.to && !context.explicit)) return null;
+      noteName = indexedNoteName;
+      word = match.text;
+      from = match.from;
+    } else {
+      // Fallback: the block is open but the debounced compile has not yet
+      // registered its scenario, so read the note name from the raw text.
+      const match = context.matchBefore(/~\w*\{(?:[^{}]*[;{])?\s*[\w-]*/);
+      if (!match || (match.from === match.to && !context.explicit)) return null;
+      const nameMatch = /^~(\w*)\{/.exec(match.text);
+      const wordMatch = /[{;]\s*([\w-]*)$/.exec(match.text);
+      if (!nameMatch || !wordMatch) return null;
+      noteName = nameMatch[1];
+      word = wordMatch[1];
+      from = match.to - word.length;
+    }
+
+    const options = (noteKeys.get(noteName) ?? [])
+      .filter((key) => key.startsWith(word))
+      .map((key) => ({
+        label: key,
+        type: "property",
+      }));
+
+    return { from, options };
+  };
+}
+
 export function getAllDynamicCompletionSources(
   completionIndex: CompletionIndex,
   rendererNames: readonly string[] = [],
@@ -451,11 +535,14 @@ export function getAllDynamicCompletionSources(
     createStyleCompletionSource,
     createStatementCompletionSource,
     createGlobalStyleKeywordCompletionSource,
+    createAboutNoteKeyCompletionSource,
   ];
   return [
     ...sources.map((sourceFn) => sourceFn(completionIndex)),
     // Built apart from the rest: what a '^' may be followed by comes from the
     // renderer registry rather than from the index.
     createRendererDirectiveNameCompletionSource(rendererNames),
+    // Likewise '~', whose names are a language convention, not index state.
+    createAboutNoteNameCompletionSource(),
   ];
 }

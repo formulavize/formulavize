@@ -308,6 +308,79 @@ describe("renderer directive completions", () => {
   });
 });
 
+describe("about notes offer no renderer properties", () => {
+  // An about note's keys are free-form metadata, so the block looks like a
+  // style block to the regex fallback but has no renderer vocabulary at all.
+  const source = createRendererPropertyCompletionSource(
+    new CompletionIndex([], [], []),
+    cytoscapeRendererMeta,
+  );
+
+  test("named about note", async () => {
+    const ctx = createMockContext(8, "~about{b", false);
+    expect(await runSource(source, ctx)).toBeNull();
+  });
+
+  test("unnamed about note", async () => {
+    const ctx = createMockContext(3, "~{b", false);
+    expect(await runSource(source, ctx)).toBeNull();
+  });
+
+  test("after a declaration already written in the note", async () => {
+    const ctx = createMockContext(30, '~about{author:"me"; b', false);
+    expect(await runSource(source, ctx)).toBeNull();
+  });
+
+  test("named note with its scenario registered", async () => {
+    // Once the debounce lands the block is an indexed StyleArgList, so the
+    // note name on the scenario is what has to turn the offer off.
+    const indexed = createRendererPropertyCompletionSource(
+      new CompletionIndex(
+        [],
+        [
+          {
+            type: ContextScenarioType.StyleArgList,
+            from: 7,
+            to: 30,
+            aboutNoteName: "about",
+          },
+        ],
+        [],
+      ),
+      cytoscapeRendererMeta,
+    );
+    const ctx = createMockContext(10, "~about{ ba", false);
+    expect(await runSource(indexed, ctx)).toBeNull();
+  });
+
+  test("unnamed note with its scenario registered", async () => {
+    const indexed = createRendererPropertyCompletionSource(
+      new CompletionIndex(
+        [],
+        [
+          {
+            type: ContextScenarioType.StyleArgList,
+            from: 1,
+            to: 30,
+            aboutNoteName: "",
+          },
+        ],
+        [],
+      ),
+      cytoscapeRendererMeta,
+    );
+    const ctx = createMockContext(4, "~{ ba", false);
+    expect(await runSource(indexed, ctx)).toBeNull();
+  });
+
+  test("a style block is still offered properties", async () => {
+    const ctx = createMockContext(15, "func() { back", false);
+    const result = await runSource(source, ctx);
+    expect(result).not.toBeNull();
+    expect(result!.options.map((o) => o.label)).toContain("background-color");
+  });
+});
+
 describe("the completer holds no renderer vocabulary of its own", () => {
   const fakeProperties: PropertyCompletion[] = [{ name: "wobble" }];
 

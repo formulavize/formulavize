@@ -82,6 +82,11 @@ export function createRendererPropertyCompletionSource(
     if (allProperties.length === 0) return null;
 
     const contextScenario = completionIndex.getContextScenarioAt(context.pos);
+
+    // An about note's keys are free-form metadata, so no renderer has a
+    // vocabulary to offer for them. The note's own key source handles the block.
+    if (contextScenario?.aboutNoteName !== undefined) return null;
+
     const isStyleContext =
       contextScenario?.type === ContextScenarioType.StyleArgList;
 
@@ -100,8 +105,12 @@ export function createRendererPropertyCompletionSource(
     if (isStyleContext) {
       match = context.matchBefore(/[\w-]*/);
     } else {
-      // Fallback: inside braces but context not yet registered (debounce lag)
-      match = context.matchBefore(/[*^]?\w*\{(?:[^{}]*[;{])?\s*[\w-]*/);
+      // Fallback: inside braces but context not yet registered (debounce lag).
+      // '~' is matched only so an about note's block can be told apart from a
+      // style block and declined: a note's keys are free-form metadata, so no
+      // renderer has a vocabulary to offer for them.
+      match = context.matchBefore(/[*^~]?\w*\{(?:[^{}]*[;{])?\s*[\w-]*/);
+      if (match?.text.startsWith("~")) return null;
     }
 
     if (!match || (match.from === match.to && !context.explicit)) return null;

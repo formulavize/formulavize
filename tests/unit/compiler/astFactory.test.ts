@@ -13,6 +13,7 @@ import {
   StyleBindingTreeNode as StyleBinding,
   GlobalStyleBindingTreeNode as GlobalStyleBinding,
   RendererDirectiveTreeNode as RendererDirective,
+  AboutNoteTreeNode as AboutNote,
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
   BaseTreeNode,
@@ -385,6 +386,52 @@ describe("renderer directives", () => {
       new Recipe([
         new RendererDirective("cytoscape", new Style(new Map(), [])),
       ]),
+    );
+  });
+});
+
+describe("about notes", () => {
+  test("empty about note", () => {
+    const input = "~about{}";
+    expect(makeTree(input)).toEqual(
+      new Recipe([new AboutNote("about", new Style(new Map(), []))]),
+    );
+    expect(getErrors(input)).toHaveLength(0);
+  });
+  test("about note with mixed types", () => {
+    const input = '~about{author:"Remy";version:2\n#d #e}';
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new AboutNote(
+          "about",
+          new Style(
+            new Map([
+              ["author", "Remy"],
+              ["version", "2"],
+            ]),
+            [new StyleTag(["d"]), new StyleTag(["e"])],
+          ),
+        ),
+      ]),
+    );
+    expect(getErrors(input)).toHaveLength(0);
+  });
+  test("about note with no name", () => {
+    const input = '~{"marginalia"}';
+    expect(makeTree(input)).toEqual(
+      new Recipe([
+        new AboutNote(
+          "",
+          new Style(new Map([[DESCRIPTION_PROPERTY, "marginalia"]]), []),
+        ),
+      ]),
+    );
+    expect(getErrors(input)).toHaveLength(0);
+  });
+  test("incomplete about note", () => {
+    const input = "~about{";
+    expect(makeTree(input)).toEqual(
+      new Recipe([new AboutNote("about", new Style(new Map(), []))]),
     );
   });
 });

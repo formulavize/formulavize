@@ -26,6 +26,7 @@ export enum ErrorCode {
   UnexpectedToken = "SYN_UNEXPECTED_TOKEN",
   InvalidGlobalStyleKeyword = "SYN_INVALID_GLOBAL_STYLE_KEYWORD",
   RendererDirectiveNotAtTopLevel = "SYN_RENDERER_DIRECTIVE_NOT_TOP_LEVEL",
+  AboutNoteNotAtTopLevel = "SYN_ABOUT_NOTE_NOT_TOP_LEVEL",
 
   // Import errors
   ImportFetchFailed = "IMP_FETCH_FAILED",

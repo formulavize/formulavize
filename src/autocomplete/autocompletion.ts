@@ -29,6 +29,10 @@ export interface ContextScenario {
   // properties they offer based on these; what a given key means is the
   // renderer's concern, not this layer's.
   rendererDirectiveProps?: ReadonlyMap<string, string>;
+  // Set inside a '~<noteName>{ }' block, to the note's name ('' when unnamed).
+  // A note's keys are metadata, so no renderer vocabulary applies there; the
+  // keys offered instead depend on the note's name.
+  aboutNoteName?: string;
 }
 
 // An autocompletion token definition
