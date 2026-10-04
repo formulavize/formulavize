@@ -14,6 +14,7 @@ import {
   createGlobalStyleKeywordCompletionSource,
   createRendererDirectiveNameCompletionSource,
   createAboutNoteNameCompletionSource,
+  createAboutNoteKeyCompletionSource,
   getAllDynamicCompletionSources,
 } from "src/autocomplete/autocompleter";
 import {
@@ -1043,7 +1044,7 @@ describe("autocompleter", () => {
       });
 
       test("filters note names by prefix", async () => {
-        const context = createMockContext(2, "~p");
+        const context = createMockContext(2, "~v");
         const result = await runSource(source, context);
 
         expect(result).toBeTruthy();
@@ -1063,6 +1064,141 @@ describe("autocompleter", () => {
         const result = await runSource(source, context);
 
         expect(result).toBeNull();
+      });
+    });
+  });
+
+  describe("createAboutNoteKeyCompletionSource", () => {
+    const noteScenario = (aboutNoteName: string): CompletionIndex =>
+      new CompletionIndex(
+        [],
+        [
+          {
+            type: ContextScenarioType.StyleArgList,
+            from: 10,
+            to: 30,
+            aboutNoteName,
+          },
+        ],
+        [],
+      );
+
+    test("offers nothing while no keys are established", async () => {
+      // ABOUT_NOTE_KEYS is empty for now, so the wired-up source is silent.
+      const source = createAboutNoteKeyCompletionSource(noteScenario("about"));
+      const context = createMockContext(15, "~about{ au");
+      const result = await runSource(source, context);
+
+      expect(result!.options).toEqual([]);
+    });
+
+    describe("once keys are established", () => {
+      const noteKeys = new Map([
+        ["author", ["email", "website", "mastodon"]],
+        ["", ["description"]],
+      ]);
+
+      test("offers the keys for the note's name", async () => {
+        const source = createAboutNoteKeyCompletionSource(
+          noteScenario("author"),
+          noteKeys,
+        );
+        const context = createMockContext(15, "~author{ em");
+        const result = await runSource(source, context);
+
+        expect(result).toBeTruthy();
+        expect(result!.options).toContainEqual({
+          label: "email",
+          type: "property",
+        });
+        expect(result!.options.map((o) => o.label)).not.toContain("website");
+      });
+
+      test("a different note name gets different keys", async () => {
+        const source = createAboutNoteKeyCompletionSource(
+          noteScenario("provenance"),
+          noteKeys,
+        );
+        const context = createMockContext(15, "~provenance{ au");
+        const result = await runSource(source, context);
+
+        expect(result!.options).toEqual([]);
+      });
+
+      test("an unnamed note is keyed by the empty string", async () => {
+        const source = createAboutNoteKeyCompletionSource(
+          noteScenario(""),
+          noteKeys,
+        );
+        const context = createMockContext(15, "~{ desc");
+        const result = await runSource(source, context);
+
+        expect(result!.options.map((o) => o.label)).toContain("description");
+      });
+
+      test("offers nothing in a property value position", async () => {
+        const source = createAboutNoteKeyCompletionSource(
+          noteScenario("about"),
+          noteKeys,
+        );
+        const context = createMockContext(20, '~author{ email: "a', false);
+        const result = await runSource(source, context);
+
+        expect(result).toBeNull();
+      });
+
+      test("offers nothing in a style tag position", async () => {
+        const source = createAboutNoteKeyCompletionSource(
+          noteScenario("author"),
+          noteKeys,
+        );
+        const context = createMockContext(15, "~author{ #dr");
+        const result = await runSource(source, context);
+
+        expect(result).toBeNull();
+      });
+
+      test("returns null outside an about note", async () => {
+        const source = createAboutNoteKeyCompletionSource(
+          new CompletionIndex(
+            [],
+            [{ type: ContextScenarioType.StyleArgList, from: 10, to: 30 }],
+            [],
+          ),
+          noteKeys,
+        );
+        const context = createMockContext(15, "func() { author");
+        const result = await runSource(source, context);
+
+        expect(result).toBeNull();
+      });
+
+      test("regex fallback reads the note name before the index registers", async () => {
+        // The CompletionIndex lags the debounce, so the source must recognize
+        // '~noteName{' from the raw text alone.
+        const source = createAboutNoteKeyCompletionSource(
+          new CompletionIndex([], [], []),
+          noteKeys,
+        );
+        const context = createMockContext(10, "~author{ em");
+        const result = await runSource(source, context);
+
+        expect(result).toBeTruthy();
+        expect(result!.options).toContainEqual({
+          label: "email",
+          type: "property",
+        });
+      });
+
+      test("regex fallback after a declaration already written", async () => {
+        const source = createAboutNoteKeyCompletionSource(
+          new CompletionIndex([], [], []),
+          noteKeys,
+        );
+        const context = createMockContext(24, '~author{email:"test"; we');
+        const result = await runSource(source, context);
+
+        expect(result!.options.map((o) => o.label)).toContain("website");
       });
     });
   });

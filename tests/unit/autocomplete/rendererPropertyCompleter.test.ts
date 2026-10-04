@@ -331,6 +331,48 @@ describe("about notes offer no renderer properties", () => {
     expect(await runSource(source, ctx)).toBeNull();
   });
 
+  test("named note with its scenario registered", async () => {
+    // Once the debounce lands the block is an indexed StyleArgList, so the
+    // note name on the scenario is what has to turn the offer off.
+    const indexed = createRendererPropertyCompletionSource(
+      new CompletionIndex(
+        [],
+        [
+          {
+            type: ContextScenarioType.StyleArgList,
+            from: 7,
+            to: 30,
+            aboutNoteName: "about",
+          },
+        ],
+        [],
+      ),
+      cytoscapeRendererMeta,
+    );
+    const ctx = createMockContext(10, "~about{ ba", false);
+    expect(await runSource(indexed, ctx)).toBeNull();
+  });
+
+  test("unnamed note with its scenario registered", async () => {
+    const indexed = createRendererPropertyCompletionSource(
+      new CompletionIndex(
+        [],
+        [
+          {
+            type: ContextScenarioType.StyleArgList,
+            from: 1,
+            to: 30,
+            aboutNoteName: "",
+          },
+        ],
+        [],
+      ),
+      cytoscapeRendererMeta,
+    );
+    const ctx = createMockContext(4, "~{ ba", false);
+    expect(await runSource(indexed, ctx)).toBeNull();
+  });
+
   test("a style block is still offered properties", async () => {
     const ctx = createMockContext(15, "func() { back", false);
     const result = await runSource(source, ctx);

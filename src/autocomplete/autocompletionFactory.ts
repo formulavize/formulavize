@@ -9,6 +9,7 @@ import {
   StyleBindingTreeNode,
   GlobalStyleBindingTreeNode,
   RendererDirectiveTreeNode,
+  AboutNoteTreeNode,
   NamespaceTreeNode,
   ImportTreeNode,
 } from "../compiler/ast";
@@ -187,6 +188,18 @@ function makeContextScenarios(statement: StatementTreeNode): ContextScenario[] {
           to: rendererDirectiveNode.StyleNode.Position.to - 1,
           rendererDirectiveName: rendererDirectiveNode.RendererName,
           rendererDirectiveProps: rendererDirectiveNode.StyleNode.KeyValueMap,
+        },
+      ];
+    })
+    .with(NodeType.AboutNote, () => {
+      const aboutNoteNode = statement as AboutNoteTreeNode;
+      if (!aboutNoteNode.StyleNode.Position) return [];
+      return [
+        {
+          type: ContextScenarioType.StyleArgList,
+          from: aboutNoteNode.StyleNode.Position.from + 1,
+          to: aboutNoteNode.StyleNode.Position.to - 1,
+          aboutNoteName: aboutNoteNode.NoteName,
         },
       ];
     })
