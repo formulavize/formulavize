@@ -317,6 +317,13 @@ export class Dag {
   }
 
   getAboutNotes(): Map<string, DagStyle> {
+    // There currently is no opinionated handling for about notes.
+    // About notes are notes about the recipe file as a whole.
+    // This feature is added for extensibility of metadata driven uses cases
+    // like watermarking, attributions, languange version pinning,
+    // file version tracking, license compliance, etc.
+    // We may add some official metadata handling in the future, but have just
+    // left this attachment point here for now for community experimentation.
     return this.aboutNotes;
   }
 
