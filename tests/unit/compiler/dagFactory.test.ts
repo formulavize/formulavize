@@ -11,6 +11,7 @@ import {
   StyleBindingTreeNode as StyleBinding,
   GlobalStyleBindingTreeNode as GlobalStyleBinding,
   RendererDirectiveTreeNode as RendererDirective,
+  AboutNoteTreeNode as AboutNote,
   NamespaceTreeNode as Namespace,
   ImportTreeNode as Import,
   ValueListTreeNode as ValueList,
@@ -977,6 +978,112 @@ describe("renderer directive tests", () => {
     expect(childDag.getRendererDirectives()).toEqual(
       new Map<string, DagStyle>(),
     );
+  });
+});
+
+describe("about note tests", () => {
+  test("no about note", async () => {
+    const recipe = new Recipe([]);
+    const { dag } = await makeDag(recipe, dummyImporter);
+    expect(dag.getAboutNotes()).toEqual(new Map<string, DagStyle>());
+  });
+  test("about note with inline properties", async () => {
+    const recipe = new Recipe([
+      new AboutNote(
+        "about",
+        new Style(
+          new Map([
+            ["author", "Remy"],
+            ["license", "MIT"],
+          ]),
+          [],
+        ),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+    expect(errors).toHaveLength(0);
+    expect(dag.getAboutNotes()).toEqual(
+      new Map<string, DagStyle>([
+        [
+          "about",
+          {
+            styleTags: [],
+            styleProperties: new Map([
+              ["author", "Remy"],
+              ["license", "MIT"],
+            ]),
+          },
+        ],
+      ]),
+    );
+  });
+  test("unnamed about note is keyed by the empty string", async () => {
+    const recipe = new Recipe([
+      new AboutNote(
+        "",
+        new Style(new Map([[DESCRIPTION_PROPERTY, "marginalia"]]), []),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+    expect(errors).toHaveLength(0);
+    expect(dag.getAboutNotes()).toEqual(
+      new Map<string, DagStyle>([
+        [
+          "",
+          {
+            styleTags: [],
+            styleProperties: new Map([[DESCRIPTION_PROPERTY, "marginalia"]]),
+          },
+        ],
+      ]),
+    );
+  });
+  test("about note with style tags", async () => {
+    const recipe = new Recipe([
+      new NamedStyle("draft", new Style(new Map([["status", "wip"]]))),
+      new AboutNote(
+        "about",
+        new Style(new Map(), [new StyleTagNode(["draft"])]),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+    expect(errors).toHaveLength(0);
+    expect(dag.getAboutNotes()).toEqual(
+      new Map<string, DagStyle>([
+        ["about", { styleTags: [["draft"]], styleProperties: new Map() }],
+      ]),
+    );
+  });
+  test("repeated notes for one name are last-wins", async () => {
+    const recipe = new Recipe([
+      new AboutNote("about", new Style(new Map([["version", "1"]]), [])),
+      new AboutNote("about", new Style(new Map([["version", "2"]]), [])),
+    ]);
+    const { dag } = await makeDag(recipe, dummyImporter);
+    expect(dag.getAboutNotes().get("about")).toEqual({
+      styleTags: [],
+      styleProperties: new Map([["version", "2"]]),
+    });
+  });
+  test("about note inside a namespace produces an error", async () => {
+    const recipe = new Recipe([
+      new Namespace(
+        "ns",
+        new StatementList([
+          new AboutNote("about", new Style(new Map([["author", "Remy"]]), [])),
+        ]),
+      ),
+    ]);
+    const { dag, errors } = await makeDag(recipe, dummyImporter);
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toMatchObject({
+      code: ErrorCode.AboutNoteNotAtTopLevel,
+      severity: "error",
+      source: ErrorSource.Syntax,
+    });
+    expect(dag.getAboutNotes()).toEqual(new Map<string, DagStyle>());
+    const childDag = dag.getChildDags()[0];
+    expect(childDag.getAboutNotes()).toEqual(new Map<string, DagStyle>());
   });
 });
 

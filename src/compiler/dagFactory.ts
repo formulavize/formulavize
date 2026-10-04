@@ -12,6 +12,7 @@ import {
   StyleBindingTreeNode,
   GlobalStyleBindingTreeNode,
   RendererDirectiveTreeNode,
+  AboutNoteTreeNode,
   NamespaceTreeNode,
   ValueTreeNode,
   ImportTreeNode,
@@ -560,6 +561,34 @@ function processRendererDirective(
   );
 }
 
+function processAboutNote(
+  aboutNoteStmt: AboutNoteTreeNode,
+  workingDag: Dag,
+  errors: Error[],
+): void {
+  // About notes should describe the recipe file as a whole, so a note nested
+  // in a namespace cannot be read from the root dag.
+  if (workingDag.Parent) {
+    const errMsg = makeError(
+      aboutNoteStmt,
+      `About note '~${aboutNoteStmt.NoteName}' is only ` +
+        `allowed at the top level, not inside namespace '${workingDag.Name}'`,
+      ErrorSource.Syntax,
+      ErrorCode.AboutNoteNotAtTopLevel,
+    );
+    errors.push(errMsg);
+    console.debug(errMsg);
+    return;
+  }
+  // The note name is deliberately not validated. A note can be treated as a
+  // semi-structured comment, so the compiler ascribes no meaning to its name
+  // or its keys. We may add validation in the future if the community converges
+  // on standard metadata notes.
+  const styleNode = aboutNoteStmt.StyleNode;
+  checkStyleTagsInStyleNode(styleNode, workingDag, errors);
+  workingDag.addAboutNote(aboutNoteStmt.NoteName, makeDagStyle(styleNode));
+}
+
 async function processStatement(
   stmt: BaseTreeNode,
   workingDag: Dag,
@@ -601,6 +630,9 @@ async function processStatement(
         workingDag,
         errors,
       );
+    })
+    .with(NodeType.AboutNote, () => {
+      processAboutNote(stmt as AboutNoteTreeNode, workingDag, errors);
     })
     .with(NodeType.QualifiedVariable, () => null)
     .with(NodeType.Namespace, async () => {

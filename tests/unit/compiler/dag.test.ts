@@ -330,6 +330,46 @@ describe("merge dag tests", () => {
       new Map([["cytoscape", directive2]]),
     );
   });
+  test("merge dag about notes", () => {
+    // Anonymous imports merge into the importing dag, so metadata carried by
+    // an imported file would be silently dropped without this.
+    const dag1 = new Dag("root1");
+    const note1 = {
+      styleTags: [],
+      styleProperties: new Map([["author", "Remy"]]),
+    };
+    dag1.addAboutNote("about", note1);
+    const dag2 = new Dag("root2");
+    const note2 = {
+      styleTags: [],
+      styleProperties: new Map([["source", "upstream"]]),
+    };
+    dag2.addAboutNote("provenance", note2);
+
+    dag1.mergeDag(dag2);
+    expect(dag1.getAboutNotes()).toEqual(
+      new Map([
+        ["about", note1],
+        ["provenance", note2],
+      ]),
+    );
+  });
+  test("merge dag about notes with conflicting names", () => {
+    const dag1 = new Dag("root1");
+    dag1.addAboutNote("about", {
+      styleTags: [],
+      styleProperties: new Map([["version", "1"]]),
+    });
+    const dag2 = new Dag("root2");
+    const note2 = {
+      styleTags: [],
+      styleProperties: new Map([["version", "2"]]),
+    };
+    dag2.addAboutNote("about", note2);
+
+    dag1.mergeDag(dag2);
+    expect(dag1.getAboutNotes()).toEqual(new Map([["about", note2]]));
+  });
   test("merge dag var nodes with no conflicts", () => {
     const dag1 = new Dag("root1");
     dag1.setVarNode("x", "node1");

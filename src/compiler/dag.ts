@@ -38,6 +38,7 @@ export class Dag {
   private styleBinding: Map<Keyword, DagStyle>;
   private globalStyleBinding: Map<Keyword, DagStyle>;
   private rendererDirectives: Map<string, DagStyle>;
+  private aboutNotes: Map<string, DagStyle>;
   private childDags: Map<DagId, Dag>;
   private namespaceNameToDagId: Map<string, DagId>;
   private lineagePath: string;
@@ -68,6 +69,7 @@ export class Dag {
     this.styleBinding = new Map();
     this.globalStyleBinding = new Map();
     this.rendererDirectives = new Map();
+    this.aboutNotes = new Map();
     this.childDags = new Map();
     this.namespaceNameToDagId = new Map();
     if (parent !== null) {
@@ -101,6 +103,10 @@ export class Dag {
 
   addRendererDirective(rendererName: string, dagStyle: DagStyle): void {
     this.rendererDirectives.set(rendererName, dagStyle);
+  }
+
+  addAboutNote(noteName: string, dagStyle: DagStyle): void {
+    this.aboutNotes.set(noteName, dagStyle);
   }
 
   private addChildDagWithOrder(childDag: Dag, insertionOrder: number): void {
@@ -310,6 +316,10 @@ export class Dag {
     return this.rendererDirectives;
   }
 
+  getAboutNotes(): Map<string, DagStyle> {
+    return this.aboutNotes;
+  }
+
   getChildDags(): Dag[] {
     return Array.from(this.childDags.values());
   }
@@ -386,6 +396,9 @@ export class Dag {
     });
     dag.getRendererDirectives().forEach((dagStyle, rendererName) => {
       this.addRendererDirective(rendererName, dagStyle);
+    });
+    dag.getAboutNotes().forEach((dagStyle, noteName) => {
+      this.addAboutNote(noteName, dagStyle);
     });
     dag.getVarNameToNodeIdMap().forEach((nodeId, varName) => {
       this.setVarNode(varName, nodeId);
@@ -476,6 +489,15 @@ export class Dag {
         childLeftPad +
         "RendererDirective: " +
         rendererName +
+        styleTagDump(dagStyle.styleTags) +
+        stylePropertiesDump(dagStyle.styleProperties) +
+        "\n";
+    });
+    this.aboutNotes.forEach((dagStyle, noteName) => {
+      result +=
+        childLeftPad +
+        "AboutNote: " +
+        noteName +
         styleTagDump(dagStyle.styleTags) +
         stylePropertiesDump(dagStyle.styleProperties) +
         "\n";
