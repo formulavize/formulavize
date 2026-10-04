@@ -54,6 +54,7 @@ function makeTokenRecords(statement: StatementTreeNode): TokenInfo[] {
     })
     .with(NodeType.GlobalStyleBinding, () => [])
     .with(NodeType.RendererDirective, () => [])
+    .with(NodeType.AboutNote, () => [])
     .with(NodeType.Namespace, () => {
       const namespaceNode = statement as NamespaceTreeNode;
       return [
