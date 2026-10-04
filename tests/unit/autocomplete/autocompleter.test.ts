@@ -13,6 +13,7 @@ import {
   createQualifiedStyleCompletionSource,
   createGlobalStyleKeywordCompletionSource,
   createRendererDirectiveNameCompletionSource,
+  createAboutNoteNameCompletionSource,
   getAllDynamicCompletionSources,
 } from "src/autocomplete/autocompleter";
 import {
@@ -999,6 +1000,70 @@ describe("autocompleter", () => {
       const result = await runSource(source, context);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe("createAboutNoteNameCompletionSource", () => {
+    test("offers nothing while no names are established", async () => {
+      // ABOUT_NOTE_NAMES is empty for now, so the wired-up source is silent.
+      const source = createAboutNoteNameCompletionSource();
+      const context = createMockContext(1, "~");
+      const result = await runSource(source, context);
+
+      expect(result!.options).toEqual([]);
+    });
+
+    describe("once names are established", () => {
+      let source: CompletionSource;
+
+      beforeEach(() => {
+        source = createAboutNoteNameCompletionSource(["about", "version"]);
+      });
+
+      test("completes note names after tilde", async () => {
+        const context = createMockContext(3, "~ab");
+        const result = await runSource(source, context);
+
+        expect(result).toBeTruthy();
+        expect(result!.from).toBe(1);
+        expect(result!.options).toContainEqual({
+          label: "about",
+          type: "keyword",
+        });
+      });
+
+      test("completes with empty prefix after tilde", async () => {
+        const context = createMockContext(1, "~");
+        const result = await runSource(source, context);
+
+        expect(result).toBeTruthy();
+        expect(result!.from).toBe(1);
+        expect(result!.options.map((o) => o.label)).toContain("about");
+        expect(result!.options.map((o) => o.label)).toContain("version");
+      });
+
+      test("filters note names by prefix", async () => {
+        const context = createMockContext(2, "~p");
+        const result = await runSource(source, context);
+
+        expect(result).toBeTruthy();
+        expect(result!.options.map((o) => o.label)).toContain("version");
+        expect(result!.options.map((o) => o.label)).not.toContain("about");
+      });
+
+      test("returns null when no tilde", async () => {
+        const context = createMockContext(5, "about");
+        const result = await runSource(source, context);
+
+        expect(result).toBeNull();
+      });
+
+      test("offers nothing once the note body is open", async () => {
+        const context = createMockContext(7, "~about{");
+        const result = await runSource(source, context);
+
+        expect(result).toBeNull();
+      });
     });
   });
 

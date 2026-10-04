@@ -10,7 +10,10 @@ import {
   ScenarioToTokenTypes,
   TokenType,
 } from "./autocompletion";
-import { GLOBAL_STYLE_KEYWORD_MAP } from "../compiler/constants";
+import {
+  ABOUT_NOTE_NAMES,
+  GLOBAL_STYLE_KEYWORD_MAP,
+} from "../compiler/constants";
 
 export function createCompletions(
   completionIndex: CompletionIndex,
@@ -439,6 +442,29 @@ export function createRendererDirectiveNameCompletionSource(
   };
 }
 
+export function createAboutNoteNameCompletionSource(
+  noteNames: readonly string[] = ABOUT_NOTE_NAMES,
+): CompletionSource {
+  return (context: CompletionContext): CompletionResult | null => {
+    const match = context.matchBefore(/~\w*/);
+    if (!match || (match.from === match.to && !context.explicit)) {
+      return null;
+    }
+
+    const word = match.text.slice(1); // Remove the leading '~'
+    const from = match.from + 1;
+
+    const options = noteNames
+      .filter((noteName) => noteName.startsWith(word))
+      .map((noteName) => ({
+        label: noteName,
+        type: "keyword",
+      }));
+
+    return { from, options };
+  };
+}
+
 export function getAllDynamicCompletionSources(
   completionIndex: CompletionIndex,
   rendererNames: readonly string[] = [],
@@ -457,5 +483,7 @@ export function getAllDynamicCompletionSources(
     // Built apart from the rest: what a '^' may be followed by comes from the
     // renderer registry rather than from the index.
     createRendererDirectiveNameCompletionSource(rendererNames),
+    // Likewise '~', whose names are a language convention, not index state.
+    createAboutNoteNameCompletionSource(),
   ];
 }

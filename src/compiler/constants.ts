@@ -16,3 +16,10 @@ export const GLOBAL_STYLE_KEYWORD_MAP: Map<string, string> = new Map([
   ["edge", "edge"],
   ["subgraph", "subgraph"],
 ]);
+
+// About note names
+// A note name currently carries no meaning to the compiler and is largely left
+// to community projects to interpret for now. This list seeds the editor's
+// suggestions after '~' with the names a recipe is conventionally expected
+// to use. It is currently empty, but added here for future extensibility.
+export const ABOUT_NOTE_NAMES: readonly string[] = [];
