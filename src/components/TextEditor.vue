@@ -58,6 +58,7 @@ import {
   oneDarkHighlightStyle,
 } from "@codemirror/theme-one-dark";
 import { fizLanguage } from "@formulavize/lang-fiz";
+import { colorPicker } from "../editor/colorPicker";
 import { CompletionIndex } from "../autocomplete/autocompletion";
 import { getAllDynamicCompletionSources } from "../autocomplete/autocompleter";
 import { createRendererPropertyCompletionSource } from "../autocomplete/rendererPropertyCompleter";
@@ -323,6 +324,7 @@ export default defineComponent({
           createTutorialHeaderProtection(this.tutorialMode),
         ),
         fizLanguage,
+        colorPicker,
       ],
     });
 
