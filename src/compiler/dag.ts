@@ -379,6 +379,101 @@ export class Dag {
     return this.getLineagePath().split("/").slice(0, -1).join("/");
   }
 
+  private static cloneElement<T extends DagElement>(element: T): T {
+    return {
+      ...element,
+      styleTags: element.styleTags.map((styleTag) => [...styleTag]),
+      styleProperties: new Map(element.styleProperties),
+    };
+  }
+
+  private static cloneStyle(dagStyle: DagStyle): DagStyle {
+    return {
+      styleTags: dagStyle.styleTags.map((styleTag) => [...styleTag]),
+      styleProperties: new Map(dagStyle.styleProperties),
+    };
+  }
+
+  private static cloneStyleMap<K>(
+    styleMap: Map<K, DagStyle>,
+  ): Map<K, DagStyle> {
+    return new Map(
+      Array.from(styleMap, ([key, dagStyle]) => [
+        key,
+        Dag.cloneStyle(dagStyle),
+      ]),
+    );
+  }
+
+  private refreshDescendantLineage(): void {
+    // Recompute the cached lineage paths below this dag. Setting a parent only
+    // refreshes the dag it was set on.
+    this.childDags.forEach((childDag) => {
+      childDag.lineagePath = childDag.getLineagePath();
+      childDag.dagLineagePath = childDag.getDagLineagePath();
+      childDag.refreshDescendantLineage();
+    });
+  }
+
+  clone(): Dag {
+    // Deep copy this dag, detached from any parent.
+    // The cacher hands a copy to every import site because consumers mutate
+    // what they receive (Id, Name, re-parenting), and sharing one instance
+    // lets a later consumer steal the subgraph from an earlier one.
+    const copy = new Dag(
+      this.id,
+      null,
+      this.name,
+      this.dagStyleTags.map((styleTag) => [...styleTag]),
+      new Map(this.dagStyleProperties),
+    );
+
+    this.nodeMap.forEach((node, nodeId) => {
+      copy.nodeMap.set(nodeId, Dag.cloneElement(node));
+    });
+    this.edgeMap.forEach((edge, edgeId) => {
+      copy.edgeMap.set(edgeId, Dag.cloneElement(edge));
+    });
+
+    copy.varNameToNodeId = new Map(this.varNameToNodeId);
+    copy.varNameToStyleNode = new Map(
+      Array.from(this.varNameToStyleNode, ([varName, styleNode]) => [
+        varName,
+        styleNode ? Dag.cloneStyle(styleNode) : styleNode,
+      ]),
+    );
+    copy.styleTagNameToFlatStyleMap = new Map(
+      Array.from(this.styleTagNameToFlatStyleMap, ([styleTagName, props]) => [
+        styleTagName,
+        new Map(props),
+      ]),
+    );
+    copy.styleBinding = Dag.cloneStyleMap(this.styleBinding);
+    copy.globalStyleBinding = Dag.cloneStyleMap(this.globalStyleBinding);
+    copy.rendererDirectives = Dag.cloneStyleMap(this.rendererDirectives);
+    copy.aboutNotes = Dag.cloneStyleMap(this.aboutNotes);
+    copy.usedImports = new Set(this.usedImports);
+
+    // addChildDagWithOrder sets the child's parent and recomputes its lineage,
+    // but a subtree is cloned before it is attached, so everything below the
+    // child still holds the path it had while the child was a root
+    this.childDags.forEach((childDag) => {
+      const childCopy = childDag.clone();
+      copy.addChildDagWithOrder(
+        childCopy,
+        this.elementInsertionOrder.get(childDag.id) ?? 0,
+      );
+      childCopy.refreshDescendantLineage();
+    });
+    copy.namespaceNameToDagId = new Map(this.namespaceNameToDagId);
+
+    // restored last: attaching the child dags above bumped the counter
+    copy.elementInsertionOrder = new Map(this.elementInsertionOrder);
+    copy.insertionCounter = this.insertionCounter;
+
+    return copy;
+  }
+
   mergeDag(dag: Dag): void {
     // Merge the input dag into the current dag
     // Preserve relative insertion order from the source dag

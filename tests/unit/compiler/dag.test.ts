@@ -578,3 +578,175 @@ describe("insertion order tests", () => {
     expect(order.get("b")).toBe(1);
   });
 });
+
+describe("clone tests", () => {
+  function makePopulatedDag(): Dag {
+    const dag = new Dag(
+      "rootId",
+      null,
+      "rootName",
+      [["dagTag"]],
+      new Map([["color", "red"]]),
+    );
+    dag.addNode({
+      id: "node1",
+      name: "f",
+      styleTags: [["nodeTag"]],
+      styleProperties: new Map([["shape", "circle"]]),
+    });
+    dag.addNode({
+      id: "node2",
+      name: "g",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+    dag.addEdge({
+      id: "edge1",
+      name: "e",
+      styleTags: [],
+      styleProperties: new Map([["width", "2"]]),
+      srcNodeId: "node1",
+      destNodeId: "node2",
+    });
+    dag.setStyle("s", new Map([["color", "blue"]]));
+    dag.addStyleBinding("node", {
+      styleTags: [["s"]],
+      styleProperties: new Map(),
+    });
+    dag.addGlobalStyleBinding("edge", {
+      styleTags: [],
+      styleProperties: new Map([["color", "green"]]),
+    });
+    dag.addRendererDirective("cytoscape", {
+      styleTags: [],
+      styleProperties: new Map([["layout", "dagre"]]),
+    });
+    dag.addAboutNote("", {
+      styleTags: [],
+      styleProperties: new Map([["author", "someone"]]),
+    });
+    dag.setVarNode("x", "node1");
+    dag.setVarStyle("y", { styleTags: [["s"]], styleProperties: new Map() });
+    dag.addUsedImport("pkg.fiz");
+
+    const childDag = new Dag("childId", dag, "child");
+    childDag.addNode({
+      id: "node3",
+      name: "h",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+    return dag;
+  }
+
+  test("clone matches the original", () => {
+    const dag = makePopulatedDag();
+    const copy = dag.clone();
+    expect(copy).not.toBe(dag);
+    expect(copy).toEqual(dag);
+    expect(copy.debugDumpDag()).toEqual(dag.debugDumpDag());
+  });
+
+  test("clone is detached from any parent", () => {
+    const dag = new Dag("rootId");
+    const childDag = new Dag("childId", dag, "child");
+    const copy = childDag.clone();
+    expect(copy.Parent).toBeNull();
+    expect(copy.getDagAsDagNode().id).toEqual("childId");
+  });
+
+  test("clone child dags are owned by the clone", () => {
+    const dag = makePopulatedDag();
+    const copy = dag.clone();
+    const [originalChild] = dag.getChildDags();
+    const [copiedChild] = copy.getChildDags();
+    expect(copiedChild).not.toBe(originalChild);
+    expect(copiedChild.Parent).toBe(copy);
+    // the original keeps its child: attaching the copy elsewhere must not
+    // re-parent what the original owns
+    expect(originalChild.Parent).toBe(dag);
+  });
+
+  test("mutating a clone leaves the original untouched", () => {
+    const dag = makePopulatedDag();
+    const copy = dag.clone();
+
+    copy.Id = "newId";
+    copy.Name = "newName";
+    copy.addNode({
+      id: "node4",
+      name: "extra",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+    copy.getChildDags()[0].Name = "renamed";
+    copy.getNodeList()[0].styleProperties.set("shape", "square");
+    copy.UsedImports.add("other.fiz");
+
+    expect(dag.Id).toEqual("rootId");
+    expect(dag.Name).toEqual("rootName");
+    expect(dag.getNodeList()).toHaveLength(2);
+    expect(dag.getChildDags()[0].Name).toEqual("child");
+    expect(dag.getNodeList()[0].styleProperties.get("shape")).toEqual("circle");
+    expect(dag.UsedImports).toEqual(new Set(["pkg.fiz"]));
+  });
+
+  test("clone shares no style maps with the original", () => {
+    const dag = makePopulatedDag();
+    const copy = dag.clone();
+
+    expect(copy.getFlattenedStyles().get("s")).not.toBe(
+      dag.getFlattenedStyles().get("s"),
+    );
+    expect(copy.getStyleBindings().get("node")).not.toBe(
+      dag.getStyleBindings().get("node"),
+    );
+    expect(copy.DagStyleProperties).not.toBe(dag.DagStyleProperties);
+
+    copy.getFlattenedStyles().get("s")?.set("color", "yellow");
+    expect(dag.getFlattenedStyles().get("s")?.get("color")).toEqual("blue");
+  });
+
+  test("clone preserves element insertion order", () => {
+    const dag = makePopulatedDag();
+    const copy = dag.clone();
+    expect(copy.getElementInsertionOrder()).toEqual(
+      dag.getElementInsertionOrder(),
+    );
+    copy.addNode({
+      id: "node5",
+      name: "later",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+    // the restored insertion counter keeps new elements ordered last
+    const order = copy.getElementInsertionOrder();
+    const maxOriginalOrder = Math.max(
+      ...Array.from(dag.getElementInsertionOrder().values()),
+    );
+    expect(order.get("node5")).toBeGreaterThan(maxOriginalOrder);
+  });
+});
+
+describe("deep clone lineage", () => {
+  test("clone of a three level dag keeps every lineage path", () => {
+    const root = new Dag("rootId");
+    const child = new Dag("childId", root, "child");
+    const grandchild = new Dag("grandchildId", child, "grandchild");
+    grandchild.addNode({
+      id: "node1",
+      name: "f",
+      styleTags: [],
+      styleProperties: new Map(),
+    });
+
+    const copy = root.clone();
+    const copiedChild = copy.getChildDags()[0];
+    const copiedGrandchild = copiedChild.getChildDags()[0];
+
+    expect(copiedChild.LineagePath).toEqual(child.LineagePath);
+    expect(copiedGrandchild.LineagePath).toEqual(grandchild.LineagePath);
+    expect(copiedGrandchild.DagLineagePath).toEqual(grandchild.DagLineagePath);
+    expect(copy).toEqual(root);
+  });
+});
