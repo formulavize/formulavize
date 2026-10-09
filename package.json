@@ -30,6 +30,8 @@
     "@lezer/common": "^1.5.2",
     "@napi-rs/canvas": "^0.1.60",
     "@tsparticles/confetti": "^4.3.2",
+    "colors-named": "^1.0.5",
+    "colors-named-hex": "^1.0.4",
     "commander": "^15.0.0",
     "cytoscape": "^3.34.0",
     "cytoscape-dagre": "^4.0.0",
