@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.15.0](https://github.com/formulavize/formulavize/compare/v1.14.0...v1.15.0) (2026-10-09)
+
+
+### Features
+
+* add color picker to text editor ([#82](https://github.com/formulavize/formulavize/issues/82)) ([0fe06be](https://github.com/formulavize/formulavize/commit/0fe06bef8232faffcef1ae5ec5e0b976d637de45))
+
 ## [1.14.0](https://github.com/formulavize/formulavize/compare/v1.13.0...v1.14.0) (2026-10-04)
 
 
