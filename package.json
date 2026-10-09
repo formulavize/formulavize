@@ -17,7 +17,6 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@babel/runtime": "^8.0.5",
     "@codemirror/autocomplete": "^6.20.3",
     "@codemirror/commands": "^6.10.4",
     "@codemirror/language": "^6.12.4",
@@ -31,7 +30,6 @@
     "@lezer/common": "^1.5.2",
     "@napi-rs/canvas": "^0.1.60",
     "@tsparticles/confetti": "^4.3.2",
-    "@uiw/codemirror-extensions-color": "^4.25.12",
     "colors-named": "^1.0.5",
     "colors-named-hex": "^1.0.4",
     "commander": "^15.0.0",

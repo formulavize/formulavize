@@ -8,25 +8,23 @@ import {
   ViewUpdate,
   WidgetType,
 } from "@codemirror/view";
-import { color as colorLiteralPicker } from "@uiw/codemirror-extensions-color";
 import namedColors from "colors-named";
 import namedColorHexes from "colors-named-hex";
 
 // Swatch pickers for colors written in a fiz recipe.
 //
-// `@uiw/codemirror-extensions-color` keys off the syntax node name
-// `ColorLiteral`, which lezer-fiz emits for a bare hex value, so it covers
-// `background-color: #ff0000` as shipped. It does not cover the quoted form
-// (`background-color: "lightblue"`), which lezer-fiz emits as a StringLiteral
-// and which recipes use at least as often, so the quoted case gets a sibling
-// plugin here. The two never see the same node, and both draw the swatch DOM
-// that the upstream `colorTheme` (bundled into its `color` extension) styles.
+// A style declaration can name a color three ways: a bare hex literal
+// (`background-color: #ff0000`), a quoted hex (`"#ff0000"`), and a quoted
+// name (`"lightblue"`). lezer-fiz emits the first as a ColorLiteral and the
+// other two as a StringLiteral, but both sit in its StyleValue group, so one
+// pass over a declaration's values covers every form. A pick is written back
+// in the form the recipe used, keeping its quoting and any alpha it carried.
 
-/** A quoted style value that names a color, and where it sits in the doc. */
-export interface QuotedColor {
-  /** Document offset of the opening quote. */
+/** A style value that names a color, and where it sits in the doc. */
+export interface StyleColor {
+  /** Document offset where the value starts (the opening quote, if quoted). */
   from: number;
-  /** Document offset just past the closing quote. */
+  /** Document offset just past the end of the value. */
   to: number;
   /** The color as `#rrggbb`, the only form an `<input type="color">` takes. */
   hex: string;
@@ -35,7 +33,7 @@ export interface QuotedColor {
    * cannot edit alpha, so it is carried through a change untouched.
    */
   alpha: string;
-  /** The quote character the recipe used, preserved when rewriting. */
+  /** The quote character the recipe used, or "" for a bare hex literal. */
   quote: string;
 }
 
@@ -63,44 +61,37 @@ function isColorProperty(propertyName: string): boolean {
   );
 }
 
-/** Expand a 3/4/6/8-digit hex to the `#rrggbb` plus alpha digits pair. */
-function splitHex(hex: string): { rgb: string; alpha: string } {
-  const digits = hex.slice(1).toLowerCase();
-  const perChannel = digits.length <= 4 ? 1 : 2;
-  const channel = (index: number): string => {
-    const raw = digits.slice(index * perChannel, (index + 1) * perChannel);
-    return perChannel === 1 ? raw + raw : raw;
-  };
-  return {
-    rgb: `#${channel(0)}${channel(1)}${channel(2)}`,
-    alpha: channel(3),
-  };
-}
-
 /** Resolve a style value to a picker-ready color, or null if it names none. */
 function parseColor(value: string): { hex: string; alpha: string } | null {
   if (HEX_PATTERN.test(value)) {
-    const { rgb, alpha } = splitHex(value);
-    return { hex: rgb, alpha };
+    // A 3- or 4-digit hex abbreviates each channel to one digit; expanding it
+    // first leaves the rgb and alpha digits at fixed offsets either way.
+    const digits = value.slice(1).toLowerCase();
+    const expanded =
+      digits.length <= 4
+        ? [...digits].map((digit) => digit + digit).join("")
+        : digits;
+    return { hex: `#${expanded.slice(0, 6)}`, alpha: expanded.slice(6) };
   }
-  const hex = COLOR_NAME_TO_HEX_MAP.get(value.toLowerCase());
-  if (!hex) return null;
-  return { hex, alpha: "" };
+  const named = COLOR_NAME_TO_HEX_MAP.get(value.toLowerCase());
+  return named ? { hex: named, alpha: "" } : null;
 }
 
+const QUOTES = ['"', "'"];
+
 /**
- * Find the quoted colors among the style declarations in a document range.
+ * Find the colors among the style declarations in a document range.
  *
  * A declaration may list several values (`background-color: "red", "blue"`), so
- * every string child is considered. A value that is not a single color (e.g. a
- * gradient's `"red blue"` stop list) yields no swatch.
+ * every value is considered. A value that is not a single color (e.g. a
+ * gradient's `"red blue"` stop list, or a number) yields no swatch.
  */
-export function findQuotedColors(
+export function findStyleColors(
   state: EditorState,
   from: number,
   to: number,
-): QuotedColor[] {
-  const found: QuotedColor[] = [];
+): StyleColor[] {
+  const found: StyleColor[] = [];
   syntaxTree(state).iterate({
     from,
     to,
@@ -111,17 +102,17 @@ export function findQuotedColors(
       if (!property) return;
       const propertyName = state.doc.sliceString(property.from, property.to);
       if (!isColorProperty(propertyName)) return;
-      for (const literal of declaration.getChildren("StringLiteral")) {
-        const raw = state.doc.sliceString(literal.from, literal.to);
-        if (raw.length < 2) continue;
-        const parsed = parseColor(raw.slice(1, -1).trim());
+      for (const value of declaration.getChildren("StyleValue")) {
+        const raw = state.doc.sliceString(value.from, value.to);
+        const quote = QUOTES.includes(raw[0]) ? raw[0] : "";
+        const parsed = parseColor(quote ? raw.slice(1, -1).trim() : raw);
         if (!parsed) continue;
         found.push({
-          from: literal.from,
-          to: literal.to,
+          from: value.from,
+          to: value.to,
           hex: parsed.hex,
           alpha: parsed.alpha,
-          quote: raw[0],
+          quote,
         });
       }
     },
@@ -129,25 +120,24 @@ export function findQuotedColors(
   return found;
 }
 
-/** The text a picked color should replace the original quoted value with. */
-export function rewriteQuotedColor(
-  target: QuotedColor,
-  picked: string,
-): string {
+/** The text a picked color should replace the original style value with. */
+export function rewriteStyleColor(target: StyleColor, picked: string): string {
   return `${target.quote}${picked.toLowerCase()}${target.alpha}${target.quote}`;
 }
 
-// Which document range each live picker stands for. Kept off the element so the
-// upstream plugin's change handler, which looks for its own `data-color` on the
-// input, declines our swatches and we decline its.
-const pickerTargets = new WeakMap<HTMLInputElement, QuotedColor>();
+// Which document range each live picker stands for, kept off the element so it
+// stays typed and is dropped along with the element it belongs to.
+const pickerTargets = new WeakMap<HTMLInputElement, StyleColor>();
 
-class QuotedColorWidget extends WidgetType {
-  constructor(private readonly target: QuotedColor) {
+class StyleColorWidget extends WidgetType {
+  constructor(private readonly target: StyleColor) {
     super();
   }
 
-  eq(other: QuotedColorWidget): boolean {
+  // from/to take part although the DOM does not show them: an unequal widget
+  // is what makes codemirror call toDOM again, and only that refreshes the
+  // pickerTargets entry a later pick reads its range from.
+  eq(other: StyleColorWidget): boolean {
     return (
       other.target.from === this.target.from &&
       other.target.to === this.target.to &&
@@ -161,7 +151,7 @@ class QuotedColorWidget extends WidgetType {
     picker.type = "color";
     picker.value = this.target.hex;
     pickerTargets.set(picker, this.target);
-    // `data-color` on the wrapper is what the upstream swatch theme selects on.
+    // `data-color` on the wrapper is what the swatch theme below selects on.
     const wrapper = document.createElement("span");
     wrapper.dataset.color = this.target.hex;
     wrapper.style.backgroundColor = this.target.hex;
@@ -174,12 +164,12 @@ class QuotedColorWidget extends WidgetType {
   }
 }
 
-function quotedColorDecorations(view: EditorView): DecorationSet {
+function styleColorDecorations(view: EditorView): DecorationSet {
   const widgets: Range<Decoration>[] = [];
   for (const range of view.visibleRanges) {
-    for (const target of findQuotedColors(view.state, range.from, range.to)) {
+    for (const target of findStyleColors(view.state, range.from, range.to)) {
       const widget = Decoration.widget({
-        widget: new QuotedColorWidget(target),
+        widget: new StyleColorWidget(target),
       });
       widgets.push(widget.range(target.from));
     }
@@ -187,17 +177,17 @@ function quotedColorDecorations(view: EditorView): DecorationSet {
   return Decoration.set(widgets);
 }
 
-const quotedColorView = ViewPlugin.fromClass(
-  class QuotedColorView {
+const styleColorView = ViewPlugin.fromClass(
+  class StyleColorView {
     decorations: DecorationSet;
 
     constructor(view: EditorView) {
-      this.decorations = quotedColorDecorations(view);
+      this.decorations = styleColorDecorations(view);
     }
 
     update(update: ViewUpdate): void {
       if (update.docChanged || update.viewportChanged) {
-        this.decorations = quotedColorDecorations(update.view);
+        this.decorations = styleColorDecorations(update.view);
       }
     }
   },
@@ -212,7 +202,7 @@ const quotedColorView = ViewPlugin.fromClass(
           changes: {
             from: target.from,
             to: target.to,
-            insert: rewriteQuotedColor(target, picker.value),
+            insert: rewriteStyleColor(target, picker.value),
           },
         });
         return true;
@@ -221,23 +211,46 @@ const quotedColorView = ViewPlugin.fromClass(
   },
 );
 
-// The upstream swatch theme outlines each swatch in `#00000040`, which all but
-// disappears against the dark editor theme. Lighten it there so a dark swatch
-// still reads as a swatch.
-const darkSwatchOutline = EditorView.baseTheme({
+// A small square showing the color, with the platform picker stretched off to
+// one side so only the square shows. Adapted from the theme that shipped with
+// `@uiw/codemirror-extensions-color`, which this file used to lean on for the
+// bare hex case.
+const swatchTheme = EditorView.baseTheme({
+  "span[data-color]": {
+    width: "12px",
+    height: "12px",
+    display: "inline-block",
+    borderRadius: "2px",
+    marginRight: "0.5ch",
+    marginTop: "-2px",
+    outline: "1px solid #00000040",
+    overflow: "hidden",
+    verticalAlign: "middle",
+  },
+  'span[data-color] input[type="color"]': {
+    background: "transparent",
+    border: "none",
+    display: "block",
+    height: "12px",
+    outline: "0",
+    paddingLeft: "24px",
+  },
+  'span[data-color] input[type="color"]::-webkit-color-swatch': {
+    border: "none",
+    paddingLeft: "24px",
+  },
+  // A `#00000040` outline all but disappears against the dark editor theme, so
+  // lighten it there to keep a dark swatch reading as a swatch.
   "&dark span[data-color]": {
     outline: "1px solid #ffffff40",
   },
 });
 
 /**
- * Inline color swatches for both the bare (`#ff0000`) and quoted
- * (`"lightblue"`) ways a fiz style declaration can name a color. Clicking a
- * swatch opens the platform picker and writes the choice back in place,
- * preserving the original quoting and any alpha the value carried.
+ * Inline color swatches for every way a fiz style declaration can name a
+ * color: bare (`#ff0000`), quoted hex (`"#ff0000"`) and quoted name
+ * (`"lightblue"`). Clicking a swatch opens the platform picker and writes the
+ * choice back in place, preserving the original quoting and any alpha the
+ * value carried.
  */
-export const colorPicker: Extension = [
-  colorLiteralPicker,
-  quotedColorView,
-  darkSwatchOutline,
-];
+export const colorPicker: Extension = [styleColorView, swatchTheme];

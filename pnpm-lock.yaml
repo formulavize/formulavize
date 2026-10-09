@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@babel/runtime':
-        specifier: ^8.0.5
-        version: 8.0.5
       '@codemirror/autocomplete':
         specifier: ^6.20.3
         version: 6.20.3
@@ -50,9 +47,6 @@ importers:
       '@tsparticles/confetti':
         specifier: ^4.3.2
         version: 4.3.2
-      '@uiw/codemirror-extensions-color':
-        specifier: ^4.25.12
-        version: 4.25.12(@codemirror/language@6.12.4)(@codemirror/state@6.7.1)(@codemirror/view@6.43.8)
       colors-named:
         specifier: ^1.0.5
         version: 1.0.5
@@ -262,9 +256,6 @@ packages:
     resolution: {integrity: sha512-srpptsAkEbbNIC/q8nT7o+m6CQe8CJUTV/t7MYc9NnWlgYVtHOb7JH6SorxMhN0kuRJjVqXbKClG6xSbPtzz+g==}
     engines: {node: ^22.18.0 || >=24.11.0}
     hasBin: true
-
-  '@babel/runtime@8.0.5':
-    resolution: {integrity: sha512-7NK+Lz3spQ52XsUGTxIEVU4jYN2/dIaX8sTxRFAUtYmttYZnVh3aehiihv+/Gb7+duMNHl2OrFcBQRyOHScxpg==}
 
   '@babel/types@7.29.8':
     resolution: {integrity: sha512-Vj1jF3cPfxg7OAfoI7QnVKLoILlm2JF9pnVHrX8qx7AHMiYWT+NDAA7jChlNgRS4WTLc/fD1lXLmPixluj+3Gg==}
@@ -1169,13 +1160,6 @@ packages:
     resolution: {integrity: sha512-fkv8dHRDqfGtTHuJeebdrQ7cX6Ad4WAS00rgHh9UGvMycF1mjBfsxry1XsLIFhWZ6Judlh6UdzK+TYlbpCXgnA==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@uiw/codemirror-extensions-color@4.25.12':
-    resolution: {integrity: sha512-9aKOCMxerz1k9rCs8IUFauZ/3p4jj8amIe0K/iHeUJyVw6bJLPCK2UZ88UNJUSylrf78DEnGwZsS3Gkxj+Amgg==}
-    peerDependencies:
-      '@codemirror/language': '>=6.0.0'
-      '@codemirror/state': '>=6.0.0'
-      '@codemirror/view': '>=6.0.0'
-
   '@vitejs/plugin-vue@6.0.8':
     resolution: {integrity: sha512-0ZjgOg7oO6farnNGup7yvoM/YXZV84OZxHAwtflItNa/6zzQyVb5LNxyea3FEKEX2XlagIKzrlH7wwxkKgtiew==}
     engines: {node: ^20.19.0 || >=22.12.0}
@@ -1948,10 +1932,6 @@ packages:
 
   hookable@5.5.3:
     resolution: {integrity: sha512-Yc+BQe8SvoXH1643Qez1zqLRmbA5rCL+sSmk6TVos0LWVfNIB7PGncdlId77WzLGSIB5KaWgTaNTs2lNVEI6VQ==}
-
-  hsl-matcher@1.2.4:
-    resolution: {integrity: sha512-tS7XnJS33Egirm+6cI+Z/kH/aVZt94uxGlJxOZlGql2/yqbAzPg3zHHnTnVN4cVpoJnEYEGq+LE3iXbuUIe8BA==}
-    engines: {node: '>=16.0.0'}
 
   html-encoding-sniffer@6.0.0:
     resolution: {integrity: sha512-CV9TW3Y3f8/wT0BRFc1/KAVQ3TUHiXmaAb6VW9vtiMFf7SLoMd1PdAc4W3KFOFETBJUb90KatHqlsZMWV+R9Gg==}
@@ -3075,8 +3055,6 @@ snapshots:
     dependencies:
       '@babel/types': 8.0.4
 
-  '@babel/runtime@8.0.5': {}
-
   '@babel/types@7.29.8':
     dependencies:
       '@babel/helper-string-parser': 7.29.7
@@ -3888,15 +3866,6 @@ snapshots:
     dependencies:
       '@typescript-eslint/types': 8.67.0
       eslint-visitor-keys: 5.0.1
-
-  '@uiw/codemirror-extensions-color@4.25.12(@codemirror/language@6.12.4)(@codemirror/state@6.7.1)(@codemirror/view@6.43.8)':
-    dependencies:
-      '@codemirror/language': 6.12.4
-      '@codemirror/state': 6.7.1
-      '@codemirror/view': 6.43.8
-      colors-named: 1.0.5
-      colors-named-hex: 1.0.4
-      hsl-matcher: 1.2.4
 
   '@vitejs/plugin-vue@6.0.8(vite@8.2.1(@types/node@26.2.0)(esbuild@0.28.2)(jiti@2.6.1)(tsx@4.23.12)(yaml@2.9.0))(vue@3.5.41(typescript@6.0.3))':
     dependencies:
@@ -4738,8 +4707,6 @@ snapshots:
       parse-passwd: 1.0.0
 
   hookable@5.5.3: {}
-
-  hsl-matcher@1.2.4: {}
 
   html-encoding-sniffer@6.0.0:
     dependencies:

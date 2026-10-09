@@ -2,24 +2,24 @@ import { describe, test, expect } from "vitest";
 import { EditorState } from "@codemirror/state";
 import { fizLanguage } from "@formulavize/lang-fiz";
 import {
-  QuotedColor,
-  findQuotedColors,
-  rewriteQuotedColor,
+  StyleColor,
+  findStyleColors,
+  rewriteStyleColor,
 } from "src/editor/colorPicker";
 
-function colorsIn(source: string): QuotedColor[] {
+function colorsIn(source: string): StyleColor[] {
   const state = EditorState.create({
     doc: source,
     extensions: [fizLanguage],
   });
-  return findQuotedColors(state, 0, state.doc.length);
+  return findStyleColors(state, 0, state.doc.length);
 }
 
 function valuesIn(source: string): string[] {
   return colorsIn(source).map((found) => source.slice(found.from, found.to));
 }
 
-describe("findQuotedColors", () => {
+describe("findStyleColors", () => {
   test("finds a quoted hex value in a style tag declaration", () => {
     const source = '#warm{ background-color: "#ff0000" }\nf()\n';
     expect(colorsIn(source)).toEqual([
@@ -114,8 +114,33 @@ describe("findQuotedColors", () => {
     expect(valuesIn('#t{ "red" }\nf()\n')).toEqual([]);
   });
 
-  test("leaves a bare hex literal to the upstream ColorLiteral plugin", () => {
-    expect(valuesIn("#t{ background-color: #ff0000 }\nf()\n")).toEqual([]);
+  test("finds a bare hex literal", () => {
+    const found = colorsIn("#t{ background-color: #ff0000 }\nf()\n");
+    expect(found).toHaveLength(1);
+    expect(found[0].hex).toBe("#ff0000");
+    expect(found[0].quote).toBe("");
+  });
+
+  test("keeps the alpha digits of a bare hex literal", () => {
+    const found = colorsIn("#t{ background-color: #ff00aa80 }\nf()\n");
+    expect(found).toHaveLength(1);
+    expect(found[0].hex).toBe("#ff00aa");
+    expect(found[0].alpha).toBe("80");
+  });
+
+  test("ignores a bare hex literal in a non-color property", () => {
+    expect(valuesIn("#t{ label: #ff0000 }\nf()\n")).toEqual([]);
+  });
+
+  test("finds bare and quoted values in one declaration, in order", () => {
+    expect(valuesIn('#t{ border-color: #ff0000, "blue" }\nf()\n')).toEqual([
+      "#ff0000",
+      '"blue"',
+    ]);
+  });
+
+  test("ignores a numeric value in a color property", () => {
+    expect(valuesIn("#t{ border-color: 4 }\nf()\n")).toEqual([]);
   });
 
   test("only reports colors inside the requested range", () => {
@@ -127,8 +152,10 @@ describe("findQuotedColors", () => {
       extensions: [fizLanguage],
     });
     const secondLine = state.doc.line(2);
-    const found = findQuotedColors(state, secondLine.from, secondLine.to);
-    expect(found.map((c) => source.slice(c.from, c.to))).toEqual(['"blue"']);
+    const found = findStyleColors(state, secondLine.from, secondLine.to);
+    expect(found.map((color) => source.slice(color.from, color.to))).toEqual([
+      '"blue"',
+    ]);
   });
 
   test("finds nothing in a recipe without styles", () => {
@@ -136,8 +163,8 @@ describe("findQuotedColors", () => {
   });
 });
 
-describe("rewriteQuotedColor", () => {
-  const base: QuotedColor = {
+describe("rewriteStyleColor", () => {
+  const base: StyleColor = {
     from: 0,
     to: 0,
     hex: "#ff0000",
@@ -146,18 +173,24 @@ describe("rewriteQuotedColor", () => {
   };
 
   test("writes the picked color back in the original quote style", () => {
-    expect(rewriteQuotedColor({ ...base, quote: "'" }, "#00FF00")).toBe(
+    expect(rewriteStyleColor({ ...base, quote: "'" }, "#00FF00")).toBe(
       "'#00ff00'",
     );
   });
 
   test("carries the original alpha through unchanged", () => {
-    expect(rewriteQuotedColor({ ...base, alpha: "80" }, "#00ff00")).toBe(
+    expect(rewriteStyleColor({ ...base, alpha: "80" }, "#00ff00")).toBe(
       '"#00ff0080"',
     );
   });
 
   test("replaces a named color with the picked hex", () => {
-    expect(rewriteQuotedColor(base, "#123456")).toBe('"#123456"');
+    expect(rewriteStyleColor(base, "#123456")).toBe('"#123456"');
+  });
+
+  test("writes a bare value back unquoted", () => {
+    expect(rewriteStyleColor({ ...base, quote: "" }, "#00FF00")).toBe(
+      "#00ff00",
+    );
   });
 });
