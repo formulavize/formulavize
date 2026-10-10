@@ -176,10 +176,6 @@ export class ImportCacher {
   // depend on who asked for it. A compilation does, so the two are kept apart.
   private readonly sourceCache = new Map<string, Promise<string>>();
   private readonly compilationCache = new Map<string, Promise<Compilation>>();
-  // Locations whose in-flight compilation was truncated by the cycle check.
-  // Those results are only valid for the import chain that produced them, so
-  // they are dropped rather than served to a caller that has no cycle.
-  private readonly cycleTruncated = new Set<string>();
   private readonly compileSourceFn: CompileFromSourceFn;
   private readonly fetchSourceFn: FetchSourceFn;
 
@@ -238,9 +234,12 @@ export class ImportCacher {
     // Prevent circular imports
     if (seenImports.has(packageLocation)) {
       // Everything on the current chain is compiling without this package's
-      // contents, so none of those compilations may be reused elsewhere.
+      // contents, so none of those compilations may be reused elsewhere. Their
+      // promises are still in flight; dropping the entries now leaves each
+      // awaiter with the result it asked for and leaves nothing behind to
+      // hand a caller that has no cycle.
       seenImports.forEach((seenImport) => {
-        this.cycleTruncated.add(seenImport);
+        this.compilationCache.delete(seenImport);
       });
       return Promise.reject(
         new ImportError(
@@ -262,19 +261,13 @@ export class ImportCacher {
       newSeenImports,
     );
     this.compilationCache.set(packageLocation, compilationPromise);
-    const evictCompilation = () =>
+    compilationPromise.catch(() =>
       evictIfCurrent(
         this.compilationCache,
         packageLocation,
         compilationPromise,
-      );
-    compilationPromise.then(() => {
-      // The taint is consumed here: if the cycle is still there on the next
-      // compile it is recorded again, and if the recipe was fixed the result
-      // becomes cacheable once more.
-      const wasTruncated = this.cycleTruncated.delete(packageLocation);
-      if (wasTruncated) evictCompilation();
-    }, evictCompilation);
+      ),
+    );
     return compilationPromise;
   }
 
@@ -290,7 +283,6 @@ export class ImportCacher {
   clearCache(): void {
     this.sourceCache.clear();
     this.compilationCache.clear();
-    this.cycleTruncated.clear();
   }
 
   // Returns map of package locations to their imports for debugging.
