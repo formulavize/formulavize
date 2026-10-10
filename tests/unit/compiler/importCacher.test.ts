@@ -186,6 +186,35 @@ describe("import cacher", () => {
     );
   });
 
+  test("should throw an error if response is HTML in any casing", async () => {
+    // header values are not case-normalized, and an uppercase media type that
+    // escaped this check would still pass the 'text/' allow-list below it
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeMockHeaderWithContentType("TEXT/HTML; charset=UTF-8"),
+      text: () => Promise.resolve("<html></html>"),
+    });
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    await expectImportError(
+      importCacher.getPackageCompilation(packageLocation),
+      ErrorCode.ImportHtmlResponse,
+    );
+  });
+
+  test("should accept an allowed content type in any casing", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeMockHeaderWithContentType("Text/Plain; charset=UTF-8"),
+      text: () => Promise.resolve("package source"),
+    });
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    const compilation =
+      await importCacher.getPackageCompilation(packageLocation);
+    expect(compilation.DAG).toBeInstanceOf(Dag);
+  });
+
   test("should not resolve a location naming a prototype member", async () => {
     // a plain-object cache answers 'constructor' or '__proto__' with an
     // inherited member, which is not a compilation at all

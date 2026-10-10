@@ -55,6 +55,8 @@ function isAllowedContentType(contentType: string): boolean {
   // Allow-list rather than deny-list, but a generous one: fiz files are served
   // as text/plain by GitHub raw, as application/octet-stream by some object
   // stores, and with no type at all by plenty of static servers.
+  // Normalizes the header itself rather than trusting the caller to have done
+  // it: the parameters ('; charset=utf-8') are not part of the media type.
   const mediaType = contentType.split(";")[0].trim().toLowerCase();
   if (!mediaType) return true;
   if (mediaType.startsWith("text/")) return true;
@@ -133,7 +135,15 @@ export async function fetchSourceOverHttp(
     );
   }
 
-  const contentType = response.headers.get("content-type") ?? "";
+  // Lowercased at the one place the header is read, so the html check and the
+  // allow-list below cannot disagree about it: header values are not
+  // case-normalized, and a 'TEXT/HTML' that slipped past the html check would
+  // go on to satisfy the allow-list's 'text/' prefix and be parsed as fiz.
+  const contentType = (
+    response.headers.get("content-type") ?? ""
+  ).toLowerCase();
+  // Deliberately a substring test: a server that lists html among several
+  // types is still handing back a web page rather than a fiz file.
   if (contentType.includes("text/html")) {
     throw new ImportError(
       `Expected a fiz file but received HTML from '${packageLocation}'`,
