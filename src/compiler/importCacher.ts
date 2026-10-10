@@ -298,23 +298,30 @@ export class ImportCacher {
     this.cycleTruncated.clear();
   }
 
-  async getDependencyTree(
+  // Returns map of package locations to their imports for debugging.
+  getDependencyTree(
     startingPackage: string,
-    seenImports: Set<string> = new Set(),
-    importsByPackage: Map<string, Set<string>> = new Map(),
   ): Promise<Map<string, Set<string>>> {
-    // Create a map of package locations to their imports for debugging.
+    return this.collectDependencies(startingPackage, new Set(), new Map());
+  }
+
+  private async collectDependencies(
+    startingPackage: string,
+    seenImports: Set<string>,
+    importsByPackage: Map<string, Set<string>>,
+  ): Promise<Map<string, Set<string>>> {
     // One map is threaded through the whole walk so a package shared by
-    // several importers is visited once instead of once per path to it.
-    if (seenImports.has(startingPackage)) return importsByPackage;
+    // several importers is visited once instead of once per path to it. A
+    // package is recorded before the walk descends into its imports, so this
+    // also covers the current chain: re-entering it would otherwise trip
+    // getPackageCompilation's cycle check, which taints and evicts cached
+    // compilations the walk only meant to read.
     if (importsByPackage.has(startingPackage)) return importsByPackage;
 
     const compilation = await this.getPackageCompilation(
       startingPackage,
       seenImports,
-    ).catch(() => {
-      return null;
-    });
+    ).catch(() => null);
     if (!compilation) return importsByPackage;
 
     const imports = getImportsFromRecipe(compilation.AST);
@@ -322,7 +329,7 @@ export class ImportCacher {
 
     const newSeenImports = new Set([...seenImports, startingPackage]);
     for (const imp of imports) {
-      await this.getDependencyTree(imp, newSeenImports, importsByPackage);
+      await this.collectDependencies(imp, newSeenImports, importsByPackage);
     }
     return importsByPackage;
   }

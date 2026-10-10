@@ -633,6 +633,36 @@ describe("dependency analysis utilities", () => {
       ]),
     );
   });
+  test("a package importing itself", async () => {
+    // the shortest cycle there is: the walk re-enters the package it is
+    // already recording
+    global.fetch = vi
+      .fn()
+      .mockImplementation(makeMockFetchImpl(new Map([["a.fiz", `@ "a.fiz"`]])));
+    const compiler = new Compiler();
+    const importTree = await compiler.ImportCacher.getDependencyTree("a.fiz");
+    expect(importTree).toEqual(new Map([["a.fiz", new Set(["a.fiz"])]]));
+  });
+  test("a cycle longer than one hop", async () => {
+    global.fetch = vi.fn().mockImplementation(
+      makeMockFetchImpl(
+        new Map([
+          ["a.fiz", `@ "b.fiz"`],
+          ["b.fiz", `@ "c.fiz"`],
+          ["c.fiz", `@ "a.fiz"`],
+        ]),
+      ),
+    );
+    const compiler = new Compiler();
+    const importTree = await compiler.ImportCacher.getDependencyTree("a.fiz");
+    expect(importTree).toEqual(
+      new Map([
+        ["a.fiz", new Set(["b.fiz"])],
+        ["b.fiz", new Set(["c.fiz"])],
+        ["c.fiz", new Set(["a.fiz"])],
+      ]),
+    );
+  });
   test("flattened diamond dependencies", async () => {
     global.fetch = vi.fn().mockImplementation(
       makeMockFetchImpl(
