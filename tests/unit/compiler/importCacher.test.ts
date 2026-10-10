@@ -69,9 +69,10 @@ describe("import cacher", () => {
     const importCacher = new ImportCacher(mockCompileSourceFn);
     const { DAG } = await importCacher.getPackageCompilation(packageLocation);
 
+    // the signal is what bounds a hung server, so assert it is really attached
     expect(global.fetch).toHaveBeenCalledWith(
       packageLocation,
-      expect.anything(),
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
     expect(mockCompileSourceFn).toHaveBeenCalledWith(
       "package source",

@@ -54,13 +54,6 @@ function hasFizExtension(packageLocation: string): boolean {
   }
 }
 
-function makeTimeoutSignal(): AbortSignal | undefined {
-  // guarded so an environment without AbortSignal.timeout still fetches
-  return typeof AbortSignal?.timeout === "function"
-    ? AbortSignal.timeout(IMPORT_FETCH_TIMEOUT_MS)
-    : undefined;
-}
-
 function isAllowedContentType(contentType: string): boolean {
   // Allow-list rather than deny-list, but a generous one: fiz files are served
   // as text/plain by GitHub raw, as application/octet-stream by some object
@@ -122,7 +115,9 @@ export async function fetchSourceOverHttp(
 ): Promise<string> {
   let response: Response;
   try {
-    response = await fetch(packageLocation, { signal: makeTimeoutSignal() });
+    response = await fetch(packageLocation, {
+      signal: AbortSignal.timeout(IMPORT_FETCH_TIMEOUT_MS),
+    });
   } catch (error) {
     const reason =
       error instanceof Error && error.name === "TimeoutError"
