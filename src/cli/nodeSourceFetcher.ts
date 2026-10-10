@@ -5,7 +5,7 @@ import {
   FetchSourceFn,
   ImportError,
   fetchSourceOverHttp,
-} from "../compiler/importCacher";
+} from "../compiler/importFetcher";
 import { ErrorCode, describeError } from "../compiler/compilationErrors";
 
 // Node's fetch requires an absolute URL, so a recipe's '@ "lib.fiz"' cannot be

@@ -5,7 +5,8 @@ import { RecipeTreeNode } from "./ast";
 import { makeRecipeTree } from "./astFactory";
 import { makeDag } from "./dagFactory";
 import { Compilation } from "./compilation";
-import { ImportCacher, FetchSourceFn } from "./importCacher";
+import { ImportCacher } from "./importCacher";
+import { FetchSourceFn } from "./importFetcher";
 import { CompilationError as Error } from "./compilationErrors";
 
 interface SourceGen<I> {

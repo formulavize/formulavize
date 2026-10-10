@@ -20,7 +20,8 @@ import {
 } from "./ast";
 import { Dag, NodeId, StyleProperties, DagId, DagStyle } from "./dag";
 import { GLOBAL_STYLE_KEYWORD_MAP } from "./constants";
-import { ImportCacher, ImportError, ImportResolver } from "./importCacher";
+import { ImportCacher, ImportResolver } from "./importCacher";
+import { ImportError } from "./importFetcher";
 import {
   CompilationError as Error,
   DEFAULT_POSITION,

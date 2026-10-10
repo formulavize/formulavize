@@ -1,12 +1,11 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { Dag } from "src/compiler/dag";
+import { ImportCacher, CompileFromSourceFn } from "src/compiler/importCacher";
 import {
-  ImportCacher,
   ImportError,
-  CompileFromSourceFn,
   IMPORT_FETCH_TIMEOUT_MS,
   MAX_IMPORT_BYTES,
-} from "src/compiler/importCacher";
+} from "src/compiler/importFetcher";
 import { Compiler } from "src/compiler/driver";
 import { FIZ_FILE_EXTENSION } from "src/compiler/constants";
 import { ErrorCode } from "src/compiler/compilationErrors";
