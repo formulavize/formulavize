@@ -1,13 +1,44 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { Dag } from "src/compiler/dag";
-import { ImportCacher, CompileFromSourceFn } from "src/compiler/importCacher";
+import {
+  ImportCacher,
+  ImportError,
+  CompileFromSourceFn,
+  IMPORT_FETCH_TIMEOUT_MS,
+  MAX_IMPORT_BYTES,
+} from "src/compiler/importCacher";
 import { Compiler } from "src/compiler/driver";
 import { FIZ_FILE_EXTENSION } from "src/compiler/constants";
+import { ErrorCode } from "src/compiler/compilationErrors";
+
+function makeMockHeaders(entries: Record<string, string>) {
+  return {
+    get: (key: string) => entries[key.toLowerCase()] ?? null,
+  };
+}
 
 function makeMockHeaderWithContentType(contentType: string) {
-  return {
-    get: (key: string) => (key === "content-type" ? contentType : null),
-  };
+  return makeMockHeaders({ "content-type": contentType });
+}
+
+async function captureRejection(promise: Promise<unknown>): Promise<unknown> {
+  return promise.then(
+    () => {
+      throw new Error("expected the promise to reject");
+    },
+    (error) => error,
+  );
+}
+
+async function expectImportError(
+  promise: Promise<unknown>,
+  code: ErrorCode,
+): Promise<ImportError> {
+  const error = await captureRejection(promise);
+  expect(error).toBeInstanceOf(ImportError);
+  const importError = error as ImportError;
+  expect(importError.code).toEqual(code);
+  return importError;
 }
 
 function makeDefaultMockHeader() {
@@ -15,10 +46,10 @@ function makeDefaultMockHeader() {
 }
 
 describe("import cacher", () => {
-  const mockDag = {};
+  const mockDag = new Dag("mock-package");
   const mockCompileSourceFn: CompileFromSourceFn = vi
     .fn()
-    .mockReturnValue({ DAG: mockDag });
+    .mockReturnValue({ DAG: mockDag, Errors: [] });
 
   const packageLocation = `test-package${FIZ_FILE_EXTENSION}`;
   const nonFizPackageLocation = "test-package.txt";
@@ -38,7 +69,10 @@ describe("import cacher", () => {
     const importCacher = new ImportCacher(mockCompileSourceFn);
     const result = await importCacher.getPackageDag(packageLocation);
 
-    expect(global.fetch).toHaveBeenCalledWith(packageLocation);
+    expect(global.fetch).toHaveBeenCalledWith(
+      packageLocation,
+      expect.anything(),
+    );
     expect(mockCompileSourceFn).toHaveBeenCalledWith(
       "package source",
       new Set([packageLocation]),
@@ -146,6 +180,181 @@ describe("import cacher", () => {
       `Expected a fiz file but received HTML from '${packageLocation}'`,
     );
   });
+
+  test("should not resolve a location naming a prototype member", async () => {
+    // a plain-object cache answers 'constructor' or '__proto__' with an
+    // inherited member, which is not a compilation at all
+    global.fetch = vi.fn();
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    for (const location of ["constructor", "__proto__", "toString"]) {
+      await expectImportError(
+        importCacher.getPackageDag(location),
+        ErrorCode.ImportMissingExtension,
+      );
+      await expect(
+        importCacher.getCachedCompilation(location),
+      ).resolves.toBeUndefined();
+    }
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test("should hand each caller its own copy of the dag", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeDefaultMockHeader(),
+      text: () => Promise.resolve("package source"),
+    });
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    const firstDag = await importCacher.getPackageDag(packageLocation);
+    const secondDag = await importCacher.getPackageDag(packageLocation);
+
+    // callers mutate what they receive, so sharing one instance would let the
+    // second import site steal the subgraph from the first
+    expect(firstDag).not.toBe(secondDag);
+    expect(firstDag).toEqual(secondDag);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  test("should retry after a failed fetch instead of caching it", async () => {
+    global.fetch = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("offline"))
+      .mockResolvedValueOnce({
+        ok: true,
+        headers: makeDefaultMockHeader(),
+        text: () => Promise.resolve("package source"),
+      });
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    await expect(importCacher.getPackageDag(packageLocation)).rejects.toThrow(
+      "offline",
+    );
+    await expect(
+      importCacher.getPackageDag(packageLocation),
+    ).resolves.toBeInstanceOf(Dag);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  test("should report a circular import as a coded error", async () => {
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+    const error = await expectImportError(
+      importCacher.getPackageDag(packageLocation, new Set([packageLocation])),
+      ErrorCode.ImportCircular,
+    );
+    expect(error.message).toEqual(
+      `Circular import detected: ${packageLocation}`,
+    );
+  });
+
+  test("should code a missing extension and an HTML response", async () => {
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+    await expectImportError(
+      importCacher.getPackageDag(nonFizPackageLocation),
+      ErrorCode.ImportMissingExtension,
+    );
+
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeMockHeaderWithContentType("text/html; charset=utf-8"),
+      text: () => Promise.resolve("<html></html>"),
+    });
+    await expectImportError(
+      importCacher.getPackageDag(packageLocation),
+      ErrorCode.ImportHtmlResponse,
+    );
+  });
+
+  test("should reject a response that is not text", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeMockHeaderWithContentType("application/json"),
+      text: () => Promise.resolve("{}"),
+    });
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    const error = await expectImportError(
+      importCacher.getPackageDag(packageLocation),
+      ErrorCode.ImportInvalidContentType,
+    );
+    expect(error.message).toContain("application/json");
+  });
+
+  test("should accept a fiz location carrying a query string", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeDefaultMockHeader(),
+      text: () => Promise.resolve("package source"),
+    });
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+    const versionedLocation = `https://example.com/pkg${FIZ_FILE_EXTENSION}?v=2`;
+
+    await expect(
+      importCacher.getPackageDag(versionedLocation),
+    ).resolves.toBeInstanceOf(Dag);
+  });
+
+  test("should report a fetch timeout as such", async () => {
+    const timeoutError = new Error("This operation was aborted");
+    timeoutError.name = "TimeoutError";
+    global.fetch = vi.fn().mockRejectedValueOnce(timeoutError);
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    const error = await expectImportError(
+      importCacher.getPackageDag(packageLocation),
+      ErrorCode.ImportFetchFailed,
+    );
+    expect(error.message).toContain(
+      `timed out after ${IMPORT_FETCH_TIMEOUT_MS}ms`,
+    );
+  });
+
+  test("should reject a response larger than the import limit", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeMockHeaders({
+        "content-type": "text/plain",
+        "content-length": String(MAX_IMPORT_BYTES + 1),
+      }),
+      text: () => Promise.resolve("package source"),
+    });
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    const error = await expectImportError(
+      importCacher.getPackageDag(packageLocation),
+      ErrorCode.ImportFetchFailed,
+    );
+    expect(error.message).toContain("import limit");
+  });
+
+  test("should report the status when a fetch fails", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: false,
+      status: 404,
+      statusText: "Not Found",
+    });
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    await expect(importCacher.getPackageDag(packageLocation)).rejects.toThrow(
+      `Failed to fetch package from '${packageLocation}': 404 Not Found`,
+    );
+  });
+
+  test("should never reject a cache peek", async () => {
+    global.fetch = vi.fn().mockRejectedValueOnce(new Error("offline"));
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    await expect(
+      importCacher.getCachedCompilation(packageLocation),
+    ).resolves.toBeUndefined();
+
+    const pending = importCacher.getPackageDag(packageLocation);
+    await expect(pending).rejects.toThrow("offline");
+    await expect(
+      importCacher.getCachedCompilation(packageLocation),
+    ).resolves.toBeUndefined();
+  });
 });
 
 function makeMockResponse(recipe: string, valid: boolean = true) {
@@ -189,8 +398,8 @@ describe("transitive imports", () => {
     expect(dagNode.name).toEqual("f");
 
     expect(dag.UsedImports).toEqual(new Set(["a.fiz", "b.fiz"]));
-    expect(global.fetch).toHaveBeenCalledWith("a.fiz");
-    expect(global.fetch).toHaveBeenCalledWith("b.fiz");
+    expect(global.fetch).toHaveBeenCalledWith("a.fiz", expect.anything());
+    expect(global.fetch).toHaveBeenCalledWith("b.fiz", expect.anything());
   });
 
   test("self imports should not cause infinite loop", async () => {
@@ -206,7 +415,7 @@ describe("transitive imports", () => {
     expect(dag.getNodeList()).toHaveLength(0);
 
     expect(dag.UsedImports).toEqual(new Set(["a.fiz"]));
-    expect(global.fetch).toHaveBeenCalledWith("a.fiz");
+    expect(global.fetch).toHaveBeenCalledWith("a.fiz", expect.anything());
   });
 
   test("circular imports should not cause infinite loop", async () => {
@@ -225,8 +434,8 @@ describe("transitive imports", () => {
     expect(dag.getNodeList()).toHaveLength(0);
 
     expect(dag.UsedImports).toEqual(new Set(["a.fiz", "b.fiz"]));
-    expect(global.fetch).toHaveBeenCalledWith("a.fiz");
-    expect(global.fetch).toHaveBeenCalledWith("b.fiz");
+    expect(global.fetch).toHaveBeenCalledWith("a.fiz", expect.anything());
+    expect(global.fetch).toHaveBeenCalledWith("b.fiz", expect.anything());
   });
 
   test("diamond dependency is not considered a circular import", async () => {
@@ -246,10 +455,10 @@ describe("transitive imports", () => {
     expect(dag.getChildDags()).toHaveLength(2);
 
     expect(dag.UsedImports).toEqual(new Set(["a.fiz", "b.fiz", "c.fiz"]));
-    expect(global.fetch).toHaveBeenCalledWith("a.fiz");
-    expect(global.fetch).toHaveBeenCalledWith("b.fiz");
-    expect(global.fetch).toHaveBeenCalledWith("c.fiz");
-    expect(global.fetch).toHaveBeenCalledWith("d.fiz");
+    expect(global.fetch).toHaveBeenCalledWith("a.fiz", expect.anything());
+    expect(global.fetch).toHaveBeenCalledWith("b.fiz", expect.anything());
+    expect(global.fetch).toHaveBeenCalledWith("c.fiz", expect.anything());
+    expect(global.fetch).toHaveBeenCalledWith("d.fiz", expect.anything());
   });
 });
 
@@ -310,5 +519,138 @@ describe("dependency analysis utilities", () => {
     const importer = compiler.ImportCacher;
     const importSet = await importer.getFlatDependencyList("a.fiz");
     expect(importSet).toEqual(new Set(["b.fiz", "c.fiz", "d.fiz"]));
+  });
+});
+
+function nodeNames(dag: Dag): Set<string> {
+  return new Set(dag.getNodeList().map((node) => node.name));
+}
+
+describe("import reuse across call sites", () => {
+  test("one package merged into two namespaces keeps both subgraphs", async () => {
+    global.fetch = vi
+      .fn()
+      .mockImplementation(makeMockFetchImpl(new Map([["p.fiz", "sub[f()]"]])));
+
+    const dag = await compileDagOnce(`ns1[@ "p.fiz"]; ns2[@ "p.fiz"]`);
+
+    const namespaces = dag.getChildDags();
+    expect(namespaces).toHaveLength(2);
+    for (const namespace of namespaces) {
+      // a shared dag instance would be re-parented out of the first namespace
+      const importedChildren = namespace.getChildDags();
+      expect(importedChildren).toHaveLength(1);
+      expect(nodeNames(importedChildren[0])).toEqual(new Set(["f"]));
+    }
+  });
+
+  test("one package named in two namespaces keeps both subgraphs", async () => {
+    global.fetch = vi
+      .fn()
+      .mockImplementation(makeMockFetchImpl(new Map([["p.fiz", "f()"]])));
+
+    const dag = await compileDagOnce(`ns1[x @ "p.fiz"]; ns2[x @ "p.fiz"]`);
+
+    const namespaces = dag.getChildDags();
+    expect(namespaces).toHaveLength(2);
+    for (const namespace of namespaces) {
+      const importedChildren = namespace.getChildDags();
+      expect(importedChildren).toHaveLength(1);
+      expect(nodeNames(importedChildren[0])).toEqual(new Set(["f"]));
+    }
+  });
+
+  test("a cycle-truncated package is not reused where there is no cycle", async () => {
+    global.fetch = vi.fn().mockImplementation(
+      makeMockFetchImpl(
+        new Map([
+          ["a.fiz", `@ "b.fiz"; fa()`],
+          ["b.fiz", `@ "a.fiz"; fb()`],
+        ]),
+      ),
+    );
+    const compiler = new Compiler();
+
+    // compiling 'a' leaves 'b' compiled without 'a', since that import closed
+    // the cycle
+    const viaA = await compiler.compileFromSource(`@ "a.fiz"`);
+    expect(nodeNames(viaA.DAG)).toEqual(new Set(["fa", "fb"]));
+
+    // importing 'b' directly is not a cycle, so it must see 'a' as well
+    const viaB = await compiler.compileFromSource(`@ "b.fiz"`);
+    expect(nodeNames(viaB.DAG)).toEqual(new Set(["fa", "fb"]));
+
+    // recompiled, but the fetched source is still cached
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("imported error reporting", () => {
+  test("a circular import reports its message", async () => {
+    global.fetch = vi
+      .fn()
+      .mockImplementation(makeMockFetchImpl(new Map([["a.fiz", `@ "a.fiz"`]])));
+
+    const compilation = await new Compiler().compileFromSource(`@ "a.fiz"`);
+
+    expect(compilation.Errors).toHaveLength(1);
+    const [error] = compilation.Errors;
+    expect(error.message).toContain("Circular import detected: a.fiz");
+    expect(error.message).not.toContain("undefined");
+    expect(error.source).toEqual("Import");
+  });
+
+  test("errors inside an imported package are surfaced on the import", async () => {
+    global.fetch = vi
+      .fn()
+      .mockImplementation(makeMockFetchImpl(new Map([["p.fiz", "f(x)"]])));
+
+    const source = `@ "p.fiz"`;
+    const compilation = await new Compiler().compileFromSource(source);
+
+    expect(compilation.Errors).toHaveLength(1);
+    const [error] = compilation.Errors;
+    expect(error.message).toContain(
+      "Imported package 'p.fiz' reported 1 issue(s)",
+    );
+    expect(error.severity).toEqual("warning");
+    expect(error.source).toEqual("Import");
+    // positioned on the import statement, not at the imported file's offsets
+    expect(error.position.to).toBeLessThanOrEqual(source.length);
+  });
+});
+
+describe("dependency walk", () => {
+  test("a shared dependency is visited once per package", async () => {
+    global.fetch = vi.fn().mockImplementation(
+      makeMockFetchImpl(
+        new Map([
+          ["a.fiz", `x @ "b.fiz"; y @ "c.fiz"`],
+          ["b.fiz", `x @ "d.fiz"; y @ "e.fiz"`],
+          ["c.fiz", `x @ "d.fiz"; y @ "e.fiz"`],
+          ["d.fiz", `@ "f.fiz"`],
+          ["e.fiz", `@ "f.fiz"`],
+          ["f.fiz", "g()"],
+        ]),
+      ),
+    );
+    const compiler = new Compiler();
+    // prime the cache so the walk itself is all that gets measured
+    await compiler.compileFromSource(`@ "a.fiz"`);
+
+    const importer = compiler.ImportCacher;
+    const lookups = vi.spyOn(importer, "getPackageCompilation");
+    const tree = await importer.getDependencyTree("a.fiz");
+
+    expect(Array.from(tree.keys()).sort()).toEqual([
+      "a.fiz",
+      "b.fiz",
+      "c.fiz",
+      "d.fiz",
+      "e.fiz",
+      "f.fiz",
+    ]);
+    // once per package, not once per path to it
+    expect(lookups).toHaveBeenCalledTimes(6);
   });
 });

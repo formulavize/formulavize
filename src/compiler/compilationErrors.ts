@@ -33,6 +33,7 @@ export enum ErrorCode {
   ImportCircular = "IMP_CIRCULAR",
   ImportMissingExtension = "IMP_MISSING_EXTENSION",
   ImportHtmlResponse = "IMP_HTML_RESPONSE",
+  ImportInvalidContentType = "IMP_INVALID_CONTENT_TYPE",
 
   // Internal errors
   UnknownArgumentType = "INT_UNKNOWN_ARG_TYPE",
