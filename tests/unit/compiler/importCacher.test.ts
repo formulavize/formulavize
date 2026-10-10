@@ -1,48 +1,18 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { Dag } from "src/compiler/dag";
 import { ImportCacher, CompileFromSourceFn } from "src/compiler/importCacher";
-import {
-  ImportError,
-  IMPORT_FETCH_TIMEOUT_MS,
-  MAX_IMPORT_BYTES,
-} from "src/compiler/importFetcher";
 import { Compiler } from "src/compiler/driver";
 import { FIZ_FILE_EXTENSION } from "src/compiler/constants";
 import { ErrorCode } from "src/compiler/compilationErrors";
+import {
+  makeDefaultMockHeader,
+  makeMockHeaderWithContentType,
+  expectImportError,
+} from "./importTestHelpers";
 
-function makeMockHeaders(entries: Record<string, string>) {
-  return {
-    get: (key: string) => entries[key.toLowerCase()] ?? null,
-  };
-}
-
-function makeMockHeaderWithContentType(contentType: string) {
-  return makeMockHeaders({ "content-type": contentType });
-}
-
-async function captureRejection(promise: Promise<unknown>): Promise<unknown> {
-  return promise.then(
-    () => {
-      throw new Error("expected the promise to reject");
-    },
-    (error) => error,
-  );
-}
-
-async function expectImportError(
-  promise: Promise<unknown>,
-  code: ErrorCode,
-): Promise<ImportError> {
-  const error = await captureRejection(promise);
-  expect(error).toBeInstanceOf(ImportError);
-  const importError = error as ImportError;
-  expect(importError.code).toEqual(code);
-  return importError;
-}
-
-function makeDefaultMockHeader() {
-  return makeMockHeaderWithContentType("text/plain");
-}
+// What the cache remembers, and which locations it refuses before a fetch is
+// ever attempted. How one response is judged to be a fiz file belongs to the
+// transport and is tested in importFetcher.test.ts.
 
 describe("import cacher", () => {
   const mockDag = new Dag("mock-package");
@@ -52,7 +22,6 @@ describe("import cacher", () => {
 
   const packageLocation = `test-package${FIZ_FILE_EXTENSION}`;
   const nonFizPackageLocation = "test-package.txt";
-  const invalidPackageLocation = "invalid.fiz";
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -68,31 +37,15 @@ describe("import cacher", () => {
     const importCacher = new ImportCacher(mockCompileSourceFn);
     const { DAG } = await importCacher.getPackageCompilation(packageLocation);
 
-    // the signal is what bounds a hung server, so assert it is really attached
     expect(global.fetch).toHaveBeenCalledWith(
       packageLocation,
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      expect.anything(),
     );
     expect(mockCompileSourceFn).toHaveBeenCalledWith(
       "package source",
       new Set([packageLocation]),
     );
     expect(DAG).toEqual(mockDag);
-  });
-
-  test("should return error for an invalid package location", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: false,
-      text: () => Promise.resolve("failure"),
-    });
-
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-    await expect(
-      importCacher.getPackageCompilation(invalidPackageLocation),
-    ).rejects.toThrow(
-      `Failed to fetch package from '${invalidPackageLocation}'`,
-    );
-    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   test("should return error for a non-fiz package location", async () => {
@@ -183,73 +136,6 @@ describe("import cacher", () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
-  test("should throw an error if fetch status unsuccessful", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: false,
-      statusText: "Not Found",
-    });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-
-    await expect(
-      importCacher.getPackageCompilation(packageLocation),
-    ).rejects.toThrow(
-      "Failed to fetch package from 'test-package.fiz': Not Found",
-    );
-  });
-
-  test("should throw an error if fetch fails", async () => {
-    global.fetch = vi.fn().mockRejectedValueOnce(new Error("Failed to fetch"));
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-
-    await expect(
-      importCacher.getPackageCompilation(packageLocation),
-    ).rejects.toThrow("Failed to fetch");
-  });
-
-  test("should throw an error if response is HTML", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeMockHeaderWithContentType("text/html; charset=utf-8"),
-      text: () => Promise.resolve("<html></html>"),
-    });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-
-    await expect(
-      importCacher.getPackageCompilation(packageLocation),
-    ).rejects.toThrow(
-      `Expected a fiz file but received HTML from '${packageLocation}'`,
-    );
-  });
-
-  test("should throw an error if response is HTML in any casing", async () => {
-    // header values are not case-normalized, and an uppercase media type that
-    // escaped this check would still pass the 'text/' allow-list below it
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeMockHeaderWithContentType("TEXT/HTML; charset=UTF-8"),
-      text: () => Promise.resolve("<html></html>"),
-    });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-
-    await expectImportError(
-      importCacher.getPackageCompilation(packageLocation),
-      ErrorCode.ImportHtmlResponse,
-    );
-  });
-
-  test("should accept an allowed content type in any casing", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeMockHeaderWithContentType("Text/Plain; charset=UTF-8"),
-      text: () => Promise.resolve("package source"),
-    });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-
-    const compilation =
-      await importCacher.getPackageCompilation(packageLocation);
-    expect(compilation.DAG).toBeInstanceOf(Dag);
-  });
-
   test("should not resolve a location naming a prototype member", async () => {
     // a plain-object cache answers 'constructor' or '__proto__' with an
     // inherited member, which is not a compilation at all
@@ -337,21 +223,6 @@ describe("import cacher", () => {
     );
   });
 
-  test("should reject a response that is not text", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeMockHeaderWithContentType("application/json"),
-      text: () => Promise.resolve("{}"),
-    });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-
-    const error = await expectImportError(
-      importCacher.getPackageCompilation(packageLocation),
-      ErrorCode.ImportInvalidContentType,
-    );
-    expect(error.message).toContain("application/json");
-  });
-
   test("should accept a fiz location carrying a query string", async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
@@ -419,54 +290,6 @@ describe("import cacher", () => {
       expect(error.message).toContain("Failed to parse URL");
     }
     expect(global.fetch).toHaveBeenCalledTimes(2);
-  });
-
-  test("should report a fetch timeout as such", async () => {
-    const timeoutError = new Error("This operation was aborted");
-    timeoutError.name = "TimeoutError";
-    global.fetch = vi.fn().mockRejectedValueOnce(timeoutError);
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-
-    const error = await expectImportError(
-      importCacher.getPackageCompilation(packageLocation),
-      ErrorCode.ImportFetchFailed,
-    );
-    expect(error.message).toContain(
-      `timed out after ${IMPORT_FETCH_TIMEOUT_MS}ms`,
-    );
-  });
-
-  test("should reject a response larger than the import limit", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeMockHeaders({
-        "content-type": "text/plain",
-        "content-length": String(MAX_IMPORT_BYTES + 1),
-      }),
-      text: () => Promise.resolve("package source"),
-    });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-
-    const error = await expectImportError(
-      importCacher.getPackageCompilation(packageLocation),
-      ErrorCode.ImportFetchFailed,
-    );
-    expect(error.message).toContain("import limit");
-  });
-
-  test("should report the status when a fetch fails", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: false,
-      status: 404,
-      statusText: "Not Found",
-    });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-
-    await expect(
-      importCacher.getPackageCompilation(packageLocation),
-    ).rejects.toThrow(
-      `Failed to fetch package from '${packageLocation}': 404 Not Found`,
-    );
   });
 
   test("should never reject a cache peek", async () => {
