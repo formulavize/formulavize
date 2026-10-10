@@ -165,25 +165,33 @@ export async function fetchSourceOverHttp(
   return readBoundedText(response, packageLocation);
 }
 
+// Drops a cached promise, but only while it is still the entry under that key.
+// A clearCache() or a later request may have replaced it since it settled, and
+// evicting the replacement would throw away a result nothing went wrong with.
+function evictIfCurrent<T>(
+  cache: Map<string, Promise<T>>,
+  key: string,
+  cachedPromise: Promise<T>,
+): void {
+  if (cache.get(key) === cachedPromise) cache.delete(key);
+}
+
 export class ImportCacher {
   // Fetched source is cacheable unconditionally: what a location holds does not
   // depend on who asked for it. A compilation does, so the two are kept apart.
-  private sourceCache: Map<string, Promise<string>>;
-  private compilationCache: Map<string, Promise<Compilation>>;
+  private readonly sourceCache = new Map<string, Promise<string>>();
+  private readonly compilationCache = new Map<string, Promise<Compilation>>();
   // Locations whose in-flight compilation was truncated by the cycle check.
   // Those results are only valid for the import chain that produced them, so
   // they are dropped rather than served to a caller that has no cycle.
-  private cycleTruncated: Set<string>;
-  private compileSourceFn: CompileFromSourceFn;
-  private fetchSourceFn: FetchSourceFn;
+  private readonly cycleTruncated = new Set<string>();
+  private readonly compileSourceFn: CompileFromSourceFn;
+  private readonly fetchSourceFn: FetchSourceFn;
 
   constructor(
     compileSourceFn: CompileFromSourceFn,
     fetchSourceFn: FetchSourceFn = fetchSourceOverHttp,
   ) {
-    this.sourceCache = new Map();
-    this.compilationCache = new Map();
-    this.cycleTruncated = new Set();
     this.compileSourceFn = compileSourceFn;
     this.fetchSourceFn = fetchSourceFn;
   }
@@ -197,11 +205,9 @@ export class ImportCacher {
     // A cached rejection would make one transient failure permanent, so the
     // entry is evicted once it is known to have failed. Attaching the handler
     // here also keeps the rejection from being reported as unhandled.
-    sourcePromise.catch(() => {
-      if (this.sourceCache.get(packageLocation) === sourcePromise) {
-        this.sourceCache.delete(packageLocation);
-      }
-    });
+    sourcePromise.catch(() =>
+      evictIfCurrent(this.sourceCache, packageLocation, sourcePromise),
+    );
     return sourcePromise;
   }
 
@@ -211,15 +217,6 @@ export class ImportCacher {
   ): Promise<Compilation> {
     const source = await this.getSource(packageLocation);
     return this.compileSourceFn(source, seenImports);
-  }
-
-  private evictCompilation(
-    packageLocation: string,
-    compilationPromise: Promise<Compilation>,
-  ): void {
-    if (this.compilationCache.get(packageLocation) === compilationPromise) {
-      this.compilationCache.delete(packageLocation);
-    }
   }
 
   // The cached compilation itself, shared by every caller. Its dag is the
@@ -270,16 +267,19 @@ export class ImportCacher {
       newSeenImports,
     );
     this.compilationCache.set(packageLocation, compilationPromise);
-    compilationPromise.then(
-      () => {
-        // The taint is consumed here: if the cycle is still there on the next
-        // compile it is recorded again, and if the recipe was fixed the result
-        // becomes cacheable once more.
-        if (!this.cycleTruncated.delete(packageLocation)) return;
-        this.evictCompilation(packageLocation, compilationPromise);
-      },
-      () => this.evictCompilation(packageLocation, compilationPromise),
-    );
+    const evictCompilation = () =>
+      evictIfCurrent(
+        this.compilationCache,
+        packageLocation,
+        compilationPromise,
+      );
+    compilationPromise.then(() => {
+      // The taint is consumed here: if the cycle is still there on the next
+      // compile it is recorded again, and if the recipe was fixed the result
+      // becomes cacheable once more.
+      const wasTruncated = this.cycleTruncated.delete(packageLocation);
+      if (wasTruncated) evictCompilation();
+    }, evictCompilation);
     return compilationPromise;
   }
 
@@ -293,9 +293,9 @@ export class ImportCacher {
   }
 
   clearCache(): void {
-    this.sourceCache = new Map();
-    this.compilationCache = new Map();
-    this.cycleTruncated = new Set();
+    this.sourceCache.clear();
+    this.compilationCache.clear();
+    this.cycleTruncated.clear();
   }
 
   async getDependencyTree(
