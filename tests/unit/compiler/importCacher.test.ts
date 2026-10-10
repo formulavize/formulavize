@@ -149,6 +149,41 @@ describe("import cacher", () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
+  test("a failed request should not evict the entry that replaced it", async () => {
+    const pendingFetches: Array<{
+      resolve: (response: unknown) => void;
+      reject: (error: unknown) => void;
+    }> = [];
+    global.fetch = vi.fn().mockImplementation(
+      () =>
+        new Promise((resolve, reject) => {
+          pendingFetches.push({ resolve, reject });
+        }),
+    );
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    // abandon a request mid-flight, then start a fresh one for the same package
+    const abandoned = importCacher.getPackageCompilation(packageLocation);
+    importCacher.clearCache();
+    const replacement = importCacher.getPackageCompilation(packageLocation);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+
+    pendingFetches[1].resolve({
+      ok: true,
+      headers: makeDefaultMockHeader(),
+      text: () => Promise.resolve("package source"),
+    });
+    await expect(replacement).resolves.toBeDefined();
+
+    pendingFetches[0].reject(new Error("offline"));
+    await expect(abandoned).rejects.toThrow("offline");
+
+    // the abandoned failure must leave the cached success alone, or the next
+    // caller pays for a refetch of a package that is sitting right there
+    await importCacher.getPackageCompilation(packageLocation);
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
   test("should throw an error if fetch status unsuccessful", async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: false,
