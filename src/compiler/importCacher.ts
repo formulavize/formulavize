@@ -5,7 +5,7 @@ import { ErrorCode, describeError } from "./compilationErrors";
 
 export type CompileFromSourceFn = (
   source: string,
-  seenImports: Set<string>,
+  seenImports: ReadonlySet<string>,
 ) => Promise<Compilation>;
 
 // How a package location is turned into recipe text. The default reaches for
@@ -204,7 +204,7 @@ export class ImportCacher {
 
   private async makePackagePromise(
     packageLocation: string,
-    seenImports: Set<string>,
+    seenImports: ReadonlySet<string>,
   ): Promise<Compilation> {
     const source = await this.getSource(packageLocation);
     return this.compileSourceFn(source, seenImports);
@@ -215,7 +215,7 @@ export class ImportCacher {
   // re-parenting) must take its own Dag.clone() first.
   getPackageCompilation(
     packageLocation: string,
-    seenImports: Set<string> = new Set(),
+    seenImports: ReadonlySet<string> = new Set(),
   ): Promise<Compilation> {
     // The suffix is usually the last thing users input
     // so this check only allows a fetch attempt with the complete location.
@@ -328,5 +328,21 @@ export class ImportCacher {
       Array.from(depSet),
     );
     return new Set(dependencyLists.flat());
+  }
+}
+
+// Pairs a cacher with the import chain a request sits on, so the two travel
+// as one value instead of as two parameters threaded side by side through
+// every statement handler. Both are private: a caller only ever needs the
+// compilation for a location, and the chain a nested import inherits is
+// derived inside the cacher.
+export class ImportResolver {
+  constructor(
+    private readonly cacher: ImportCacher,
+    private readonly seenImports: ReadonlySet<string> = new Set(),
+  ) {}
+
+  getCompilation(packageLocation: string): Promise<Compilation> {
+    return this.cacher.getPackageCompilation(packageLocation, this.seenImports);
   }
 }

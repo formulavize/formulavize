@@ -50,7 +50,7 @@ export class Compiler {
     input: I,
     sourceGen: SourceGen<I>,
     parse: Parse<I>,
-    seenImports: Set<string> = new Set(),
+    seenImports: ReadonlySet<string> = new Set(),
   ): Promise<Compilation> {
     const source = sourceGen(input);
     const { ast, errors: parseErrors } = parse(input);
@@ -82,7 +82,7 @@ export class Compiler {
 
   compileFromSource(
     sourceRecipe: string,
-    seenImports: Set<string> = new Set(),
+    seenImports: ReadonlySet<string> = new Set(),
   ): Promise<Compilation> {
     function sourceFromSource(sourceRecipe: string): string {
       return sourceRecipe;
