@@ -5,7 +5,7 @@ import { RecipeTreeNode } from "./ast";
 import { makeRecipeTree } from "./astFactory";
 import { makeDag } from "./dagFactory";
 import { Compilation } from "./compilation";
-import { ImportCacher } from "./importCacher";
+import { ImportCacher, FetchSourceFn } from "./importCacher";
 import { CompilationError as Error } from "./compilationErrors";
 
 interface SourceGen<I> {
@@ -26,12 +26,19 @@ export function parseFromSource(sourceRecipe: string): {
   return makeRecipeTree(tree, text);
 }
 
+export interface CompilerOptions {
+  // How imports are read. Defaults to fetching over HTTP; the CLI passes a
+  // filesystem-backed fetcher so relative imports resolve outside a browser.
+  fetchSource?: FetchSourceFn;
+}
+
 export class Compiler {
   private importCacher: ImportCacher;
 
-  constructor() {
-    this.importCacher = new ImportCacher((source, seenImports) =>
-      this.compileFromSource(source, seenImports),
+  constructor(options: CompilerOptions = {}) {
+    this.importCacher = new ImportCacher(
+      (source, seenImports) => this.compileFromSource(source, seenImports),
+      options.fetchSource,
     );
   }
 

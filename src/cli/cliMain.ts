@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { readFile, writeFile } from "node:fs/promises";
-import { basename, extname } from "node:path";
+import { basename, dirname, extname } from "node:path";
 import { Command, CommanderError, Option } from "commander";
 import { Compiler } from "../compiler/driver";
 import { CompilationError } from "../compiler/compilationErrors";
@@ -10,6 +10,7 @@ import {
   type HeadlessRenderOptions,
 } from "../rendererApi";
 import { headlessRendererDescriptors } from "../renderers/headlessRenderers";
+import { makeNodeSourceFetcher } from "./nodeSourceFetcher";
 
 // Every format some headless renderer can write. Derived rather than listed so
 // a renderer bringing a format of its own needs no change here.
@@ -112,7 +113,12 @@ async function main(): Promise<number> {
     return 1;
   }
 
-  const compilation = await new Compiler().compileFromSource(source);
+  // Imports resolve against the recipe's own directory, since there is no page
+  // origin to resolve a relative location against.
+  const compiler = new Compiler({
+    fetchSource: makeNodeSourceFetcher(dirname(inputPath)),
+  });
+  const compilation = await compiler.compileFromSource(source);
 
   const errors = compilation.Errors;
   if (errors.length > 0) {
