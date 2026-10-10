@@ -31,16 +31,26 @@ function describeError(error: unknown): string {
   return String(error);
 }
 
+// Never fetched, and never used to resolve anything: a relative location is
+// only parseable as a URL against some base, and inspecting its path needs one.
+const LOCATION_PATH_BASE: string = "file:///";
+
 function hasFizExtension(packageLocation: string): boolean {
   // Check the path, not the whole location: a query string or fragment is not
   // part of the file name ('pkg.fiz?v=2' is a fiz file, '/index.html#pkg.fiz'
-  // is not).
+  // is not). Relative and absolute locations go through the same parse, which
+  // also means a stray surrounding space is tolerated here exactly as fetch
+  // tolerates it.
   try {
-    return new URL(packageLocation).pathname.endsWith(FIZ_FILE_EXTENSION);
+    return new URL(packageLocation, LOCATION_PATH_BASE).pathname.endsWith(
+      FIZ_FILE_EXTENSION,
+    );
   } catch {
-    // a relative location is not a parseable URL on its own
-    const [pathOnly] = packageLocation.split(/[?#]/, 1);
-    return pathOnly.endsWith(FIZ_FILE_EXTENSION);
+    // A location too malformed to parse has no path to inspect, and cannot be
+    // fetched either. Pass it on so the fetch reports what is wrong with it,
+    // rather than claiming the extension is missing from a location that may
+    // well carry one.
+    return true;
   }
 }
 

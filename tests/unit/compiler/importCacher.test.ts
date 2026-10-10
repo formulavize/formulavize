@@ -331,6 +331,61 @@ describe("import cacher", () => {
     expect(compilation.DAG).toBeInstanceOf(Dag);
   });
 
+  test("should reject a fragment that only looks like a fiz file", async () => {
+    global.fetch = vi.fn();
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    for (const location of [
+      `https://example.com/index.html#pkg${FIZ_FILE_EXTENSION}`,
+      `index.html#pkg${FIZ_FILE_EXTENSION}`,
+      `index.html?src=pkg${FIZ_FILE_EXTENSION}`,
+    ]) {
+      await expectImportError(
+        importCacher.getPackageCompilation(location),
+        ErrorCode.ImportMissingExtension,
+      );
+    }
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  test("should tolerate whitespace around a fiz location", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeDefaultMockHeader(),
+      text: () => Promise.resolve("package source"),
+    });
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    // fetch strips this itself, so rejecting it for a missing extension would
+    // only mislead about a location that does carry one
+    const compilation = await importCacher.getPackageCompilation(
+      `${packageLocation} `,
+    );
+    expect(compilation.DAG).toBeInstanceOf(Dag);
+  });
+
+  test("should let an unparseable location fail at the fetch", async () => {
+    global.fetch = vi
+      .fn()
+      .mockRejectedValue(new TypeError("Failed to parse URL"));
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    // the extension check cannot inspect either of these, and reporting a
+    // missing extension would describe neither fault: the first carries the
+    // extension and the second is not a location at all
+    for (const location of [
+      `https://example.com:99999/pkg${FIZ_FILE_EXTENSION}`,
+      "http://",
+    ]) {
+      const error = await expectImportError(
+        importCacher.getPackageCompilation(location),
+        ErrorCode.ImportFetchFailed,
+      );
+      expect(error.message).toContain("Failed to parse URL");
+    }
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
   test("should report a fetch timeout as such", async () => {
     const timeoutError = new Error("This operation was aborted");
     timeoutError.name = "TimeoutError";
