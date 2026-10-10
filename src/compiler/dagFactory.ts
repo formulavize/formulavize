@@ -26,6 +26,7 @@ import {
   DEFAULT_POSITION,
   ErrorCode,
   ErrorSource,
+  describeError,
 } from "./compilationErrors";
 
 export enum ScopeKind {
@@ -301,11 +302,9 @@ async function getImportedDag(
   const compilation = await importer
     .getPackageCompilation(importStmt.ImportLocation, seenImports)
     .catch((err) => {
-      // 'Error' is the compilation error type in this module, so the built-in
-      // is reached through globalThis here
       const errMsg = makeError(
         importStmt,
-        err instanceof globalThis.Error ? err.message : String(err),
+        describeError(err),
         ErrorSource.Import,
         err instanceof ImportError ? err.code : ErrorCode.ImportFetchFailed,
       );

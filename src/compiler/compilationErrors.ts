@@ -48,3 +48,11 @@ export interface CompilationError {
   source: ErrorSource;
   code?: ErrorCode;
 }
+
+// The message to report for something thrown by a layer outside the compiler:
+// a fetch, a file read, a renderer. An Error carries one, anything else has to
+// be stringified.
+export function describeError(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  return String(error);
+}

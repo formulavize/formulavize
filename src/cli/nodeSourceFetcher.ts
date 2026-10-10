@@ -6,7 +6,7 @@ import {
   ImportError,
   fetchSourceOverHttp,
 } from "../compiler/importCacher";
-import { ErrorCode } from "../compiler/compilationErrors";
+import { ErrorCode, describeError } from "../compiler/compilationErrors";
 
 // Node's fetch requires an absolute URL, so a recipe's '@ "lib.fiz"' cannot be
 // fetched the way a browser resolves it against the page origin. Outside a
@@ -22,9 +22,8 @@ export function makeNodeSourceFetcher(baseDir: string): FetchSourceFn {
     try {
       return await readFile(filePath, "utf8");
     } catch (error) {
-      const reason = error instanceof Error ? error.message : String(error);
       throw new ImportError(
-        `Failed to read package from '${filePath}': ${reason}`,
+        `Failed to read package from '${filePath}': ${describeError(error)}`,
         ErrorCode.ImportFetchFailed,
       );
     }

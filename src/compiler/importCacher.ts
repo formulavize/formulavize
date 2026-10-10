@@ -1,7 +1,7 @@
 import { FIZ_FILE_EXTENSION } from "./constants";
 import { Compilation } from "./compilation";
 import { getImportsFromRecipe } from "./astUtility";
-import { ErrorCode } from "./compilationErrors";
+import { ErrorCode, describeError } from "./compilationErrors";
 
 export type CompileFromSourceFn = (
   source: string,
@@ -25,11 +25,6 @@ export class ImportError extends Error {
 
 export const IMPORT_FETCH_TIMEOUT_MS: number = 10_000;
 export const MAX_IMPORT_BYTES: number = 4 * 1024 * 1024;
-
-function describeError(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  return String(error);
-}
 
 // Never fetched, and never used to resolve anything: a relative location is
 // only parseable as a URL against some base, and inspecting its path needs one.

@@ -1289,6 +1289,25 @@ describe("error reporting", () => {
     expect(dag.getEdgeList()).toHaveLength(0);
     expect(dag.getChildDags()).toHaveLength(0);
   });
+  test("error reporting when an import rejects with a non-Error", async () => {
+    const mockImporterError = {
+      // nothing obliges a rejection to carry an Error, and a thrown string
+      // has no .message to report
+      getPackageCompilation: () => Promise.reject("not an Error at all"),
+    } as unknown as ImportCacher;
+
+    const recipe = new Recipe([new Import("bad_path")]);
+    const { dag, errors } = await makeDag(recipe, mockImporterError);
+
+    expect(errors).toHaveLength(1);
+    expectError(errors[0], {
+      message: "not an Error at all",
+      severity: "error",
+      source: "Import",
+    });
+    expect(errors[0].code).toEqual(ErrorCode.ImportFetchFailed);
+    expect(dag.getNodeList()).toHaveLength(0);
+  });
   test("error uses default position when node has no position", async () => {
     const recipe = new Recipe([
       new Call("f", new ValueList([new QualifiedVariable(["not_found_var"])])),
