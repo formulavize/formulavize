@@ -1096,7 +1096,7 @@ describe("import tests", () => {
     styleProperties: new Map(),
   });
   const mockImporter = {
-    getPackageDag: async () => importedDag,
+    getPackageCompilation: async () => ({ DAG: importedDag, Errors: [] }),
   } as unknown as ImportCacher;
 
   test("imported anonymous namespace", async () => {
@@ -1156,7 +1156,7 @@ describe("import tests", () => {
   });
 
   const mockImporterError = {
-    getPackageDag: async () => {
+    getPackageCompilation: async () => {
       throw new Error("import error");
     },
   } as unknown as ImportCacher;
@@ -1270,7 +1270,7 @@ describe("error reporting", () => {
   });
   test("error reporting when import fails", async () => {
     const mockImporterError = {
-      getPackageDag: async () => {
+      getPackageCompilation: async () => {
         throw new Error("import error");
       },
     } as unknown as ImportCacher;

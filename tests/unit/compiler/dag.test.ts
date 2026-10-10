@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import { Dag } from "src/compiler/dag";
 
 describe("accessor tests", () => {
@@ -748,5 +748,34 @@ describe("deep clone lineage", () => {
     expect(copiedGrandchild.LineagePath).toEqual(grandchild.LineagePath);
     expect(copiedGrandchild.DagLineagePath).toEqual(grandchild.DagLineagePath);
     expect(copy).toEqual(root);
+  });
+});
+describe("lineage cycle guard", () => {
+  test("a looped lineage stops the upward traversal", () => {
+    const root = new Dag("rootId");
+    const child = new Dag("childId", root, "child");
+    const grandchild = new Dag("grandchildId", child, "grandchild");
+    // a lineage loop should never occur in practice, but resolution must not
+    // recurse forever if one ever does
+    root.Parent = grandchild;
+
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    expect(grandchild.getVarNode(["missing"])).toBeUndefined();
+    expect(warn).toHaveBeenCalledWith(
+      "Cycle detected in the DAG lineage, stopping traversal",
+    );
+    warn.mockRestore();
+  });
+
+  test("resolution still reaches outer scopes", () => {
+    const root = new Dag("rootId");
+    root.setVarNode("x", "node1");
+    const child = new Dag("childId", root, "child");
+    const grandchild = new Dag("grandchildId", child, "grandchild");
+
+    expect(grandchild.getVarNode(["x"])).toEqual("node1");
+    expect(root.getVarNode(["child", "grandchild", "x"])).toBeUndefined();
+    grandchild.setVarNode("y", "node2");
+    expect(root.getVarNode(["child", "grandchild", "y"])).toEqual("node2");
   });
 });

@@ -20,7 +20,7 @@ import {
 } from "./ast";
 import { Dag, NodeId, StyleProperties, DagId, DagStyle } from "./dag";
 import { GLOBAL_STYLE_KEYWORD_MAP } from "./constants";
-import { ImportCacher } from "./importCacher";
+import { ImportCacher, ImportError } from "./importCacher";
 import {
   CompilationError as Error,
   DEFAULT_POSITION,
@@ -264,6 +264,29 @@ async function processNamespace(
   return subDagId;
 }
 
+function reportImportedErrors(
+  importStmt: ImportTreeNode,
+  importedErrors: Error[],
+  errors: Error[],
+): void {
+  // Surface that an imported package did not compile cleanly, which would
+  // otherwise render as a silently empty or partial subgraph.
+  // The imported errors' own positions index the imported file's text, not the
+  // editor's document, so they are never forwarded: one aggregated diagnostic
+  // is reported against the import statement instead.
+  if (importedErrors.length === 0) return;
+  const errMsg = makeError(
+    importStmt,
+    `Imported package '${importStmt.ImportLocation}' reported ` +
+      `${importedErrors.length} issue(s): ${importedErrors[0].message}`,
+    ErrorSource.Import,
+    undefined,
+    "warning",
+  );
+  errors.push(errMsg);
+  console.debug(errMsg);
+}
+
 async function getImportedDag(
   importStmt: ImportTreeNode,
   importer: ImportCacher,
@@ -275,19 +298,24 @@ async function getImportedDag(
   // Hoisting and parallelizing would be faster, but could result in
   // incorrect behavior if the order of imports matters.
   workingDag.addUsedImport(importStmt.ImportLocation);
-  return importer
-    .getPackageDag(importStmt.ImportLocation, seenImports)
+  const compilation = await importer
+    .getPackageCompilation(importStmt.ImportLocation, seenImports)
     .catch((err) => {
+      // 'Error' is the compilation error type in this module, so the built-in
+      // is reached through globalThis here
       const errMsg = makeError(
         importStmt,
-        err.message,
+        err instanceof globalThis.Error ? err.message : String(err),
         ErrorSource.Import,
-        ErrorCode.ImportFetchFailed,
+        err instanceof ImportError ? err.code : ErrorCode.ImportFetchFailed,
       );
       errors.push(errMsg);
       console.debug(errMsg);
-      return Promise.reject(err);
+      throw err;
     });
+  reportImportedErrors(importStmt, compilation.Errors, errors);
+  // the cached dag is shared, so hand this import site its own copy
+  return compilation.DAG.clone();
 }
 
 async function processImport(
