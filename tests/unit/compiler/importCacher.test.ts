@@ -1,4 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
+import { RecipeTreeNode } from "src/compiler/ast";
 import { Dag } from "src/compiler/dag";
 import { ImportCacher, CompileFromSourceFn } from "src/compiler/importCacher";
 import { Compiler } from "src/compiler/driver";
@@ -16,9 +17,10 @@ import {
 
 describe("import cacher", () => {
   const mockDag = new Dag("mock-package");
+  const mockAst = new RecipeTreeNode();
   const mockCompileSourceFn: CompileFromSourceFn = vi
     .fn()
-    .mockReturnValue({ DAG: mockDag, Errors: [] });
+    .mockReturnValue({ AST: mockAst, DAG: mockDag, Errors: [] });
 
   const packageLocation = `test-package${FIZ_FILE_EXTENSION}`;
   const nonFizPackageLocation = "test-package.txt";
@@ -148,7 +150,7 @@ describe("import cacher", () => {
         ErrorCode.ImportMissingExtension,
       );
       await expect(
-        importCacher.getCachedCompilation(location),
+        importCacher.getCachedAst(location),
       ).resolves.toBeUndefined();
     }
     expect(global.fetch).not.toHaveBeenCalled();
@@ -292,18 +294,35 @@ describe("import cacher", () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
+  test("should peek at the ast of a compiled package", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeDefaultMockHeader(),
+      text: () => Promise.resolve("package source"),
+    });
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+
+    await importCacher.getPackageCompilation(packageLocation);
+
+    await expect(importCacher.getCachedAst(packageLocation)).resolves.toBe(
+      mockAst,
+    );
+    // a peek is a peek: it must not have gone and fetched anything itself
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
   test("should never reject a cache peek", async () => {
     global.fetch = vi.fn().mockRejectedValueOnce(new Error("offline"));
     const importCacher = new ImportCacher(mockCompileSourceFn);
 
     await expect(
-      importCacher.getCachedCompilation(packageLocation),
+      importCacher.getCachedAst(packageLocation),
     ).resolves.toBeUndefined();
 
     const pending = importCacher.getPackageCompilation(packageLocation);
     await expect(pending).rejects.toThrow("offline");
     await expect(
-      importCacher.getCachedCompilation(packageLocation),
+      importCacher.getCachedAst(packageLocation),
     ).resolves.toBeUndefined();
   });
 });

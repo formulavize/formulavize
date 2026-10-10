@@ -40,10 +40,7 @@ export function useCompilation(
         prevAstDump = newAstDump;
         curCompletionIndex.value = await createCompletionIndex(
           curCompilation.AST,
-          (path) =>
-            compiler.ImportCacher.getCachedCompilation(path)
-              .then((c) => c?.AST)
-              .catch(() => undefined),
+          (path) => compiler.ImportCacher.getCachedAst(path),
         );
       }
       if (shouldDumpImports()) {

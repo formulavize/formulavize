@@ -4,24 +4,16 @@ import {
   RecipeTreeNode as Recipe,
   ImportTreeNode as Import,
 } from "src/compiler/ast";
-import { Compilation } from "src/compiler/compilation";
-import { Dag } from "src/compiler/dag";
 
-// Builds a mock CompilationCacher from a map of path → list of direct imports.
-// Paths in `rejectedPaths` simulate a failed cache lookup (e.g. fetch error).
-// Paths absent from `deps` simulate a cache miss (never fetched).
-function makeCacher(
-  deps: Map<string, string[]>,
-  rejectedPaths: Set<string> = new Set(),
-) {
+// Builds a mock AstCacher from a map of path → list of direct imports. A path
+// absent from `deps` resolves to undefined, which is how the peek reports both
+// a cache miss (never fetched) and an import that failed to compile.
+function makeCacher(deps: Map<string, string[]>) {
   return {
-    getCachedCompilation: (path: string): Promise<Compilation | undefined> => {
-      if (rejectedPaths.has(path))
-        return Promise.reject(new Error("fetch error"));
+    getCachedAst: (path: string): Promise<Recipe | undefined> => {
       const imports = deps.get(path);
       if (imports === undefined) return Promise.resolve(undefined);
-      const ast = new Recipe(imports.map((imp) => new Import(imp)));
-      return Promise.resolve(new Compilation("", ast, new Dag(""), []));
+      return Promise.resolve(new Recipe(imports.map((imp) => new Import(imp))));
     },
   };
 }
@@ -35,15 +27,6 @@ describe("dumpImportTree", () => {
   test("single import not in cache shows url only", async () => {
     const recipe = new Recipe([new Import("a.fiz")]);
     const result = await dumpImportTree(makeCacher(new Map()), recipe);
-    expect(result).toBe("a.fiz");
-  });
-
-  test("single import with rejected cache lookup shows url only", async () => {
-    const recipe = new Recipe([new Import("a.fiz")]);
-    const result = await dumpImportTree(
-      makeCacher(new Map(), new Set(["a.fiz"])),
-      recipe,
-    );
     expect(result).toBe("a.fiz");
   });
 

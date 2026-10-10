@@ -1,4 +1,5 @@
 import { FIZ_FILE_EXTENSION } from "./constants";
+import { RecipeTreeNode } from "./ast";
 import { Compilation } from "./compilation";
 import { getImportsFromRecipe } from "./astUtility";
 import { ErrorCode } from "./compilationErrors";
@@ -125,13 +126,18 @@ export class ImportCacher {
     return compilationPromise;
   }
 
-  getCachedCompilation(
-    packageLocation: string,
-  ): Promise<Compilation | undefined> {
+  // A peek at what is already compiled, for the callers that only want to read
+  // an imported recipe's shape (the import dump, the completion index) rather
+  // than pull a package in. Never fetches, and never rejects: a location that
+  // was never asked for and one whose compilation failed both read as
+  // undefined, so a caller has nothing to catch.
+  getCachedAst(packageLocation: string): Promise<RecipeTreeNode | undefined> {
     const cachedCompilation = this.compilationCache.get(packageLocation);
     if (!cachedCompilation) return Promise.resolve(undefined);
-    // never surface a cached failure as a rejection to a cache peek
-    return cachedCompilation.catch(() => undefined);
+    return cachedCompilation.then(
+      (compilation) => compilation.AST,
+      () => undefined,
+    );
   }
 
   clearCache(): void {
