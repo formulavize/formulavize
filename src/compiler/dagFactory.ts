@@ -317,6 +317,22 @@ async function getImportedDag(
   return compilation.DAG.clone();
 }
 
+// Give an imported dag its own scope under the importing dag. An import with
+// no name still needs a scope distinct from its siblings, so its location
+// stands in for one while the dag itself stays unnamed.
+function nestImportedDag(
+  importedDag: Dag,
+  importStmt: ImportTreeNode,
+  workingDag: Dag,
+  ctx: StableIdContext,
+): NodeId {
+  const scopeName = importStmt.ImportName ?? importStmt.ImportLocation;
+  importedDag.Id = ctx.childScope(ScopeKind.Import, scopeName).ScopePath;
+  importedDag.Name = importStmt.ImportName ?? "";
+  workingDag.addChildDag(importedDag);
+  return importedDag.Id;
+}
+
 async function processImport(
   importStmt: ImportTreeNode,
   workingDag: Dag,
@@ -333,11 +349,7 @@ async function processImport(
     workingDag,
     seenImports,
   );
-  const importName = importStmt.ImportName ?? importStmt.ImportLocation;
-  importedDag.Id = ctx.childScope(ScopeKind.Import, importName).ScopePath;
-  importedDag.Name = importStmt.ImportName ?? "";
-  workingDag.addChildDag(importedDag);
-  return importedDag.Id;
+  return nestImportedDag(importedDag, importStmt, workingDag, ctx);
 }
 
 async function processUnassignedImport(
@@ -348,7 +360,9 @@ async function processUnassignedImport(
   seenImports: Set<string>,
   ctx: StableIdContext,
 ) {
-  // Process imports not referenced by a variable
+  // Process imports not referenced by a variable. With no name there is
+  // nothing to address the scope by, so the contents land in the importing
+  // dag directly instead of under a scope of their own.
   const importedDag = await getImportedDag(
     importStmt,
     importer,
@@ -357,12 +371,7 @@ async function processUnassignedImport(
     seenImports,
   );
   if (importStmt.ImportName) {
-    importedDag.Id = ctx.childScope(
-      ScopeKind.Import,
-      importStmt.ImportName,
-    ).ScopePath;
-    importedDag.Name = importStmt.ImportName;
-    workingDag.addChildDag(importedDag);
+    nestImportedDag(importedDag, importStmt, workingDag, ctx);
   } else {
     workingDag.mergeDag(importedDag);
   }
