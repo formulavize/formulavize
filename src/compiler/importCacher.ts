@@ -207,7 +207,10 @@ export class ImportCacher {
     }
   }
 
-  private getPackage(
+  // The cached compilation itself, shared by every caller. Its dag is the
+  // cached instance, so a caller that mutates what it receives (Id, Name,
+  // re-parenting) must take its own Dag.clone() first.
+  getPackageCompilation(
     packageLocation: string,
     seenImports: Set<string> = new Set(),
   ): Promise<Compilation> {
@@ -263,16 +266,6 @@ export class ImportCacher {
       () => this.evictCompilation(packageLocation, compilationPromise),
     );
     return compilationPromise;
-  }
-
-  // The cached compilation itself, shared by every caller. Its dag is the
-  // cached instance, so a caller that mutates what it receives (Id, Name,
-  // re-parenting) must take its own Dag.clone() first.
-  getPackageCompilation(
-    packageLocation: string,
-    seenImports: Set<string> = new Set(),
-  ): Promise<Compilation> {
-    return this.getPackage(packageLocation, seenImports);
   }
 
   getCachedCompilation(
