@@ -1,5 +1,4 @@
 import { FIZ_FILE_EXTENSION } from "./constants";
-import { Dag } from "./dag";
 import { Compilation } from "./compilation";
 import { getImportsFromRecipe } from "./astUtility";
 import { ErrorCode } from "./compilationErrors";
@@ -266,21 +265,14 @@ export class ImportCacher {
     return compilationPromise;
   }
 
+  // The cached compilation itself, shared by every caller. Its dag is the
+  // cached instance, so a caller that mutates what it receives (Id, Name,
+  // re-parenting) must take its own Dag.clone() first.
   getPackageCompilation(
     packageLocation: string,
     seenImports: Set<string> = new Set(),
   ): Promise<Compilation> {
     return this.getPackage(packageLocation, seenImports);
-  }
-
-  async getPackageDag(
-    packageLocation: string,
-    seenImports: Set<string> = new Set(),
-  ): Promise<Dag> {
-    const compilation = await this.getPackage(packageLocation, seenImports);
-    // Callers mutate what they are handed (Id, Name, re-parenting), so every
-    // import site gets its own copy of the cached dag.
-    return compilation.DAG.clone();
   }
 
   getCachedCompilation(
