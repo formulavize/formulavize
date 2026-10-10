@@ -49,19 +49,39 @@ function hasFizExtension(packageLocation: string): boolean {
   }
 }
 
-function isAllowedContentType(contentType: string): boolean {
+// Throws unless the response could plausibly be a fiz file.
+function assertFizContentType(
+  rawContentType: string | null,
+  packageLocation: string,
+): void {
+  const contentType = (rawContentType ?? "").toLowerCase();
+
+  // Deliberately a substring test over the whole header rather than the media
+  // type alone: a server that lists html among several types is still handing
+  // back a web page rather than a fiz file.
+  if (contentType.includes("text/html")) {
+    throw new ImportError(
+      `Expected a fiz file but received HTML from '${packageLocation}'`,
+      ErrorCode.ImportHtmlResponse,
+    );
+  }
+
   // Allow-list rather than deny-list, but a generous one: fiz files are served
   // as text/plain by GitHub raw, as application/octet-stream by some object
-  // stores, and with no type at all by plenty of static servers.
-  // Normalizes the header itself rather than trusting the caller to have done
-  // it: the parameters ('; charset=utf-8') are not part of the media type.
-  const mediaType = contentType.split(";")[0].trim().toLowerCase();
-  if (!mediaType) return true;
-  if (mediaType.startsWith("text/")) return true;
-  return (
+  // stores, and with no type at all by plenty of static servers. The
+  // parameters ('; charset=utf-8') are not part of the media type.
+  const mediaType = contentType.split(";")[0].trim();
+  const isAllowed =
+    !mediaType ||
+    mediaType.startsWith("text/") ||
     mediaType === "application/octet-stream" ||
-    mediaType.startsWith("application/x-")
-  );
+    mediaType.startsWith("application/x-");
+  if (!isAllowed) {
+    throw new ImportError(
+      `Expected a fiz file but received '${contentType}' from '${packageLocation}'`,
+      ErrorCode.ImportInvalidContentType,
+    );
+  }
 }
 
 async function readBoundedText(
@@ -135,27 +155,7 @@ export async function fetchSourceOverHttp(
     );
   }
 
-  // Lowercased at the one place the header is read, so the html check and the
-  // allow-list below cannot disagree about it: header values are not
-  // case-normalized, and a 'TEXT/HTML' that slipped past the html check would
-  // go on to satisfy the allow-list's 'text/' prefix and be parsed as fiz.
-  const contentType = (
-    response.headers.get("content-type") ?? ""
-  ).toLowerCase();
-  // Deliberately a substring test: a server that lists html among several
-  // types is still handing back a web page rather than a fiz file.
-  if (contentType.includes("text/html")) {
-    throw new ImportError(
-      `Expected a fiz file but received HTML from '${packageLocation}'`,
-      ErrorCode.ImportHtmlResponse,
-    );
-  }
-  if (!isAllowedContentType(contentType)) {
-    throw new ImportError(
-      `Expected a fiz file but received '${contentType}' from '${packageLocation}'`,
-      ErrorCode.ImportInvalidContentType,
-    );
-  }
+  assertFizContentType(response.headers.get("content-type"), packageLocation);
 
   return readBoundedText(response, packageLocation);
 }
