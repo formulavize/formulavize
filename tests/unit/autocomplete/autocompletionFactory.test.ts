@@ -723,4 +723,100 @@ describe("makeCompletionIndex with imports", () => {
     const tokenValues = index.tokens.map((t) => t.value).sort();
     expect(tokenValues).toEqual(["varA", "varB"]);
   });
+
+  test("imports definitions as namespace when aliased on an assignment rhs", async () => {
+    // remote.fiz:
+    // exportedVar =
+    const remoteVar = new LocalVariable("exportedVar");
+    const remoteAssignment = new Assignment([remoteVar], null, pos(0, 15));
+    const remoteRecipe = new Recipe([remoteAssignment]);
+
+    // main.fiz:
+    // x = Remote @ "remote.fiz"
+    // the dag nests this under 'Remote' exactly as the bare form does, so
+    // 'Remote.exportedVar' resolves and has to be offered
+    const importNode = new Import("remote.fiz", "Remote", pos(4, 30));
+    const mainStatements = [
+      new Assignment([new LocalVariable("x")], importNode, pos(0, 30)),
+    ];
+
+    const mockLookup = vi.fn().mockImplementation(async (path: string) => {
+      if (path === "remote.fiz") return remoteRecipe;
+      return undefined;
+    });
+
+    const index = await makeCompletionIndex(mainStatements, mockLookup);
+
+    expect(mockLookup).toHaveBeenCalledWith("remote.fiz");
+    expect(index.namespaces).toHaveLength(1);
+    expect(index.namespaces[0].name).toBe("Remote");
+    expect(
+      index.namespaces[0].completionIndex.tokens.map((t) => t.value),
+    ).toEqual(["exportedVar"]);
+
+    // the assigned variable is the only name this scope gains
+    expect(index.tokens.map((t) => t.value)).toEqual(["x"]);
+  });
+
+  test("offers nothing but the variable for an unaliased import on an assignment rhs", async () => {
+    // remote.fiz:
+    // exportedVar =
+    const remoteVar = new LocalVariable("exportedVar");
+    const remoteAssignment = new Assignment([remoteVar], null, pos(0, 15));
+    const remoteRecipe = new Recipe([remoteAssignment]);
+
+    // main.fiz:
+    // x = @ "remote.fiz"
+    // with no alias the imported scope is unnamed: neither 'exportedVar' nor
+    // 'x.exportedVar' resolves in the dag, so there is nothing to complete
+    const importNode = new Import("remote.fiz", null, pos(4, 22));
+    const mainStatements = [
+      new Assignment([new LocalVariable("x")], importNode, pos(0, 22)),
+    ];
+
+    const mockLookup = vi.fn().mockImplementation(async (path: string) => {
+      if (path === "remote.fiz") return remoteRecipe;
+      return undefined;
+    });
+
+    const index = await makeCompletionIndex(mainStatements, mockLookup);
+
+    expect(mockLookup).not.toHaveBeenCalled();
+    expect(index.namespaces).toHaveLength(0);
+    expect(index.tokens.map((t) => t.value)).toEqual(["x"]);
+  });
+
+  test("reaches a transitive import through an aliased assignment rhs", async () => {
+    // lib.fiz:
+    // libVar =
+    const libRecipe = new Recipe([
+      new Assignment([new LocalVariable("libVar")], null, pos(0, 15)),
+    ]);
+
+    // middle.fiz:
+    // @ "lib.fiz"
+    const middleRecipe = new Recipe([new Import("lib.fiz", null, pos(0, 20))]);
+
+    // main.fiz:
+    // x = Mid @ "middle.fiz"
+    const importNode = new Import("middle.fiz", "Mid", pos(4, 28));
+    const mainStatements = [
+      new Assignment([new LocalVariable("x")], importNode, pos(0, 28)),
+    ];
+
+    const mockLookup = vi.fn().mockImplementation(async (path: string) => {
+      if (path === "middle.fiz") return middleRecipe;
+      if (path === "lib.fiz") return libRecipe;
+      return undefined;
+    });
+
+    const index = await makeCompletionIndex(mainStatements, mockLookup);
+
+    expect(mockLookup).toHaveBeenCalledWith("middle.fiz");
+    expect(mockLookup).toHaveBeenCalledWith("lib.fiz");
+    // lib.fiz is flattened into middle.fiz, which 'Mid' names from here
+    expect(
+      index.namespaces[0].completionIndex.tokens.map((t) => t.value),
+    ).toEqual(["libVar"]);
+  });
 });

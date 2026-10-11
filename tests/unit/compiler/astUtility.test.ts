@@ -1,5 +1,8 @@
 import { describe, test, expect } from "vitest";
-import { getImportsFromRecipe } from "src/compiler/astUtility";
+import {
+  getDeclaredImports,
+  getImportsFromRecipe,
+} from "src/compiler/astUtility";
 import {
   RecipeTreeNode as Recipe,
   ImportTreeNode as Import,
@@ -52,5 +55,60 @@ describe("getImportsFromRecipe", () => {
     const imports = getImportsFromRecipe(recipe);
     const expectedImports = new Set(["moduleA", "moduleB", "moduleC"]);
     expect(imports).toEqual(expectedImports);
+  });
+});
+
+describe("getDeclaredImports", () => {
+  test("no statements", () => {
+    expect(getDeclaredImports([])).toEqual([]);
+  });
+
+  test("a bare import statement is not assigned", () => {
+    const declared = getDeclaredImports([new Import("moduleA")]);
+    expect(declared).toHaveLength(1);
+    expect(declared[0].node.ImportLocation).toBe("moduleA");
+    expect(declared[0].isAssigned).toBe(false);
+  });
+
+  test("an import on an assignment rhs is assigned", () => {
+    const declared = getDeclaredImports([
+      new Assignment([new LocalVariable("x")], new Import("moduleA", "Alias")),
+    ]);
+    expect(declared).toHaveLength(1);
+    expect(declared[0].node.ImportLocation).toBe("moduleA");
+    expect(declared[0].node.ImportName).toBe("Alias");
+    expect(declared[0].isAssigned).toBe(true);
+  });
+
+  test("an assignment with a non-import rhs declares nothing", () => {
+    const declared = getDeclaredImports([
+      new Assignment([new LocalVariable("x")], null),
+    ]);
+    expect(declared).toEqual([]);
+  });
+
+  test("keeps the order the statements declare them in", () => {
+    const declared = getDeclaredImports([
+      new Import("moduleA"),
+      new Assignment([new LocalVariable("x")], new Import("moduleB")),
+      new Import("moduleC"),
+    ]);
+    expect(declared.map(({ node }) => node.ImportLocation)).toEqual([
+      "moduleA",
+      "moduleB",
+      "moduleC",
+    ]);
+  });
+
+  test("a namespace's imports belong to its own scope", () => {
+    // the namespace is a scope of its own, so a caller that wants its imports
+    // walks into it rather than finding them hoisted to this level
+    const declared = getDeclaredImports([
+      new Import("moduleA"),
+      new Namespace("n", new StatementList([new Import("moduleB")])),
+    ]);
+    expect(declared.map(({ node }) => node.ImportLocation)).toEqual([
+      "moduleA",
+    ]);
   });
 });
