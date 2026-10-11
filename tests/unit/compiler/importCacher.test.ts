@@ -1,7 +1,11 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { RecipeTreeNode } from "src/compiler/ast";
 import { Dag } from "src/compiler/dag";
-import { ImportCacher, CompileFromSourceFn } from "src/compiler/importCacher";
+import {
+  ImportCacher,
+  ImportResolver,
+  CompileFromSourceFn,
+} from "src/compiler/importCacher";
 import { Compiler } from "src/compiler/driver";
 import { FIZ_FILE_EXTENSION } from "src/compiler/constants";
 import { ErrorCode } from "src/compiler/compilationErrors";
@@ -45,9 +49,29 @@ describe("import cacher", () => {
     );
     expect(mockCompileSourceFn).toHaveBeenCalledWith(
       "package source",
-      new Set([packageLocation]),
+      expect.any(ImportResolver),
     );
     expect(DAG).toEqual(mockDag);
+  });
+
+  test("should hand the nested compile a resolver already on the chain", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeDefaultMockHeader(),
+      text: () => Promise.resolve("package source"),
+    });
+
+    const importCacher = new ImportCacher(mockCompileSourceFn);
+    await importCacher.getPackageCompilation(packageLocation);
+
+    // the chain the resolver carries is private, so the way to see that this
+    // package is on it is to ask that resolver for this package: importing
+    // what is still compiling is the cycle the chain exists to catch
+    const [, imports] = vi.mocked(mockCompileSourceFn).mock.calls[0];
+    await expectImportError(
+      imports.getCompilation(packageLocation),
+      ErrorCode.ImportCircular,
+    );
   });
 
   test("should return error for a non-fiz package location", async () => {

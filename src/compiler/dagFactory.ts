@@ -20,7 +20,7 @@ import {
 } from "./ast";
 import { Dag, NodeId, StyleProperties, DagId, DagStyle } from "./dag";
 import { GLOBAL_STYLE_KEYWORD_MAP } from "./constants";
-import { ImportCacher, ImportResolver } from "./importCacher";
+import { ImportResolver } from "./importCacher";
 import { ImportError } from "./importFetcher";
 import {
   CompilationError as Error,
@@ -720,8 +720,7 @@ export async function makeSubDag(
 
 export async function makeDag(
   recipe: RecipeTreeNode,
-  importer: ImportCacher,
-  seenImports: ReadonlySet<string> = new Set(),
+  importResolver: ImportResolver,
 ): Promise<{ dag: Dag; errors: Error[] }> {
   const errors: Error[] = [];
   const rootCtx = new StableIdContext("root");
@@ -733,7 +732,7 @@ export async function makeDag(
     "root",
     new NamespaceTreeNode("", statementList),
     errors,
-    new ImportResolver(importer, seenImports),
+    importResolver,
     undefined,
     rootCtx,
   );

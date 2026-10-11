@@ -9,11 +9,11 @@ import {
 } from "src/compiler/ast";
 import { makeDag } from "src/compiler/dagFactory";
 import { Compiler } from "src/compiler/driver";
-import { ImportCacher } from "src/compiler/importCacher";
+import { ImportResolver } from "src/compiler/importCacher";
 import { makeCyElements } from "src/renderers/cyDag/cyGraphFactory";
 import cytoscape from "cytoscape";
 
-const dummyImporter = {} as ImportCacher;
+const dummyImportResolver = {} as ImportResolver;
 
 describe("stable IDs with Cytoscape integration", () => {
   test("unicode node IDs work in headless Cytoscape selectors", async () => {
@@ -24,7 +24,7 @@ describe("stable IDs with Cytoscape integration", () => {
       ),
       new Call("慢火", new ValueList([new QualifiedVariable(["x"])])),
     ]);
-    const { dag } = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImportResolver);
     const cyElements = makeCyElements(dag);
 
     const cy = cytoscape({ headless: true });
@@ -60,7 +60,7 @@ describe("stable IDs with Cytoscape integration", () => {
       ),
       new Call("b", new ValueList([new QualifiedVariable(["x"])])),
     ]);
-    const { dag } = await makeDag(recipe, dummyImporter);
+    const { dag } = await makeDag(recipe, dummyImportResolver);
     const cyElements = makeCyElements(dag);
 
     const cy = cytoscape({ headless: true });

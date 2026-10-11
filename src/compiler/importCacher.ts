@@ -12,7 +12,7 @@ import {
 
 export type CompileFromSourceFn = (
   source: string,
-  seenImports: ReadonlySet<string>,
+  importResolver: ImportResolver,
 ) => Promise<Compilation>;
 
 // Drops a cached promise, but only while it is still the entry under that key.
@@ -62,7 +62,7 @@ export class ImportCacher {
     seenImports: ReadonlySet<string>,
   ): Promise<Compilation> {
     const source = await this.getSource(packageLocation);
-    return this.compileSourceFn(source, seenImports);
+    return this.compileSourceFn(source, new ImportResolver(this, seenImports));
   }
 
   // The cached compilation itself, shared by every caller. Its dag is the

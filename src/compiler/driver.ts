@@ -5,7 +5,7 @@ import { RecipeTreeNode } from "./ast";
 import { makeRecipeTree } from "./astFactory";
 import { makeDag } from "./dagFactory";
 import { Compilation } from "./compilation";
-import { ImportCacher } from "./importCacher";
+import { ImportCacher, ImportResolver } from "./importCacher";
 import { FetchSourceFn } from "./importFetcher";
 import { CompilationError as Error } from "./compilationErrors";
 
@@ -38,7 +38,7 @@ export class Compiler {
 
   constructor(options: CompilerOptions = {}) {
     this.importCacher = new ImportCacher(
-      (source, seenImports) => this.compileFromSource(source, seenImports),
+      (source, importResolver) => this.compileSource(source, importResolver),
       options.fetchSource,
     );
   }
@@ -51,15 +51,11 @@ export class Compiler {
     input: I,
     sourceGen: SourceGen<I>,
     parse: Parse<I>,
-    seenImports: ReadonlySet<string> = new Set(),
+    importResolver: ImportResolver,
   ): Promise<Compilation> {
     const source = sourceGen(input);
     const { ast, errors: parseErrors } = parse(input);
-    const { dag, errors: dagErrors } = await makeDag(
-      ast,
-      this.importCacher,
-      seenImports,
-    );
+    const { dag, errors: dagErrors } = await makeDag(ast, importResolver);
     const errors = [...parseErrors, ...dagErrors];
     return new Compilation(source, ast, dag, errors);
   }
@@ -78,12 +74,25 @@ export class Compiler {
       return makeRecipeTree(tree, text);
     }
 
-    return this.compile(editorState, sourceFromEditor, parseFromEditor);
+    return this.compile(
+      editorState,
+      sourceFromEditor,
+      parseFromEditor,
+      this.rootImportResolver(),
+    );
   }
 
-  compileFromSource(
+  compileFromSource(sourceRecipe: string): Promise<Compilation> {
+    return this.compileSource(sourceRecipe, this.rootImportResolver());
+  }
+
+  private rootImportResolver(): ImportResolver {
+    return new ImportResolver(this.importCacher);
+  }
+
+  private compileSource(
     sourceRecipe: string,
-    seenImports: ReadonlySet<string> = new Set(),
+    importResolver: ImportResolver,
   ): Promise<Compilation> {
     function sourceFromSource(sourceRecipe: string): string {
       return sourceRecipe;
@@ -93,7 +102,7 @@ export class Compiler {
       sourceRecipe,
       sourceFromSource,
       parseFromSource,
-      seenImports,
+      importResolver,
     );
   }
 }
