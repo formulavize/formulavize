@@ -1,19 +1,14 @@
 import { FIZ_FILE_EXTENSION } from "./constants";
 import { RecipeTreeNode } from "./ast";
-import { Compilation } from "./compilation";
+import { ParseResult, parseFromSource } from "./parser";
 import { getImportsFromRecipe } from "./astUtility";
-import { ErrorCode } from "./compilationErrors";
+import { CompilationError, ErrorCode } from "./compilationErrors";
 import {
   FetchSourceFn,
   ImportError,
   fetchSourceOverHttp,
   hasFizExtension,
 } from "./importFetcher";
-
-export type CompileFromSourceFn = (
-  source: string,
-  importResolver: ImportResolver,
-) => Promise<Compilation>;
 
 // Drops a cached promise, but only while it is still the entry under that key.
 // A clearCache() or a later request may have replaced it since it settled, and
@@ -26,52 +21,20 @@ function evictIfCurrent<T>(
   if (cache.get(key) === cachedPromise) cache.delete(key);
 }
 
+// What a location holds does not depend on who asked for it, and neither does
+// the tree that text parses to, so one cache covers both and nothing in it is
+// ever conditional on an import chain. A compiled dag is a different matter --
+// its ids and nesting belong to the site that imported it -- so no dag is
+// cached here at all; each import site builds its own from the cached parse.
 export class ImportCacher {
-  // Fetched source is cacheable unconditionally: what a location holds does not
-  // depend on who asked for it. A compilation does, so the two are kept apart.
-  private readonly sourceCache = new Map<string, Promise<string>>();
-  private readonly compilationCache = new Map<string, Promise<Compilation>>();
-  private readonly compileSourceFn: CompileFromSourceFn;
+  private readonly parseCache = new Map<string, Promise<ParseResult>>();
   private readonly fetchSourceFn: FetchSourceFn;
 
-  constructor(
-    compileSourceFn: CompileFromSourceFn,
-    fetchSourceFn: FetchSourceFn = fetchSourceOverHttp,
-  ) {
-    this.compileSourceFn = compileSourceFn;
+  constructor(fetchSourceFn: FetchSourceFn = fetchSourceOverHttp) {
     this.fetchSourceFn = fetchSourceFn;
   }
 
-  private getSource(packageLocation: string): Promise<string> {
-    const cachedSource = this.sourceCache.get(packageLocation);
-    if (cachedSource) return cachedSource;
-
-    const sourcePromise = this.fetchSourceFn(packageLocation);
-    this.sourceCache.set(packageLocation, sourcePromise);
-    // A cached rejection would make one transient failure permanent, so the
-    // entry is evicted once it is known to have failed. Attaching the handler
-    // here also keeps the rejection from being reported as unhandled.
-    sourcePromise.catch(() =>
-      evictIfCurrent(this.sourceCache, packageLocation, sourcePromise),
-    );
-    return sourcePromise;
-  }
-
-  private async makePackagePromise(
-    packageLocation: string,
-    seenImports: ReadonlySet<string>,
-  ): Promise<Compilation> {
-    const source = await this.getSource(packageLocation);
-    return this.compileSourceFn(source, new ImportResolver(this, seenImports));
-  }
-
-  // The cached compilation itself, shared by every caller. Its dag is the
-  // cached instance, so a caller that mutates what it receives (Id, Name,
-  // re-parenting) must take its own Dag.clone() first.
-  getPackageCompilation(
-    packageLocation: string,
-    seenImports: ReadonlySet<string> = new Set(),
-  ): Promise<Compilation> {
+  getParsedRecipe(packageLocation: string): Promise<ParseResult> {
     // The suffix is usually the last thing users input
     // so this check only allows a fetch attempt with the complete location.
     // This prevents the user from fetching non-fiz text and popularizes
@@ -86,98 +49,66 @@ export class ImportCacher {
       );
     }
 
-    // Prevent circular imports
-    if (seenImports.has(packageLocation)) {
-      // Everything on the current chain is compiling without this package's
-      // contents, so none of those compilations may be reused elsewhere. Their
-      // promises are still in flight; dropping the entries now leaves each
-      // awaiter with the result it asked for and leaves nothing behind to
-      // hand a caller that has no cycle.
-      seenImports.forEach((seenImport) => {
-        this.compilationCache.delete(seenImport);
-      });
-      return Promise.reject(
-        new ImportError(
-          `Circular import detected: ${packageLocation}`,
-          ErrorCode.ImportCircular,
-        ),
-      );
-    }
-
     // Assumes packageLocation uniquely identifies a package
     // versioning is currently the responsibility of the package implementer
     // to put in the packageLocation (e.g. packageLocation = "pkg-1.0.0.fiz")
-    const cachedCompilation = this.compilationCache.get(packageLocation);
-    if (cachedCompilation) return cachedCompilation;
+    const cachedParse = this.parseCache.get(packageLocation);
+    if (cachedParse) return cachedParse;
 
-    const newSeenImports = new Set([...seenImports, packageLocation]);
-    const compilationPromise = this.makePackagePromise(
-      packageLocation,
-      newSeenImports,
+    const parsePromise =
+      this.fetchSourceFn(packageLocation).then(parseFromSource);
+    this.parseCache.set(packageLocation, parsePromise);
+    // A cached rejection would make one transient failure permanent, so the
+    // entry is evicted once it is known to have failed. Attaching the handler
+    // here also keeps the rejection from being reported as unhandled.
+    parsePromise.catch(() =>
+      evictIfCurrent(this.parseCache, packageLocation, parsePromise),
     );
-    this.compilationCache.set(packageLocation, compilationPromise);
-    compilationPromise.catch(() =>
-      evictIfCurrent(
-        this.compilationCache,
-        packageLocation,
-        compilationPromise,
-      ),
-    );
-    return compilationPromise;
+    return parsePromise;
   }
 
-  // A peek at what is already compiled, for the callers that only want to read
+  // A peek at what is already parsed, for the callers that only want to read
   // an imported recipe's shape (the import dump, the completion index) rather
   // than pull a package in. Never fetches, and never rejects: a location that
-  // was never asked for and one whose compilation failed both read as
-  // undefined, so a caller has nothing to catch.
+  // was never asked for and one whose fetch failed both read as undefined, so
+  // a caller has nothing to catch.
   getCachedAst(packageLocation: string): Promise<RecipeTreeNode | undefined> {
-    const cachedCompilation = this.compilationCache.get(packageLocation);
-    if (!cachedCompilation) return Promise.resolve(undefined);
-    return cachedCompilation.then(
-      (compilation) => compilation.AST,
+    const cachedParse = this.parseCache.get(packageLocation);
+    if (!cachedParse) return Promise.resolve(undefined);
+    return cachedParse.then(
+      ({ ast }) => ast,
       () => undefined,
     );
   }
 
   clearCache(): void {
-    this.sourceCache.clear();
-    this.compilationCache.clear();
+    this.parseCache.clear();
   }
 
   // Returns map of package locations to their imports for debugging.
-  getDependencyTree(
+  // No production caller yet; kept for future debugging tooling.
+  async getDependencyTree(
     startingPackage: string,
   ): Promise<Map<string, Set<string>>> {
-    return this.collectDependencies(startingPackage, new Set(), new Map());
-  }
+    // One map is threaded through the whole walk, so a package shared by
+    // several importers is visited once instead of once per path to it. That
+    // is also all the cycle safety this walk needs: a package is recorded
+    // before the walk descends into its imports, so re-entering it returns
+    // immediately.
+    const importsByPackage = new Map<string, Set<string>>();
 
-  private async collectDependencies(
-    startingPackage: string,
-    seenImports: Set<string>,
-    importsByPackage: Map<string, Set<string>>,
-  ): Promise<Map<string, Set<string>>> {
-    // One map is threaded through the whole walk so a package shared by
-    // several importers is visited once instead of once per path to it. A
-    // package is recorded before the walk descends into its imports, so this
-    // also covers the current chain: re-entering it would otherwise trip
-    // getPackageCompilation's cycle check, which taints and evicts cached
-    // compilations the walk only meant to read.
-    if (importsByPackage.has(startingPackage)) return importsByPackage;
+    const visit = async (packageLocation: string): Promise<void> => {
+      if (importsByPackage.has(packageLocation)) return;
+      const parsed = await this.getParsedRecipe(packageLocation).catch(
+        () => null,
+      );
+      if (!parsed) return;
+      const imports = getImportsFromRecipe(parsed.ast);
+      importsByPackage.set(packageLocation, imports);
+      for (const imported of imports) await visit(imported);
+    };
 
-    const compilation = await this.getPackageCompilation(
-      startingPackage,
-      seenImports,
-    ).catch(() => null);
-    if (!compilation) return importsByPackage;
-
-    const imports = getImportsFromRecipe(compilation.AST);
-    importsByPackage.set(startingPackage, imports);
-
-    const newSeenImports = new Set([...seenImports, startingPackage]);
-    for (const imp of imports) {
-      await this.collectDependencies(imp, newSeenImports, importsByPackage);
-    }
+    await visit(startingPackage);
     return importsByPackage;
   }
 
@@ -191,18 +122,48 @@ export class ImportCacher {
   }
 }
 
+// A package's recipe, plus the resolver the next level down must use. The two
+// travel together so a caller cannot build a nested dag with the chain it was
+// handed rather than the one that includes this package.
+export interface ResolvedImport {
+  ast: RecipeTreeNode;
+  parseErrors: CompilationError[];
+  resolver: ImportResolver;
+}
+
 // Pairs a cacher with the import chain a request sits on, so the two travel
 // as one value instead of as two parameters threaded side by side through
 // every statement handler. Both are private: a caller only ever needs the
-// compilation for a location, and the chain a nested import inherits is
-// derived inside the cacher.
+// recipe for a location, and the chain a nested import inherits comes back
+// with it.
 export class ImportResolver {
   constructor(
     private readonly cacher: ImportCacher,
-    private readonly seenImports: ReadonlySet<string> = new Set(),
+    private readonly chain: ReadonlySet<string> = new Set(),
   ) {}
 
-  getCompilation(packageLocation: string): Promise<Compilation> {
-    return this.cacher.getPackageCompilation(packageLocation, this.seenImports);
+  async getImport(packageLocation: string): Promise<ResolvedImport> {
+    // Prevent circular imports. Nothing cached is conditional on the chain, so
+    // reporting the cycle is all there is to do: the packages on the chain are
+    // compiling without this one's contents, but each is a dag belonging to one
+    // import site and is never handed to another.
+    if (this.chain.has(packageLocation)) {
+      throw new ImportError(
+        `Circular import detected: ${packageLocation}`,
+        ErrorCode.ImportCircular,
+      );
+    }
+
+    const { ast, errors } = await this.cacher.getParsedRecipe(packageLocation);
+    // extended only once the location is known to be a real package, so an
+    // unfetchable location never lands on a chain
+    return {
+      ast,
+      parseErrors: errors,
+      resolver: new ImportResolver(
+        this.cacher,
+        new Set([...this.chain, packageLocation]),
+      ),
+    };
   }
 }

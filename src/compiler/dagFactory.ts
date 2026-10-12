@@ -292,40 +292,53 @@ async function getImportedDag(
   imports: ImportResolver,
   errors: Error[],
   workingDag: Dag,
+  ctx: StableIdContext,
 ): Promise<Dag> {
   // Imports are processed sequentially to ensure order is respected.
   // Hoisting and parallelizing would be faster, but could result in
   // incorrect behavior if the order of imports matters.
-  workingDag.addUsedImport(importStmt.ImportLocation);
-  const compilation = await imports
-    .getCompilation(importStmt.ImportLocation)
-    .catch((err) => {
-      const errMsg = makeError(
-        importStmt,
-        describeError(err),
-        ErrorSource.Import,
-        err instanceof ImportError ? err.code : ErrorCode.ImportFetchFailed,
-      );
-      errors.push(errMsg);
-      console.debug(errMsg);
-      throw err;
-    });
-  reportImportedErrors(importStmt, compilation.Errors, errors);
-  // the cached dag is shared, so hand this import site its own copy
-  return compilation.DAG.clone();
+  const packageLocation = importStmt.ImportLocation;
+  workingDag.addUsedImport(packageLocation);
+  const resolved = await imports.getImport(packageLocation).catch((err) => {
+    const errMsg = makeError(
+      importStmt,
+      describeError(err),
+      ErrorSource.Import,
+      err instanceof ImportError ? err.code : ErrorCode.ImportFetchFailed,
+    );
+    errors.push(errMsg);
+    console.debug(errMsg);
+    throw err;
+  });
+  // The package's contents are built here rather than reused from a cache,
+  // under a scope belonging to this import site, so two sites importing one
+  // package get their own ids instead of two subgraphs that collide. The
+  // scope is taken after the resolve, so a failed import consumes no counter.
+  const importCtx = ctx.childScope(
+    ScopeKind.Import,
+    importStmt.ImportName ?? packageLocation,
+  );
+  const { dag, errors: importedErrors } = await makeDag(
+    resolved.ast,
+    resolved.resolver,
+    importCtx,
+  );
+  reportImportedErrors(
+    importStmt,
+    [...resolved.parseErrors, ...importedErrors],
+    errors,
+  );
+  return dag;
 }
 
-// Give an imported dag its own scope under the importing dag. An import with
-// no name still needs a scope distinct from its siblings, so its location
-// stands in for one while the dag itself stays unnamed.
+// Attach an imported dag under the importing dag. Its id is already the
+// import site's scope path, since that is the scope its contents were built
+// under; an import with no name leaves the dag itself unnamed.
 function nestImportedDag(
   importedDag: Dag,
   importStmt: ImportTreeNode,
   workingDag: Dag,
-  ctx: StableIdContext,
 ): NodeId {
-  const scopeName = importStmt.ImportName ?? importStmt.ImportLocation;
-  importedDag.Id = ctx.childScope(ScopeKind.Import, scopeName).ScopePath;
   importedDag.Name = importStmt.ImportName ?? "";
   workingDag.addChildDag(importedDag);
   return importedDag.Id;
@@ -344,8 +357,9 @@ async function processImport(
     imports,
     errors,
     workingDag,
+    ctx,
   );
-  return nestImportedDag(importedDag, importStmt, workingDag, ctx);
+  return nestImportedDag(importedDag, importStmt, workingDag);
 }
 
 async function processUnassignedImport(
@@ -363,9 +377,10 @@ async function processUnassignedImport(
     imports,
     errors,
     workingDag,
+    ctx,
   );
   if (importStmt.ImportName) {
-    nestImportedDag(importedDag, importStmt, workingDag, ctx);
+    nestImportedDag(importedDag, importStmt, workingDag);
   } else {
     workingDag.mergeDag(importedDag);
   }
@@ -721,20 +736,20 @@ export async function makeSubDag(
 export async function makeDag(
   recipe: RecipeTreeNode,
   importResolver: ImportResolver,
+  ctx: StableIdContext = new StableIdContext("root"),
 ): Promise<{ dag: Dag; errors: Error[] }> {
   const errors: Error[] = [];
-  const rootCtx = new StableIdContext("root");
   const statementList = new StatementListTreeNode(
     recipe.Statements,
     recipe.Position,
   );
   const dag = await makeSubDag(
-    "root",
+    ctx.ScopePath,
     new NamespaceTreeNode("", statementList),
     errors,
     importResolver,
     undefined,
-    rootCtx,
+    ctx,
   );
   return { dag, errors };
 }

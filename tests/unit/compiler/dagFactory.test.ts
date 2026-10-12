@@ -1088,15 +1088,15 @@ describe("about note tests", () => {
 });
 
 describe("import tests", () => {
-  const importedDag = new Dag("ImportTest");
-  importedDag.addNode({
-    id: "idX",
-    name: "nameX",
-    styleTags: [],
-    styleProperties: new Map(),
-  });
+  // An import site builds the imported dag from this recipe under its own
+  // scope, so the mock hands back a recipe and the resolver for the next
+  // level down rather than a finished dag.
   const mockImports = {
-    getCompilation: async () => ({ DAG: importedDag, Errors: [] }),
+    getImport: async () => ({
+      ast: new Recipe([new Call("nameX", new ValueList([]))]),
+      parseErrors: [],
+      resolver: mockImports,
+    }),
   } as unknown as ImportResolver;
 
   test("imported anonymous namespace", async () => {
@@ -1156,7 +1156,7 @@ describe("import tests", () => {
   });
 
   const mockImportsError = {
-    getCompilation: async () => {
+    getImport: async () => {
       throw new Error("import error");
     },
   } as unknown as ImportResolver;
@@ -1270,7 +1270,7 @@ describe("error reporting", () => {
   });
   test("error reporting when import fails", async () => {
     const mockImportsError = {
-      getCompilation: async () => {
+      getImport: async () => {
         throw new Error("import error");
       },
     } as unknown as ImportResolver;
@@ -1293,7 +1293,7 @@ describe("error reporting", () => {
     const mockImportsError = {
       // nothing obliges a rejection to carry an Error, and a thrown string
       // has no .message to report
-      getCompilation: () => Promise.reject("not an Error at all"),
+      getImport: () => Promise.reject("not an Error at all"),
     } as unknown as ImportResolver;
 
     const recipe = new Recipe([new Import("bad_path")]);

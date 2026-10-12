@@ -1,11 +1,6 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
-import { RecipeTreeNode } from "src/compiler/ast";
 import { Dag } from "src/compiler/dag";
-import {
-  ImportCacher,
-  ImportResolver,
-  CompileFromSourceFn,
-} from "src/compiler/importCacher";
+import { ImportCacher, ImportResolver } from "src/compiler/importCacher";
 import { Compiler } from "src/compiler/driver";
 import { FIZ_FILE_EXTENSION } from "src/compiler/constants";
 import { ErrorCode } from "src/compiler/compilationErrors";
@@ -17,112 +12,108 @@ import {
 
 // What the cache remembers, and which locations it refuses before a fetch is
 // ever attempted. How one response is judged to be a fiz file belongs to the
-// transport and is tested in importFetcher.test.ts.
+// transport and is tested in importFetcher.test.ts. Nothing here compiles a
+// dag: the cache holds a parsed recipe, and what an import site builds from
+// one is dagFactory's business.
 
 describe("import cacher", () => {
-  const mockDag = new Dag("mock-package");
-  const mockAst = new RecipeTreeNode();
-  const mockCompileSourceFn: CompileFromSourceFn = vi
-    .fn()
-    .mockReturnValue({ AST: mockAst, DAG: mockDag, Errors: [] });
-
   const packageLocation = `test-package${FIZ_FILE_EXTENSION}`;
+  const otherPackageLocation = `other-package${FIZ_FILE_EXTENSION}`;
   const nonFizPackageLocation = "test-package.txt";
+
+  // A root resolver and the cacher behind it. Tests reach for the cacher only
+  // where the cache itself is the subject (clearing it, peeking into it).
+  function makeCacher(): [ImportCacher, ImportResolver] {
+    const importCacher = new ImportCacher();
+    return [importCacher, new ImportResolver(importCacher)];
+  }
+
+  function mockSourceResponse(source: string) {
+    return {
+      ok: true,
+      headers: makeDefaultMockHeader(),
+      text: () => Promise.resolve(source),
+    };
+  }
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  test("should fetch a package from a valid URL", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeDefaultMockHeader(),
-      text: () => Promise.resolve("package source"),
-    });
+  test("should fetch and parse a package from a valid URL", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce(mockSourceResponse("f()"));
 
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-    const { DAG } = await importCacher.getPackageCompilation(packageLocation);
+    const [, imports] = makeCacher();
+    const { ast, parseErrors } = await imports.getImport(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledWith(
       packageLocation,
       expect.anything(),
     );
-    expect(mockCompileSourceFn).toHaveBeenCalledWith(
-      "package source",
-      expect.any(ImportResolver),
-    );
-    expect(DAG).toEqual(mockDag);
+    expect(parseErrors).toEqual([]);
+    expect(ast.Statements).toHaveLength(1);
   });
 
-  test("should hand the nested compile a resolver already on the chain", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeDefaultMockHeader(),
-      text: () => Promise.resolve("package source"),
-    });
+  test("should hand the next level down a resolver on the chain", async () => {
+    global.fetch = vi
+      .fn()
+      .mockImplementation((url: string) =>
+        Promise.resolve(
+          mockSourceResponse(url === packageLocation ? "f()" : "g()"),
+        ),
+      );
 
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-    await importCacher.getPackageCompilation(packageLocation);
+    const [, imports] = makeCacher();
+    const resolved = await imports.getImport(packageLocation);
 
-    // the chain the resolver carries is private, so the way to see that this
+    // the chain a resolver carries is private, so the way to see that this
     // package is on it is to ask that resolver for this package: importing
-    // what is still compiling is the cycle the chain exists to catch
-    const [, imports] = vi.mocked(mockCompileSourceFn).mock.calls[0];
-    await expectImportError(
-      imports.getCompilation(packageLocation),
+    // what is still being built is the cycle the chain exists to catch
+    const error = await expectImportError(
+      resolved.resolver.getImport(packageLocation),
       ErrorCode.ImportCircular,
     );
+    expect(error.message).toEqual(
+      `Circular import detected: ${packageLocation}`,
+    );
+
+    // a package that is not on the chain is not a cycle
+    await expect(
+      resolved.resolver.getImport(otherPackageLocation),
+    ).resolves.toBeDefined();
   });
 
   test("should return error for a non-fiz package location", async () => {
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-    await expect(
-      importCacher.getPackageCompilation(nonFizPackageLocation),
-    ).rejects.toThrow(
+    const [, imports] = makeCacher();
+    await expect(imports.getImport(nonFizPackageLocation)).rejects.toThrow(
       `Package '${nonFizPackageLocation}' missing file extension ${FIZ_FILE_EXTENSION}`,
     );
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
   test("should cache the fetched package", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeDefaultMockHeader(),
-      text: () => Promise.resolve("package source"),
-    });
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(mockSourceResponse("package source"));
 
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-    await importCacher.getPackageCompilation(packageLocation);
-    const result = await importCacher.getPackageCompilation(packageLocation);
-
-    expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(result.DAG).toEqual(mockDag);
-
-    const cachedResult =
-      await importCacher.getPackageCompilation(packageLocation);
+    const [, imports] = makeCacher();
+    await imports.getImport(packageLocation);
+    await imports.getImport(packageLocation);
+    await imports.getImport(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
-    expect(cachedResult.DAG).toEqual(mockDag);
   });
 
   test("should clear the cache", async () => {
     global.fetch = vi
       .fn()
-      .mockResolvedValueOnce({
-        ok: true,
-        headers: makeDefaultMockHeader(),
-        text: () => Promise.resolve("package source 1"),
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        headers: makeDefaultMockHeader(),
-        text: () => Promise.resolve("package source 2"),
-      });
+      .mockResolvedValueOnce(mockSourceResponse("package source 1"))
+      .mockResolvedValueOnce(mockSourceResponse("package source 2"));
 
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-    await importCacher.getPackageCompilation(packageLocation);
+    const [importCacher, imports] = makeCacher();
+    await imports.getImport(packageLocation);
     importCacher.clearCache();
-    await importCacher.getPackageCompilation(packageLocation);
+    await imports.getImport(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
@@ -138,19 +129,15 @@ describe("import cacher", () => {
           pendingFetches.push({ resolve, reject });
         }),
     );
-    const importCacher = new ImportCacher(mockCompileSourceFn);
+    const [importCacher, imports] = makeCacher();
 
     // abandon a request mid-flight, then start a fresh one for the same package
-    const abandoned = importCacher.getPackageCompilation(packageLocation);
+    const abandoned = imports.getImport(packageLocation);
     importCacher.clearCache();
-    const replacement = importCacher.getPackageCompilation(packageLocation);
+    const replacement = imports.getImport(packageLocation);
     expect(global.fetch).toHaveBeenCalledTimes(2);
 
-    pendingFetches[1].resolve({
-      ok: true,
-      headers: makeDefaultMockHeader(),
-      text: () => Promise.resolve("package source"),
-    });
+    pendingFetches[1].resolve(mockSourceResponse("package source"));
     await expect(replacement).resolves.toBeDefined();
 
     pendingFetches[0].reject(new Error("offline"));
@@ -158,19 +145,19 @@ describe("import cacher", () => {
 
     // the abandoned failure must leave the cached success alone, or the next
     // caller pays for a refetch of a package that is sitting right there
-    await importCacher.getPackageCompilation(packageLocation);
+    await imports.getImport(packageLocation);
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
   test("should not resolve a location naming a prototype member", async () => {
     // a plain-object cache answers 'constructor' or '__proto__' with an
-    // inherited member, which is not a compilation at all
+    // inherited member, which is not a recipe at all
     global.fetch = vi.fn();
-    const importCacher = new ImportCacher(mockCompileSourceFn);
+    const [importCacher, imports] = makeCacher();
 
     for (const location of ["constructor", "__proto__", "toString"]) {
       await expectImportError(
-        importCacher.getPackageCompilation(location),
+        imports.getImport(location),
         ErrorCode.ImportMissingExtension,
       );
       await expect(
@@ -180,21 +167,19 @@ describe("import cacher", () => {
     expect(global.fetch).not.toHaveBeenCalled();
   });
 
-  test("should hand every caller the one cached compilation", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeDefaultMockHeader(),
-      text: () => Promise.resolve("package source"),
-    });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
+  test("should hand every caller the one cached parse", async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(mockSourceResponse("package source"));
+    const [, imports] = makeCacher();
 
-    const first = await importCacher.getPackageCompilation(packageLocation);
-    const second = await importCacher.getPackageCompilation(packageLocation);
+    const first = await imports.getImport(packageLocation);
+    const second = await imports.getImport(packageLocation);
 
-    // the dag handed out is the cached instance, which is why an import site
-    // clones it before mutating (see "import reuse across call sites")
-    expect(first).toBe(second);
-    expect(first.DAG).toBe(second.DAG);
+    // the ast is shared because a recipe's tree does not depend on who
+    // imported it; the dag each site builds from it does, and is not cached
+    // (see "import reuse across call sites")
+    expect(first.ast).toBe(second.ast);
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
@@ -202,39 +187,19 @@ describe("import cacher", () => {
     global.fetch = vi
       .fn()
       .mockRejectedValueOnce(new Error("offline"))
-      .mockResolvedValueOnce({
-        ok: true,
-        headers: makeDefaultMockHeader(),
-        text: () => Promise.resolve("package source"),
-      });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
+      .mockResolvedValueOnce(mockSourceResponse("f()"));
+    const [, imports] = makeCacher();
 
-    await expect(
-      importCacher.getPackageCompilation(packageLocation),
-    ).rejects.toThrow("offline");
-    const retried = await importCacher.getPackageCompilation(packageLocation);
-    expect(retried.DAG).toBeInstanceOf(Dag);
+    await expect(imports.getImport(packageLocation)).rejects.toThrow("offline");
+    const retried = await imports.getImport(packageLocation);
+    expect(retried.ast.Statements).toHaveLength(1);
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
-  test("should report a circular import as a coded error", async () => {
-    const importCacher = new ImportCacher(mockCompileSourceFn);
-    const error = await expectImportError(
-      importCacher.getPackageCompilation(
-        packageLocation,
-        new Set([packageLocation]),
-      ),
-      ErrorCode.ImportCircular,
-    );
-    expect(error.message).toEqual(
-      `Circular import detected: ${packageLocation}`,
-    );
-  });
-
   test("should code a missing extension and an HTML response", async () => {
-    const importCacher = new ImportCacher(mockCompileSourceFn);
+    const [, imports] = makeCacher();
     await expectImportError(
-      importCacher.getPackageCompilation(nonFizPackageLocation),
+      imports.getImport(nonFizPackageLocation),
       ErrorCode.ImportMissingExtension,
     );
 
@@ -244,28 +209,24 @@ describe("import cacher", () => {
       text: () => Promise.resolve("<html></html>"),
     });
     await expectImportError(
-      importCacher.getPackageCompilation(packageLocation),
+      imports.getImport(packageLocation),
       ErrorCode.ImportHtmlResponse,
     );
   });
 
   test("should accept a fiz location carrying a query string", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeDefaultMockHeader(),
-      text: () => Promise.resolve("package source"),
-    });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(mockSourceResponse("package source"));
+    const [, imports] = makeCacher();
     const versionedLocation = `https://example.com/pkg${FIZ_FILE_EXTENSION}?v=2`;
 
-    const compilation =
-      await importCacher.getPackageCompilation(versionedLocation);
-    expect(compilation.DAG).toBeInstanceOf(Dag);
+    await expect(imports.getImport(versionedLocation)).resolves.toBeDefined();
   });
 
   test("should reject a fragment that only looks like a fiz file", async () => {
     global.fetch = vi.fn();
-    const importCacher = new ImportCacher(mockCompileSourceFn);
+    const [, imports] = makeCacher();
 
     for (const location of [
       `https://example.com/index.html#pkg${FIZ_FILE_EXTENSION}`,
@@ -273,7 +234,7 @@ describe("import cacher", () => {
       `index.html?src=pkg${FIZ_FILE_EXTENSION}`,
     ]) {
       await expectImportError(
-        importCacher.getPackageCompilation(location),
+        imports.getImport(location),
         ErrorCode.ImportMissingExtension,
       );
     }
@@ -281,26 +242,23 @@ describe("import cacher", () => {
   });
 
   test("should tolerate whitespace around a fiz location", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeDefaultMockHeader(),
-      text: () => Promise.resolve("package source"),
-    });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(mockSourceResponse("package source"));
+    const [, imports] = makeCacher();
 
     // fetch strips this itself, so rejecting it for a missing extension would
     // only mislead about a location that does carry one
-    const compilation = await importCacher.getPackageCompilation(
-      `${packageLocation} `,
-    );
-    expect(compilation.DAG).toBeInstanceOf(Dag);
+    await expect(
+      imports.getImport(`${packageLocation} `),
+    ).resolves.toBeDefined();
   });
 
   test("should let an unparseable location fail at the fetch", async () => {
     global.fetch = vi
       .fn()
       .mockRejectedValue(new TypeError("Failed to parse URL"));
-    const importCacher = new ImportCacher(mockCompileSourceFn);
+    const [, imports] = makeCacher();
 
     // the extension check cannot inspect either of these, and reporting a
     // missing extension would describe neither fault: the first carries the
@@ -310,7 +268,7 @@ describe("import cacher", () => {
       "http://",
     ]) {
       const error = await expectImportError(
-        importCacher.getPackageCompilation(location),
+        imports.getImport(location),
         ErrorCode.ImportFetchFailed,
       );
       expect(error.message).toContain("Failed to parse URL");
@@ -318,32 +276,26 @@ describe("import cacher", () => {
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
-  test("should peek at the ast of a compiled package", async () => {
-    global.fetch = vi.fn().mockResolvedValueOnce({
-      ok: true,
-      headers: makeDefaultMockHeader(),
-      text: () => Promise.resolve("package source"),
-    });
-    const importCacher = new ImportCacher(mockCompileSourceFn);
+  test("should peek at the ast of a fetched package", async () => {
+    global.fetch = vi.fn().mockResolvedValueOnce(mockSourceResponse("f()"));
+    const [importCacher, imports] = makeCacher();
 
-    await importCacher.getPackageCompilation(packageLocation);
+    const { ast } = await imports.getImport(packageLocation);
 
-    await expect(importCacher.getCachedAst(packageLocation)).resolves.toBe(
-      mockAst,
-    );
+    await expect(importCacher.getCachedAst(packageLocation)).resolves.toBe(ast);
     // a peek is a peek: it must not have gone and fetched anything itself
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   test("should never reject a cache peek", async () => {
     global.fetch = vi.fn().mockRejectedValueOnce(new Error("offline"));
-    const importCacher = new ImportCacher(mockCompileSourceFn);
+    const [importCacher, imports] = makeCacher();
 
     await expect(
       importCacher.getCachedAst(packageLocation),
     ).resolves.toBeUndefined();
 
-    const pending = importCacher.getPackageCompilation(packageLocation);
+    const pending = imports.getImport(packageLocation);
     await expect(pending).rejects.toThrow("offline");
     await expect(
       importCacher.getCachedAst(packageLocation),
@@ -550,6 +502,26 @@ function nodeNames(dag: Dag): Set<string> {
   return new Set(dag.getNodeList().map((node) => node.name));
 }
 
+// Every id in a dag tree, including the child dags' own. A renderer flattens
+// the tree into one element list (makeCyElements), so an id repeated anywhere
+// below the root is a collision even when the two elements sit in different
+// scopes.
+function allElementIds(dag: Dag): string[] {
+  const ids = [
+    ...dag.getNodeList().map((node) => node.id),
+    ...dag.getEdgeList().map((edge) => edge.id),
+  ];
+  for (const childDag of dag.getChildDags()) {
+    ids.push(childDag.Id, ...allElementIds(childDag));
+  }
+  return ids;
+}
+
+function expectUniqueIds(dag: Dag): void {
+  const ids = allElementIds(dag);
+  expect(new Set(ids)).toHaveLength(ids.length);
+}
+
 describe("import reuse across call sites", () => {
   test("one package merged into two namespaces keeps both subgraphs", async () => {
     global.fetch = vi
@@ -604,8 +576,68 @@ describe("import reuse across call sites", () => {
     const viaB = await compiler.compileFromSource(`@ "b.fiz"`);
     expect(nodeNames(viaB.DAG)).toEqual(new Set(["fa", "fb"]));
 
-    // recompiled, but the fetched source is still cached
+    // recompiled, but the parsed recipe is still cached
     expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+// An imported package's contents are built under a scope belonging to the
+// import site. Before that, they were built under their own root and only the
+// imported dag's own id was rewritten, so every site importing one package
+// emitted the same ids for its contents.
+describe("imported ids are scoped to the import site", () => {
+  test("a merged import keeps a node a local call shares a name with", async () => {
+    global.fetch = vi
+      .fn()
+      .mockImplementation(makeMockFetchImpl(new Map([["p.fiz", "f()"]])));
+
+    const dag = await compileDagOnce(`f()\n@ "p.fiz"`);
+
+    // both calls were keyed 'root-n-f-0', so the merge overwrote one outright
+    expect(dag.getNodeList()).toHaveLength(2);
+    expectUniqueIds(dag);
+  });
+
+  test("a named import does not collide with a local call", async () => {
+    global.fetch = vi
+      .fn()
+      .mockImplementation(makeMockFetchImpl(new Map([["p.fiz", "f()"]])));
+
+    const dag = await compileDagOnce(`f()\nx @ "p.fiz"`);
+
+    expectUniqueIds(dag);
+  });
+
+  test("two sites importing one package keep their own ids", async () => {
+    global.fetch = vi
+      .fn()
+      .mockImplementation(
+        makeMockFetchImpl(new Map([["p.fiz", `a()\nb(a())`]])),
+      );
+
+    const dag = await compileDagOnce(`x @ "p.fiz"\ny @ "p.fiz"`);
+
+    // edges as well as nodes: the package declares one of each
+    expectUniqueIds(dag);
+    const [first, second] = dag.getChildDags();
+    expect(nodeNames(first)).toEqual(new Set(["a", "b"]));
+    expect(nodeNames(second)).toEqual(new Set(["a", "b"]));
+    // separate dags, not one instance handed out twice
+    expect(first).not.toBe(second);
+  });
+
+  test("an imported id carries its import scope path", async () => {
+    global.fetch = vi
+      .fn()
+      .mockImplementation(makeMockFetchImpl(new Map([["p.fiz", "f()"]])));
+
+    const dag = await compileDagOnce(`x @ "p.fiz"`);
+
+    const [imported] = dag.getChildDags();
+    expect(imported.Id).toEqual("root-i-x-0");
+    expect(imported.getNodeList().map((node) => node.id)).toEqual([
+      "root-i-x-0-n-f-0",
+    ]);
   });
 });
 
@@ -663,7 +695,7 @@ describe("dependency walk", () => {
     await compiler.compileFromSource(`@ "a.fiz"`);
 
     const importer = compiler.ImportCacher;
-    const lookups = vi.spyOn(importer, "getPackageCompilation");
+    const lookups = vi.spyOn(importer, "getParsedRecipe");
     const tree = await importer.getDependencyTree("a.fiz");
 
     expect(Array.from(tree.keys()).sort()).toEqual([
