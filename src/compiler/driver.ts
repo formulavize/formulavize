@@ -2,7 +2,7 @@ import { EditorState } from "@codemirror/state";
 import { makeDag } from "./dagFactory";
 import { Compilation } from "./compilation";
 import { ParseResult, parseFromEditorState, parseFromSource } from "./parser";
-import { ImportCacher, ImportResolver } from "./importCacher";
+import { ImportCacher, makeImportResolver } from "./importCacher";
 import { FetchSourceFn } from "./importFetcher";
 
 export interface CompilerOptions {
@@ -42,7 +42,7 @@ export class Compiler {
   ): Promise<Compilation> {
     const { dag, errors: dagErrors } = await makeDag(
       parsed.ast,
-      new ImportResolver(this.importCacher),
+      makeImportResolver(this.importCacher),
     );
     return new Compilation(source, parsed.ast, dag, [
       ...parsed.errors,

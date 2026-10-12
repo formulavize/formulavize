@@ -13,7 +13,10 @@ import { makeDag } from "src/compiler/dagFactory";
 import { Compiler } from "src/compiler/driver";
 import { ImportResolver } from "src/compiler/importCacher";
 
-const dummyImportResolver = {} as ImportResolver;
+// No recipe here imports anything, so the resolver should never be reached.
+const dummyImportResolver: ImportResolver = (packageLocation) => {
+  throw new Error(`unexpected import resolution: ${packageLocation}`);
+};
 
 function getNodeIds(dag: Awaited<ReturnType<typeof makeDag>>["dag"]): string[] {
   return dag.getNodeList().map((n) => n.id);

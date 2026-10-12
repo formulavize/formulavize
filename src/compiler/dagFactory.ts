@@ -238,7 +238,7 @@ async function processNamespace(
   namespaceStmt: NamespaceTreeNode,
   workingDag: Dag,
   errors: Error[],
-  imports: ImportResolver,
+  resolveImport: ImportResolver,
   ctx: StableIdContext,
 ): Promise<NodeId> {
   const childCtx = ctx.childScope(ScopeKind.Namespace, namespaceStmt.Name);
@@ -247,7 +247,7 @@ async function processNamespace(
     subDagId,
     namespaceStmt,
     errors,
-    imports,
+    resolveImport,
     workingDag,
     childCtx,
   );
@@ -292,7 +292,7 @@ function reportImportedErrors(
 // reported against the import statement, so a caller's only job is to stop.
 async function getImportedDag(
   importStmt: ImportTreeNode,
-  imports: ImportResolver,
+  resolveImport: ImportResolver,
   errors: Error[],
   workingDag: Dag,
   ctx: StableIdContext,
@@ -302,7 +302,7 @@ async function getImportedDag(
   // incorrect behavior if the order of imports matters.
   const packageLocation = importStmt.ImportLocation;
   workingDag.addUsedImport(packageLocation);
-  const resolved = await imports.getImport(packageLocation).catch((err) => {
+  const resolved = await resolveImport(packageLocation).catch((err) => {
     const errMsg = makeError(
       importStmt,
       describeError(err),
@@ -349,12 +349,12 @@ async function processImport(
   isAssigned: boolean,
   workingDag: Dag,
   errors: Error[],
-  imports: ImportResolver,
+  resolveImport: ImportResolver,
   ctx: StableIdContext,
 ): Promise<NodeId | null> {
   const importedDag = await getImportedDag(
     importStmt,
-    imports,
+    resolveImport,
     errors,
     workingDag,
     ctx,
@@ -383,7 +383,7 @@ async function processAssignmentRhs(
     CallTreeNode | QualifiedVarTreeNode | NamespaceTreeNode | ImportTreeNode,
   workingDag: Dag,
   errors: Error[],
-  imports: ImportResolver,
+  resolveImport: ImportResolver,
   ctx: StableIdContext,
 ): Promise<NodeId | null> {
   return match(rhsNode.Type)
@@ -412,7 +412,7 @@ async function processAssignmentRhs(
         rhsNode as NamespaceTreeNode,
         workingDag,
         errors,
-        imports,
+        resolveImport,
         ctx,
       );
     })
@@ -422,7 +422,7 @@ async function processAssignmentRhs(
         true,
         workingDag,
         errors,
-        imports,
+        resolveImport,
         ctx,
       );
     })
@@ -465,7 +465,7 @@ async function processAssignment(
   assignmentStmt: AssignmentTreeNode,
   workingDag: Dag,
   errors: Error[],
-  imports: ImportResolver,
+  resolveImport: ImportResolver,
   ctx: StableIdContext,
 ): Promise<void> {
   const lhsIsEmpty = assignmentStmt.Lhs.length === 0;
@@ -498,7 +498,7 @@ async function processAssignment(
     assignmentStmt.Rhs,
     workingDag,
     errors,
-    imports,
+    resolveImport,
     ctx,
   );
   if (!thisNodeId) return;
@@ -622,7 +622,7 @@ async function processStatement(
   stmt: BaseTreeNode,
   workingDag: Dag,
   errors: Error[],
-  imports: ImportResolver,
+  resolveImport: ImportResolver,
   ctx: StableIdContext,
 ): Promise<void> {
   await match(stmt.Type)
@@ -634,7 +634,7 @@ async function processStatement(
         stmt as AssignmentTreeNode,
         workingDag,
         errors,
-        imports,
+        resolveImport,
         ctx,
       );
     })
@@ -667,7 +667,7 @@ async function processStatement(
         stmt as NamespaceTreeNode,
         workingDag,
         errors,
-        imports,
+        resolveImport,
         ctx,
       );
     })
@@ -677,7 +677,7 @@ async function processStatement(
         false,
         workingDag,
         errors,
-        imports,
+        resolveImport,
         ctx,
       );
     })
@@ -697,7 +697,7 @@ export async function makeSubDag(
   dagId: DagId,
   dagNamespaceStmt: NamespaceTreeNode,
   errors: Error[],
-  imports: ImportResolver,
+  resolveImport: ImportResolver,
   parentDag?: Dag,
   ctx?: StableIdContext,
 ): Promise<Dag> {
@@ -716,14 +716,14 @@ export async function makeSubDag(
   );
 
   for (const stmt of dagNamespaceStmt.Statements) {
-    await processStatement(stmt, curLevelDag, errors, imports, idCtx);
+    await processStatement(stmt, curLevelDag, errors, resolveImport, idCtx);
   }
   return curLevelDag;
 }
 
 export async function makeDag(
   recipe: RecipeTreeNode,
-  importResolver: ImportResolver,
+  resolveImport: ImportResolver,
   ctx: StableIdContext = new StableIdContext("root"),
 ): Promise<{ dag: Dag; errors: Error[] }> {
   const errors: Error[] = [];
@@ -735,7 +735,7 @@ export async function makeDag(
     ctx.ScopePath,
     new NamespaceTreeNode("", statementList),
     errors,
-    importResolver,
+    resolveImport,
     undefined,
     ctx,
   );

@@ -13,7 +13,11 @@ import { ImportResolver } from "src/compiler/importCacher";
 import { makeCyElements } from "src/renderers/cyDag/cyGraphFactory";
 import cytoscape from "cytoscape";
 
-const dummyImportResolver = {} as ImportResolver;
+// No recipe here imports anything, so the resolver should never be reached.
+// A stub that throws states that, where a cast to {} only implied it.
+const dummyImportResolver: ImportResolver = (packageLocation) => {
+  throw new Error(`unexpected import resolution: ${packageLocation}`);
+};
 
 describe("stable IDs with Cytoscape integration", () => {
   test("unicode node IDs work in headless Cytoscape selectors", async () => {

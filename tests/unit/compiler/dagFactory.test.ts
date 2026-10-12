@@ -28,7 +28,10 @@ import {
   ErrorSource,
 } from "src/compiler/compilationErrors";
 
-const dummyImportResolver = {} as ImportResolver;
+// No recipe here imports anything, so the resolver should never be reached.
+const dummyImportResolver: ImportResolver = (packageLocation) => {
+  throw new Error(`unexpected import resolution: ${packageLocation}`);
+};
 
 describe("node tests", () => {
   async function makeDagAndReturnNodeNames(recipe: Recipe): Promise<string[]> {
@@ -1091,13 +1094,11 @@ describe("import tests", () => {
   // An import site builds the imported dag from this recipe under its own
   // scope, so the mock hands back a recipe and the resolver for the next
   // level down rather than a finished dag.
-  const mockImports = {
-    getImport: async () => ({
-      ast: new Recipe([new Call("nameX", new ValueList([]))]),
-      parseErrors: [],
-      resolver: mockImports,
-    }),
-  } as unknown as ImportResolver;
+  const mockImports: ImportResolver = async () => ({
+    ast: new Recipe([new Call("nameX", new ValueList([]))]),
+    parseErrors: [],
+    resolver: mockImports,
+  });
 
   test("imported anonymous namespace", async () => {
     const recipe = new Recipe([new Import("path")]);
@@ -1155,11 +1156,9 @@ describe("import tests", () => {
     expect(dagEdgeList).toHaveLength(1);
   });
 
-  const mockImportsError = {
-    getImport: async () => {
-      throw new Error("import error");
-    },
-  } as unknown as ImportResolver;
+  const mockImportsError: ImportResolver = async () => {
+    throw new Error("import error");
+  };
 
   test("continue after problematic import", async () => {
     const recipe = new Recipe([
@@ -1269,11 +1268,9 @@ describe("error reporting", () => {
     expect(dag.getNodeList()[0].name).toEqual("f");
   });
   test("error reporting when import fails", async () => {
-    const mockImportsError = {
-      getImport: async () => {
-        throw new Error("import error");
-      },
-    } as unknown as ImportResolver;
+    const mockImportsError: ImportResolver = async () => {
+      throw new Error("import error");
+    };
 
     const recipe = new Recipe([new Import("bad_path")]);
     const { dag, errors } = await makeDag(recipe, mockImportsError);
@@ -1290,11 +1287,10 @@ describe("error reporting", () => {
     expect(dag.getChildDags()).toHaveLength(0);
   });
   test("error reporting when an import rejects with a non-Error", async () => {
-    const mockImportsError = {
-      // nothing obliges a rejection to carry an Error, and a thrown string
-      // has no .message to report
-      getImport: () => Promise.reject("not an Error at all"),
-    } as unknown as ImportResolver;
+    // nothing obliges a rejection to carry an Error, and a thrown string
+    // has no .message to report
+    const mockImportsError: ImportResolver = () =>
+      Promise.reject("not an Error at all");
 
     const recipe = new Recipe([new Import("bad_path")]);
     const { dag, errors } = await makeDag(recipe, mockImportsError);

@@ -1,6 +1,10 @@
 import { describe, test, expect, vi, beforeEach } from "vitest";
 import { Dag } from "src/compiler/dag";
-import { ImportCacher, ImportResolver } from "src/compiler/importCacher";
+import {
+  ImportCacher,
+  ImportResolver,
+  makeImportResolver,
+} from "src/compiler/importCacher";
 import { Compiler } from "src/compiler/driver";
 import { FIZ_FILE_EXTENSION } from "src/compiler/constants";
 import { ErrorCode } from "src/compiler/compilationErrors";
@@ -25,7 +29,7 @@ describe("import cacher", () => {
   // where the cache itself is the subject (clearing it, peeking into it).
   function makeCacher(): [ImportCacher, ImportResolver] {
     const importCacher = new ImportCacher();
-    return [importCacher, new ImportResolver(importCacher)];
+    return [importCacher, makeImportResolver(importCacher)];
   }
 
   function mockSourceResponse(source: string) {
@@ -43,8 +47,8 @@ describe("import cacher", () => {
   test("should fetch and parse a package from a valid URL", async () => {
     global.fetch = vi.fn().mockResolvedValueOnce(mockSourceResponse("f()"));
 
-    const [, imports] = makeCacher();
-    const { ast, parseErrors } = await imports.getImport(packageLocation);
+    const [, resolveImport] = makeCacher();
+    const { ast, parseErrors } = await resolveImport(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledWith(
       packageLocation,
@@ -63,14 +67,14 @@ describe("import cacher", () => {
         ),
       );
 
-    const [, imports] = makeCacher();
-    const resolved = await imports.getImport(packageLocation);
+    const [, resolveImport] = makeCacher();
+    const resolved = await resolveImport(packageLocation);
 
     // the chain a resolver carries is private, so the way to see that this
     // package is on it is to ask that resolver for this package: importing
     // what is still being built is the cycle the chain exists to catch
     const error = await expectImportError(
-      resolved.resolver.getImport(packageLocation),
+      resolved.resolver(packageLocation),
       ErrorCode.ImportCircular,
     );
     expect(error.message).toEqual(
@@ -79,13 +83,13 @@ describe("import cacher", () => {
 
     // a package that is not on the chain is not a cycle
     await expect(
-      resolved.resolver.getImport(otherPackageLocation),
+      resolved.resolver(otherPackageLocation),
     ).resolves.toBeDefined();
   });
 
   test("should return error for a non-fiz package location", async () => {
-    const [, imports] = makeCacher();
-    await expect(imports.getImport(nonFizPackageLocation)).rejects.toThrow(
+    const [, resolveImport] = makeCacher();
+    await expect(resolveImport(nonFizPackageLocation)).rejects.toThrow(
       `Package '${nonFizPackageLocation}' missing file extension ${FIZ_FILE_EXTENSION}`,
     );
     expect(global.fetch).not.toHaveBeenCalled();
@@ -96,10 +100,10 @@ describe("import cacher", () => {
       .fn()
       .mockResolvedValueOnce(mockSourceResponse("package source"));
 
-    const [, imports] = makeCacher();
-    await imports.getImport(packageLocation);
-    await imports.getImport(packageLocation);
-    await imports.getImport(packageLocation);
+    const [, resolveImport] = makeCacher();
+    await resolveImport(packageLocation);
+    await resolveImport(packageLocation);
+    await resolveImport(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
@@ -110,10 +114,10 @@ describe("import cacher", () => {
       .mockResolvedValueOnce(mockSourceResponse("package source 1"))
       .mockResolvedValueOnce(mockSourceResponse("package source 2"));
 
-    const [importCacher, imports] = makeCacher();
-    await imports.getImport(packageLocation);
+    const [importCacher, resolveImport] = makeCacher();
+    await resolveImport(packageLocation);
     importCacher.clearCache();
-    await imports.getImport(packageLocation);
+    await resolveImport(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
@@ -129,12 +133,12 @@ describe("import cacher", () => {
           pendingFetches.push({ resolve, reject });
         }),
     );
-    const [importCacher, imports] = makeCacher();
+    const [importCacher, resolveImport] = makeCacher();
 
     // abandon a request mid-flight, then start a fresh one for the same package
-    const abandoned = imports.getImport(packageLocation);
+    const abandoned = resolveImport(packageLocation);
     importCacher.clearCache();
-    const replacement = imports.getImport(packageLocation);
+    const replacement = resolveImport(packageLocation);
     expect(global.fetch).toHaveBeenCalledTimes(2);
 
     pendingFetches[1].resolve(mockSourceResponse("package source"));
@@ -145,7 +149,7 @@ describe("import cacher", () => {
 
     // the abandoned failure must leave the cached success alone, or the next
     // caller pays for a refetch of a package that is sitting right there
-    await imports.getImport(packageLocation);
+    await resolveImport(packageLocation);
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
@@ -153,11 +157,11 @@ describe("import cacher", () => {
     // a plain-object cache answers 'constructor' or '__proto__' with an
     // inherited member, which is not a recipe at all
     global.fetch = vi.fn();
-    const [importCacher, imports] = makeCacher();
+    const [importCacher, resolveImport] = makeCacher();
 
     for (const location of ["constructor", "__proto__", "toString"]) {
       await expectImportError(
-        imports.getImport(location),
+        resolveImport(location),
         ErrorCode.ImportMissingExtension,
       );
       await expect(
@@ -171,10 +175,10 @@ describe("import cacher", () => {
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce(mockSourceResponse("package source"));
-    const [, imports] = makeCacher();
+    const [, resolveImport] = makeCacher();
 
-    const first = await imports.getImport(packageLocation);
-    const second = await imports.getImport(packageLocation);
+    const first = await resolveImport(packageLocation);
+    const second = await resolveImport(packageLocation);
 
     // the ast is shared because a recipe's tree does not depend on who
     // imported it; the dag each site builds from it does, and is not cached
@@ -188,18 +192,18 @@ describe("import cacher", () => {
       .fn()
       .mockRejectedValueOnce(new Error("offline"))
       .mockResolvedValueOnce(mockSourceResponse("f()"));
-    const [, imports] = makeCacher();
+    const [, resolveImport] = makeCacher();
 
-    await expect(imports.getImport(packageLocation)).rejects.toThrow("offline");
-    const retried = await imports.getImport(packageLocation);
+    await expect(resolveImport(packageLocation)).rejects.toThrow("offline");
+    const retried = await resolveImport(packageLocation);
     expect(retried.ast.Statements).toHaveLength(1);
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
 
   test("should code a missing extension and an HTML response", async () => {
-    const [, imports] = makeCacher();
+    const [, resolveImport] = makeCacher();
     await expectImportError(
-      imports.getImport(nonFizPackageLocation),
+      resolveImport(nonFizPackageLocation),
       ErrorCode.ImportMissingExtension,
     );
 
@@ -209,7 +213,7 @@ describe("import cacher", () => {
       text: () => Promise.resolve("<html></html>"),
     });
     await expectImportError(
-      imports.getImport(packageLocation),
+      resolveImport(packageLocation),
       ErrorCode.ImportHtmlResponse,
     );
   });
@@ -218,15 +222,15 @@ describe("import cacher", () => {
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce(mockSourceResponse("package source"));
-    const [, imports] = makeCacher();
+    const [, resolveImport] = makeCacher();
     const versionedLocation = `https://example.com/pkg${FIZ_FILE_EXTENSION}?v=2`;
 
-    await expect(imports.getImport(versionedLocation)).resolves.toBeDefined();
+    await expect(resolveImport(versionedLocation)).resolves.toBeDefined();
   });
 
   test("should reject a fragment that only looks like a fiz file", async () => {
     global.fetch = vi.fn();
-    const [, imports] = makeCacher();
+    const [, resolveImport] = makeCacher();
 
     for (const location of [
       `https://example.com/index.html#pkg${FIZ_FILE_EXTENSION}`,
@@ -234,7 +238,7 @@ describe("import cacher", () => {
       `index.html?src=pkg${FIZ_FILE_EXTENSION}`,
     ]) {
       await expectImportError(
-        imports.getImport(location),
+        resolveImport(location),
         ErrorCode.ImportMissingExtension,
       );
     }
@@ -245,20 +249,18 @@ describe("import cacher", () => {
     global.fetch = vi
       .fn()
       .mockResolvedValueOnce(mockSourceResponse("package source"));
-    const [, imports] = makeCacher();
+    const [, resolveImport] = makeCacher();
 
     // fetch strips this itself, so rejecting it for a missing extension would
     // only mislead about a location that does carry one
-    await expect(
-      imports.getImport(`${packageLocation} `),
-    ).resolves.toBeDefined();
+    await expect(resolveImport(`${packageLocation} `)).resolves.toBeDefined();
   });
 
   test("should let an unparseable location fail at the fetch", async () => {
     global.fetch = vi
       .fn()
       .mockRejectedValue(new TypeError("Failed to parse URL"));
-    const [, imports] = makeCacher();
+    const [, resolveImport] = makeCacher();
 
     // the extension check cannot inspect either of these, and reporting a
     // missing extension would describe neither fault: the first carries the
@@ -268,7 +270,7 @@ describe("import cacher", () => {
       "http://",
     ]) {
       const error = await expectImportError(
-        imports.getImport(location),
+        resolveImport(location),
         ErrorCode.ImportFetchFailed,
       );
       expect(error.message).toContain("Failed to parse URL");
@@ -278,9 +280,9 @@ describe("import cacher", () => {
 
   test("should peek at the ast of a fetched package", async () => {
     global.fetch = vi.fn().mockResolvedValueOnce(mockSourceResponse("f()"));
-    const [importCacher, imports] = makeCacher();
+    const [importCacher, resolveImport] = makeCacher();
 
-    const { ast } = await imports.getImport(packageLocation);
+    const { ast } = await resolveImport(packageLocation);
 
     await expect(importCacher.getCachedAst(packageLocation)).resolves.toBe(ast);
     // a peek is a peek: it must not have gone and fetched anything itself
@@ -289,13 +291,13 @@ describe("import cacher", () => {
 
   test("should never reject a cache peek", async () => {
     global.fetch = vi.fn().mockRejectedValueOnce(new Error("offline"));
-    const [importCacher, imports] = makeCacher();
+    const [importCacher, resolveImport] = makeCacher();
 
     await expect(
       importCacher.getCachedAst(packageLocation),
     ).resolves.toBeUndefined();
 
-    const pending = imports.getImport(packageLocation);
+    const pending = resolveImport(packageLocation);
     await expect(pending).rejects.toThrow("offline");
     await expect(
       importCacher.getCachedAst(packageLocation),

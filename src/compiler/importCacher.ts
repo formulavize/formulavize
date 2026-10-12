@@ -130,39 +130,45 @@ export interface ResolvedImport {
   resolver: ImportResolver;
 }
 
-// Pairs a cacher with the import chain a request sits on, so the two travel
-// as one value instead of as two parameters threaded side by side through
-// every statement handler. Both are private: a caller only ever needs the
-// recipe for a location, and the chain a nested import inherits comes back
-// with it.
-export class ImportResolver {
-  constructor(
-    private readonly cacher: ImportCacher,
-    private readonly chain: ReadonlySet<string> = new Set(),
-  ) {}
+// Resolves one location to its recipe, on behalf of one point in the import
+// chain. The chain is captured, not passed: a statement handler asks for a
+// location without threading -- or being able to inspect -- a chain it never
+// reads, and the resolver a nested import inherits comes back with the recipe.
+export type ImportResolver = (
+  packageLocation: string,
+) => Promise<ResolvedImport>;
 
-  async getImport(packageLocation: string): Promise<ResolvedImport> {
+// A resolver for requests sitting on `chain`: the locations already being
+// imported above this one. A closure rather than a class, because a resolver
+// has exactly one operation and no state a caller may reach.
+export function makeImportResolver(
+  cacher: ImportCacher,
+  chain: ReadonlySet<string> = new Set(),
+): ImportResolver {
+  return async function resolveImport(
+    packageLocation: string,
+  ): Promise<ResolvedImport> {
     // Prevent circular imports. Nothing cached is conditional on the chain, so
     // reporting the cycle is all there is to do: the packages on the chain are
     // compiling without this one's contents, but each is a dag belonging to one
     // import site and is never handed to another.
-    if (this.chain.has(packageLocation)) {
+    if (chain.has(packageLocation)) {
       throw new ImportError(
         `Circular import detected: ${packageLocation}`,
         ErrorCode.ImportCircular,
       );
     }
 
-    const { ast, errors } = await this.cacher.getParsedRecipe(packageLocation);
+    const { ast, errors } = await cacher.getParsedRecipe(packageLocation);
     // extended only once the location is known to be a real package, so an
     // unfetchable location never lands on a chain
     return {
       ast,
       parseErrors: errors,
-      resolver: new ImportResolver(
-        this.cacher,
-        new Set([...this.chain, packageLocation]),
+      resolver: makeImportResolver(
+        cacher,
+        new Set([...chain, packageLocation]),
       ),
     };
-  }
+  };
 }
