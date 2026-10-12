@@ -24,6 +24,32 @@ describe("fetch source over http", () => {
     vi.clearAllMocks();
   });
 
+  // A response whose body streams the given chunks and then fails, the way a
+  // server that sends headers and then stalls past the deadline does. The
+  // reader is the only thing the fetcher touches, so that is all this mocks.
+  function mockStreamingResponse(
+    chunks: Uint8Array[],
+    failWith: unknown,
+    headers = makeDefaultMockHeader(),
+  ) {
+    let index = 0;
+    return {
+      ok: true,
+      headers,
+      body: {
+        getReader: () => ({
+          read: () => {
+            if (index < chunks.length) {
+              return Promise.resolve({ done: false, value: chunks[index++] });
+            }
+            return Promise.reject(failWith);
+          },
+          cancel: () => Promise.resolve(),
+        }),
+      },
+    };
+  }
+
   test("should return the body of a successful response", async () => {
     global.fetch = vi.fn().mockResolvedValueOnce({
       ok: true,
@@ -167,5 +193,104 @@ describe("fetch source over http", () => {
       ErrorCode.ImportFetchFailed,
     );
     expect(error.message).toContain("import limit");
+  });
+  test("should report a timeout during the body as a fetch timeout", async () => {
+    // The fetch signal stays attached until the body is fully read, so the
+    // deadline can expire after the headers have already arrived. That is the
+    // same failure as a timeout on the headers and has to read like one,
+    // rather than escaping as the bare DOMException the stream rejects with.
+    const timeoutError = new Error("The operation was aborted due to timeout");
+    timeoutError.name = "TimeoutError";
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        mockStreamingResponse([new TextEncoder().encode("f()")], timeoutError),
+      );
+
+    const error = await expectImportError(
+      fetchSourceOverHttp(packageLocation),
+      ErrorCode.ImportFetchFailed,
+    );
+    expect(error.message).toEqual(
+      `Failed to fetch package from '${packageLocation}': ` +
+        `timed out after ${IMPORT_FETCH_TIMEOUT_MS}ms`,
+    );
+  });
+
+  test("should name the location when the body is cut off mid-stream", async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        mockStreamingResponse(
+          [new TextEncoder().encode("f()")],
+          new TypeError("terminated"),
+        ),
+      );
+
+    const error = await expectImportError(
+      fetchSourceOverHttp(packageLocation),
+      ErrorCode.ImportFetchFailed,
+    );
+    expect(error.message).toEqual(
+      `Failed to fetch package from '${packageLocation}': terminated`,
+    );
+  });
+
+  test("should report a body that fails with a non-error value", async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(mockStreamingResponse([], "socket hang up"));
+
+    const error = await expectImportError(
+      fetchSourceOverHttp(packageLocation),
+      ErrorCode.ImportFetchFailed,
+    );
+    expect(error.message).toContain("socket hang up");
+  });
+
+  test("should keep the size diagnostic when a streamed body is too large", async () => {
+    // The cap names itself, so it must survive the wrapper that turns every
+    // other body failure into a fetch error rather than being re-described.
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        mockStreamingResponse(
+          [new Uint8Array(MAX_IMPORT_BYTES + 1)],
+          new Error("unreached"),
+        ),
+      );
+
+    const error = await expectImportError(
+      fetchSourceOverHttp(packageLocation),
+      ErrorCode.ImportFetchFailed,
+    );
+    expect(error.message).toEqual(
+      `Package '${packageLocation}' exceeds the ${MAX_IMPORT_BYTES} byte import limit`,
+    );
+  });
+
+  test("should stream a body that arrives in several chunks", async () => {
+    const encoder = new TextEncoder();
+    global.fetch = vi.fn().mockResolvedValueOnce({
+      ok: true,
+      headers: makeDefaultMockHeader(),
+      body: {
+        getReader: () => {
+          const chunks = [encoder.encode("f("), encoder.encode(")")];
+          let index = 0;
+          return {
+            read: () =>
+              Promise.resolve(
+                index < chunks.length
+                  ? { done: false, value: chunks[index++] }
+                  : { done: true, value: undefined },
+              ),
+            cancel: () => Promise.resolve(),
+          };
+        },
+      },
+    });
+
+    await expect(fetchSourceOverHttp(packageLocation)).resolves.toEqual("f()");
   });
 });

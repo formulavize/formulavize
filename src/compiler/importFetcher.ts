@@ -75,6 +75,19 @@ function assertFizContentType(
   }
 }
 
+function describeFetchFailure(error: unknown): string {
+  return error instanceof Error && error.name === "TimeoutError"
+    ? `timed out after ${IMPORT_FETCH_TIMEOUT_MS}ms`
+    : describeError(error);
+}
+
+function makeFetchError(packageLocation: string, reason: string): ImportError {
+  return new ImportError(
+    `Failed to fetch package from '${packageLocation}': ${reason}`,
+    ErrorCode.ImportFetchFailed,
+  );
+}
+
 async function readBoundedText(
   response: Response,
   packageLocation: string,
@@ -125,14 +138,7 @@ export async function fetchSourceOverHttp(
       signal: AbortSignal.timeout(IMPORT_FETCH_TIMEOUT_MS),
     });
   } catch (error) {
-    const reason =
-      error instanceof Error && error.name === "TimeoutError"
-        ? `timed out after ${IMPORT_FETCH_TIMEOUT_MS}ms`
-        : describeError(error);
-    throw new ImportError(
-      `Failed to fetch package from '${packageLocation}': ${reason}`,
-      ErrorCode.ImportFetchFailed,
-    );
+    throw makeFetchError(packageLocation, describeFetchFailure(error));
   }
 
   if (!response.ok) {
@@ -140,13 +146,22 @@ export async function fetchSourceOverHttp(
     const statusInfo =
       [response.status, response.statusText].filter(Boolean).join(" ") ||
       "unknown error";
-    throw new ImportError(
-      `Failed to fetch package from '${packageLocation}': ${statusInfo}`,
-      ErrorCode.ImportFetchFailed,
-    );
+    throw makeFetchError(packageLocation, statusInfo);
   }
 
   assertFizContentType(response.headers.get("content-type"), packageLocation);
 
-  return readBoundedText(response, packageLocation);
+  // The body is read inside the same try as the headers would be: the fetch
+  // signal stays attached until the body is fully read, so the deadline can
+  // just as well expire here, and the connection can still drop mid-stream.
+  // Either way the rejection is the fetch failing and is reported as such,
+  // rather than escaping as the bare DOMException or TypeError it arrives as.
+  // The size caps already name themselves, so an ImportError passes through
+  // instead of being wrapped in a second message.
+  try {
+    return await readBoundedText(response, packageLocation);
+  } catch (error) {
+    if (error instanceof ImportError) throw error;
+    throw makeFetchError(packageLocation, describeFetchFailure(error));
+  }
 }
