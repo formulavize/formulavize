@@ -82,22 +82,22 @@ export class StableIdContext {
 
 // What every statement handler needs beyond the statement itself and the dag it
 // is building into: where diagnostics go, how an import statement reaches a
-// package, and the id context naming this scope's elements. The first two are
-// fixed for the whole of one makeDag call; only the ids change on entering a
-// scope. The dag stays a separate argument because it is the thing being
-// mutated, and because a handler sometimes has to reach for a different one
-// than the scope it is in (makeSubDag resolves a namespace's own style tags
-// against its parent).
+// package, which packages are already being imported above this one, and the
+// id context naming this scope's elements. The dag stays a separate argument
+// because it is the thing being mutated, and because a handler sometimes has
+// to reach for a different one than the scope it is in (makeSubDag resolves a
+// namespace's own style tags against its parent).
 interface BuildContext {
   errors: Error[];
   resolveImport: ImportResolver;
+  importChain: ReadonlySet<string>;
   ids: StableIdContext;
 }
 
-// Entering a namespace: same diagnostics and same import chain, new ids. An
-// import is the other kind of descent and deliberately does not come through
-// here -- it starts a makeDag of its own, with a fresh error list and the
-// resolver that carries the extended import chain.
+// Entering a namespace: same diagnostics, same resolver, same import chain --
+// only the ids change. An import is the other kind of descent and deliberately
+// does not come through here: it starts a build of its own, with a fresh error
+// list and this package added to the chain (see getImportedDag).
 function enterScope(
   ctx: BuildContext,
   kind: ScopeKind,
@@ -313,36 +313,37 @@ async function getImportedDag(
   // incorrect behavior if the order of imports matters.
   const packageLocation = importStmt.ImportLocation;
   workingDag.addUsedImport(packageLocation);
-  const resolved = await ctx.resolveImport(packageLocation).catch((err) => {
-    const errMsg = makeError(
-      importStmt,
-      describeError(err),
-      ErrorSource.Import,
-      err instanceof ImportError ? err.code : ErrorCode.ImportFetchFailed,
-    );
-    ctx.errors.push(errMsg);
-    console.debug(errMsg);
-    return null;
-  });
+  const resolved = await ctx
+    .resolveImport(packageLocation, ctx.importChain)
+    .catch((err) => {
+      const errMsg = makeError(
+        importStmt,
+        describeError(err),
+        ErrorSource.Import,
+        err instanceof ImportError ? err.code : ErrorCode.ImportFetchFailed,
+      );
+      ctx.errors.push(errMsg);
+      console.debug(errMsg);
+      return null;
+    });
   if (!resolved) return null;
   // The package's contents are built here rather than reused from a cache,
   // under a scope belonging to this import site, so two sites importing one
   // package get their own ids instead of two subgraphs that collide. The
   // scope is taken after the resolve, so a failed import consumes no counter.
-  // This is a makeDag rather than an enterScope: the package compiles with its
-  // own error list and with the resolver that has this package on its chain.
-  const importIds = ctx.ids.childScope(
-    ScopeKind.Import,
-    importStmt.ImportName ?? packageLocation,
-  );
-  const { dag, errors: importedErrors } = await makeDag(
-    resolved.ast,
-    resolved.resolver,
-    importIds,
-  );
+  const importedErrors: Error[] = [];
+  const dag = await buildDag(resolved.ast, {
+    errors: importedErrors,
+    resolveImport: ctx.resolveImport,
+    importChain: new Set([...ctx.importChain, packageLocation]),
+    ids: ctx.ids.childScope(
+      ScopeKind.Import,
+      importStmt.ImportName ?? packageLocation,
+    ),
+  });
   reportImportedErrors(
     importStmt,
-    [...resolved.parseErrors, ...importedErrors],
+    [...resolved.errors, ...importedErrors],
     ctx,
   );
   return dag;
@@ -683,20 +684,33 @@ async function makeSubDag(
   return curLevelDag;
 }
 
+async function buildDag(
+  recipe: RecipeTreeNode,
+  ctx: BuildContext,
+): Promise<Dag> {
+  const statementList = new StatementListTreeNode(
+    recipe.Statements,
+    recipe.Position,
+  );
+  return makeSubDag(
+    ctx.ids.ScopePath,
+    new NamespaceTreeNode("", statementList),
+    ctx,
+  );
+}
+
+// Every compile starts a fresh import chain: nothing imported this recipe.
 export async function makeDag(
   recipe: RecipeTreeNode,
   resolveImport: ImportResolver,
   ids: StableIdContext = new StableIdContext("root"),
 ): Promise<{ dag: Dag; errors: Error[] }> {
   const errors: Error[] = [];
-  const statementList = new StatementListTreeNode(
-    recipe.Statements,
-    recipe.Position,
-  );
-  const dag = await makeSubDag(
-    ids.ScopePath,
-    new NamespaceTreeNode("", statementList),
-    { errors, resolveImport, ids },
-  );
+  const dag = await buildDag(recipe, {
+    errors,
+    resolveImport,
+    importChain: new Set(),
+    ids,
+  });
   return { dag, errors };
 }

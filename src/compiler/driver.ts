@@ -34,8 +34,8 @@ export class Compiler {
   }
 
   // Every compile starts a fresh import chain: nothing imported this recipe.
-  // A nested import's chain comes from the resolver its parent was handed, so
-  // there is no recursive entry point here to thread one through.
+  // A nested import descends inside dagFactory, which extends the chain as it
+  // goes, so there is no recursive entry point here to thread one through.
   private async compileParsed(
     source: string,
     parsed: ParseResult,

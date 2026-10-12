@@ -6,6 +6,7 @@ import {
   makeImportResolver,
 } from "src/compiler/importCacher";
 import { Compiler } from "src/compiler/driver";
+import { ParseResult } from "src/compiler/parser";
 import { FIZ_FILE_EXTENSION } from "src/compiler/constants";
 import { ErrorCode } from "src/compiler/compilationErrors";
 import {
@@ -25,11 +26,23 @@ describe("import cacher", () => {
   const otherPackageLocation = `other-package${FIZ_FILE_EXTENSION}`;
   const nonFizPackageLocation = "test-package.txt";
 
-  // A root resolver and the cacher behind it. Tests reach for the cacher only
-  // where the cache itself is the subject (clearing it, peeking into it).
-  function makeCacher(): [ImportCacher, ImportResolver] {
+  // A resolver and the cacher behind it. The import chain defaults to empty --
+  // nothing is being imported above these requests -- so only the test that is
+  // about the chain passes one. Tests reach for the cacher only where the
+  // cache itself is the subject (clearing it, peeking into it).
+  type TestResolver = (
+    packageLocation: string,
+    importChain?: ReadonlySet<string>,
+  ) => Promise<ParseResult>;
+
+  function makeCacher(): [ImportCacher, TestResolver] {
     const importCacher = new ImportCacher();
-    return [importCacher, makeImportResolver(importCacher)];
+    const resolveImport: ImportResolver = makeImportResolver(importCacher);
+    return [
+      importCacher,
+      (packageLocation, importChain = new Set()) =>
+        resolveImport(packageLocation, importChain),
+    ];
   }
 
   function mockSourceResponse(source: string) {
@@ -48,17 +61,17 @@ describe("import cacher", () => {
     global.fetch = vi.fn().mockResolvedValueOnce(mockSourceResponse("f()"));
 
     const [, resolveImport] = makeCacher();
-    const { ast, parseErrors } = await resolveImport(packageLocation);
+    const { ast, errors } = await resolveImport(packageLocation);
 
     expect(global.fetch).toHaveBeenCalledWith(
       packageLocation,
       expect.anything(),
     );
-    expect(parseErrors).toEqual([]);
+    expect(errors).toEqual([]);
     expect(ast.Statements).toHaveLength(1);
   });
 
-  test("should hand the next level down a resolver on the chain", async () => {
+  test("should refuse a package already on the import chain", async () => {
     global.fetch = vi
       .fn()
       .mockImplementation((url: string) =>
@@ -68,22 +81,22 @@ describe("import cacher", () => {
       );
 
     const [, resolveImport] = makeCacher();
-    const resolved = await resolveImport(packageLocation);
+    const chain = new Set([packageLocation]);
 
-    // the chain a resolver carries is private, so the way to see that this
-    // package is on it is to ask that resolver for this package: importing
-    // what is still being built is the cycle the chain exists to catch
+    // importing what is still being built is the cycle the chain exists to
+    // catch, and it is refused before the cache is even consulted
     const error = await expectImportError(
-      resolved.resolver(packageLocation),
+      resolveImport(packageLocation, chain),
       ErrorCode.ImportCircular,
     );
     expect(error.message).toEqual(
       `Circular import detected: ${packageLocation}`,
     );
+    expect(global.fetch).not.toHaveBeenCalled();
 
     // a package that is not on the chain is not a cycle
     await expect(
-      resolved.resolver(otherPackageLocation),
+      resolveImport(otherPackageLocation, chain),
     ).resolves.toBeDefined();
   });
 

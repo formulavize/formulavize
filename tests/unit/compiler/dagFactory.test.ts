@@ -1092,12 +1092,10 @@ describe("about note tests", () => {
 
 describe("import tests", () => {
   // An import site builds the imported dag from this recipe under its own
-  // scope, so the mock hands back a recipe and the resolver for the next
-  // level down rather than a finished dag.
+  // scope, so the mock hands back a parsed recipe rather than a finished dag.
   const mockImports: ImportResolver = async () => ({
     ast: new Recipe([new Call("nameX", new ValueList([]))]),
-    parseErrors: [],
-    resolver: mockImports,
+    errors: [],
   });
 
   test("imported anonymous namespace", async () => {

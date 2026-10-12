@@ -2,7 +2,7 @@ import { FIZ_FILE_EXTENSION } from "./constants";
 import { RecipeTreeNode } from "./ast";
 import { ParseResult, parseFromSource } from "./parser";
 import { getImportsFromRecipe } from "./astUtility";
-import { CompilationError, ErrorCode, ImportError } from "./compilationErrors";
+import { ErrorCode, ImportError } from "./compilationErrors";
 import {
   FetchSourceFn,
   fetchSourceOverHttp,
@@ -121,54 +121,38 @@ export class ImportCacher {
   }
 }
 
-// A package's recipe, plus the resolver the next level down must use. The two
-// travel together so a caller cannot build a nested dag with the chain it was
-// handed rather than the one that includes this package.
-export interface ResolvedImport {
-  ast: RecipeTreeNode;
-  parseErrors: CompilationError[];
-  resolver: ImportResolver;
-}
-
-// Resolves one location to its recipe, on behalf of one point in the import
-// chain. The chain is captured, not passed: a statement handler asks for a
-// location without threading -- or being able to inspect -- a chain it never
-// reads, and the resolver a nested import inherits comes back with the recipe.
+// Resolves one location to its recipe, for a request sitting on `importChain`:
+// the locations already being imported above this one. The chain is a
+// parameter rather than a captured closure variable, so a resolver is one
+// function for a whole compile and the recipe it returns is the parser's own
+// ParseResult rather than a wrapper that also has to carry the next resolver.
+// Extending the chain is the business of whoever descends into an import
+// (dagFactory's getImportedDag), which is also the only place that can.
 export type ImportResolver = (
   packageLocation: string,
-) => Promise<ResolvedImport>;
+  importChain: ReadonlySet<string>,
+) => Promise<ParseResult>;
 
-// A resolver for requests sitting on `chain`: the locations already being
-// imported above this one. A closure rather than a class, because a resolver
-// has exactly one operation and no state a caller may reach.
-export function makeImportResolver(
-  cacher: ImportCacher,
-  chain: ReadonlySet<string> = new Set(),
-): ImportResolver {
-  return async function resolveImport(
+// Pairs a cacher with the circular-import check. Every other way an import can
+// fail already rejects with an ImportError that dagFactory turns into one
+// positioned diagnostic, so a cycle travels the same way rather than being
+// reported by a second mechanism. Nothing cached is conditional on the chain,
+// so refusing the request is all there is to do: the packages on the chain are
+// compiling without this one's contents, but each is a dag belonging to one
+// import site and is never handed to another.
+export function makeImportResolver(cacher: ImportCacher): ImportResolver {
+  return function resolveImport(
     packageLocation: string,
-  ): Promise<ResolvedImport> {
-    // Prevent circular imports. Nothing cached is conditional on the chain, so
-    // reporting the cycle is all there is to do: the packages on the chain are
-    // compiling without this one's contents, but each is a dag belonging to one
-    // import site and is never handed to another.
-    if (chain.has(packageLocation)) {
-      throw new ImportError(
-        `Circular import detected: ${packageLocation}`,
-        ErrorCode.ImportCircular,
+    importChain: ReadonlySet<string>,
+  ): Promise<ParseResult> {
+    if (importChain.has(packageLocation)) {
+      return Promise.reject(
+        new ImportError(
+          `Circular import detected: ${packageLocation}`,
+          ErrorCode.ImportCircular,
+        ),
       );
     }
-
-    const { ast, errors } = await cacher.getParsedRecipe(packageLocation);
-    // extended only once the location is known to be a real package, so an
-    // unfetchable location never lands on a chain
-    return {
-      ast,
-      parseErrors: errors,
-      resolver: makeImportResolver(
-        cacher,
-        new Set([...chain, packageLocation]),
-      ),
-    };
+    return cacher.getParsedRecipe(packageLocation);
   };
 }
