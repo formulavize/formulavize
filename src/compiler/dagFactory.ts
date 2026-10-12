@@ -80,6 +80,32 @@ export class StableIdContext {
   }
 }
 
+// What every statement handler needs beyond the statement itself and the dag it
+// is building into: where diagnostics go, how an import statement reaches a
+// package, and the id context naming this scope's elements. The first two are
+// fixed for the whole of one makeDag call; only the ids change on entering a
+// scope. The dag stays a separate argument because it is the thing being
+// mutated, and because a handler sometimes has to reach for a different one
+// than the scope it is in (makeSubDag resolves a namespace's own style tags
+// against its parent).
+interface BuildContext {
+  errors: Error[];
+  resolveImport: ImportResolver;
+  ids: StableIdContext;
+}
+
+// Entering a namespace: same diagnostics and same import chain, new ids. An
+// import is the other kind of descent and deliberately does not come through
+// here -- it starts a makeDag of its own, with a fresh error list and the
+// resolver that carries the extended import chain.
+function enterScope(
+  ctx: BuildContext,
+  kind: ScopeKind,
+  name: string,
+): BuildContext {
+  return { ...ctx, ids: ctx.ids.childScope(kind, name) };
+}
+
 function makeDagStyle(styleNode: StyleTreeNode): DagStyle {
   return {
     styleTags: styleNode.StyleTags.map((tag) => tag.QualifiedTagName),
@@ -112,7 +138,7 @@ function makeError(
 function checkStyleTagsInStyleNode(
   styleNode: StyleTreeNode | null,
   workingDag: Dag | undefined,
-  errors: Error[],
+  ctx: BuildContext,
 ): void {
   if (!styleNode) return;
   styleNode.StyleTags.forEach((styleTag) => {
@@ -124,7 +150,7 @@ function checkStyleTagsInStyleNode(
         ErrorSource.Reference,
         ErrorCode.StyleTagNotFound,
       );
-      errors.push(errMsg);
+      ctx.errors.push(errMsg);
       console.debug(errMsg);
     }
   });
@@ -133,19 +159,13 @@ function checkStyleTagsInStyleNode(
 function argListToEdgeInfo(
   argList: ValueTreeNode[],
   workingDag: Dag,
-  errors: Error[],
-  ctx: StableIdContext,
+  ctx: BuildContext,
 ): IncomingEdgeInfo[] {
   return argList
     .map((arg) =>
       match(arg.Type)
         .with(NodeType.Call, () => {
-          const argNodeId = processCall(
-            arg as CallTreeNode,
-            workingDag,
-            errors,
-            ctx,
-          );
+          const argNodeId = processCall(arg as CallTreeNode, workingDag, ctx);
           return { nodeId: argNodeId, varName: "", varStyle: null };
         })
         .with(NodeType.QualifiedVariable, () => {
@@ -160,7 +180,7 @@ function argListToEdgeInfo(
               ErrorSource.Reference,
               ErrorCode.VariableNotFound,
             );
-            errors.push(errMsg);
+            ctx.errors.push(errMsg);
             console.debug(errMsg);
             return null;
           }
@@ -177,7 +197,7 @@ function argListToEdgeInfo(
             ErrorSource.Internal,
             ErrorCode.UnknownArgumentType,
           );
-          errors.push(errMsg);
+          ctx.errors.push(errMsg);
           console.error(errMsg);
           return null;
         }),
@@ -189,10 +209,10 @@ function addIncomingEdgesToDag(
   incomingEdges: IncomingEdgeInfo[],
   destNodeId: NodeId,
   workingDag: Dag,
-  ctx: StableIdContext,
+  ctx: BuildContext,
 ): void {
   incomingEdges.forEach((incomingEdge) => {
-    const edgeId = ctx.nextEdgeId(incomingEdge.nodeId, destNodeId);
+    const edgeId = ctx.ids.nextEdgeId(incomingEdge.nodeId, destNodeId);
     const thisEdge = {
       id: edgeId,
       name: incomingEdge.varName,
@@ -209,11 +229,10 @@ function addIncomingEdgesToDag(
 function processCall(
   callStmt: CallTreeNode,
   workingDag: Dag,
-  errors: Error[],
-  ctx: StableIdContext,
+  ctx: BuildContext,
 ): NodeId {
-  const thisNodeId = ctx.nextNodeId(callStmt.Name);
-  checkStyleTagsInStyleNode(callStmt.Styling, workingDag, errors);
+  const thisNodeId = ctx.ids.nextNodeId(callStmt.Name);
+  checkStyleTagsInStyleNode(callStmt.Styling, workingDag, ctx);
   const thisNode = {
     id: thisNodeId,
     name: callStmt.Name,
@@ -226,7 +245,6 @@ function processCall(
   const incomingEdgeInfoList = argListToEdgeInfo(
     callStmt.Args,
     workingDag,
-    errors,
     ctx,
   );
   addIncomingEdgesToDag(incomingEdgeInfoList, thisNodeId, workingDag, ctx);
@@ -237,26 +255,21 @@ function processCall(
 async function processNamespace(
   namespaceStmt: NamespaceTreeNode,
   workingDag: Dag,
-  errors: Error[],
-  resolveImport: ImportResolver,
-  ctx: StableIdContext,
+  ctx: BuildContext,
 ): Promise<NodeId> {
-  const childCtx = ctx.childScope(ScopeKind.Namespace, namespaceStmt.Name);
-  const subDagId = childCtx.ScopePath;
-  const childDag = makeSubDag(
+  const childCtx = enterScope(ctx, ScopeKind.Namespace, namespaceStmt.Name);
+  const subDagId = childCtx.ids.ScopePath;
+  const childDag = await makeSubDag(
     subDagId,
     namespaceStmt,
-    errors,
-    resolveImport,
-    workingDag,
     childCtx,
+    workingDag,
   );
-  workingDag.addChildDag(await childDag);
+  workingDag.addChildDag(childDag);
 
   const dagIncomingEdges = argListToEdgeInfo(
     namespaceStmt.Args,
     workingDag,
-    errors,
     ctx,
   );
   addIncomingEdgesToDag(dagIncomingEdges, subDagId, workingDag, ctx);
@@ -267,7 +280,7 @@ async function processNamespace(
 function reportImportedErrors(
   importStmt: ImportTreeNode,
   importedErrors: Error[],
-  errors: Error[],
+  ctx: BuildContext,
 ): void {
   // Surface that an imported package did not compile cleanly, which would
   // otherwise render as a silently empty or partial subgraph.
@@ -283,7 +296,7 @@ function reportImportedErrors(
     undefined,
     "warning",
   );
-  errors.push(errMsg);
+  ctx.errors.push(errMsg);
   console.debug(errMsg);
 }
 
@@ -292,24 +305,22 @@ function reportImportedErrors(
 // reported against the import statement, so a caller's only job is to stop.
 async function getImportedDag(
   importStmt: ImportTreeNode,
-  resolveImport: ImportResolver,
-  errors: Error[],
   workingDag: Dag,
-  ctx: StableIdContext,
+  ctx: BuildContext,
 ): Promise<Dag | null> {
   // Imports are processed sequentially to ensure order is respected.
   // Hoisting and parallelizing would be faster, but could result in
   // incorrect behavior if the order of imports matters.
   const packageLocation = importStmt.ImportLocation;
   workingDag.addUsedImport(packageLocation);
-  const resolved = await resolveImport(packageLocation).catch((err) => {
+  const resolved = await ctx.resolveImport(packageLocation).catch((err) => {
     const errMsg = makeError(
       importStmt,
       describeError(err),
       ErrorSource.Import,
       err instanceof ImportError ? err.code : ErrorCode.ImportFetchFailed,
     );
-    errors.push(errMsg);
+    ctx.errors.push(errMsg);
     console.debug(errMsg);
     return null;
   });
@@ -318,19 +329,21 @@ async function getImportedDag(
   // under a scope belonging to this import site, so two sites importing one
   // package get their own ids instead of two subgraphs that collide. The
   // scope is taken after the resolve, so a failed import consumes no counter.
-  const importCtx = ctx.childScope(
+  // This is a makeDag rather than an enterScope: the package compiles with its
+  // own error list and with the resolver that has this package on its chain.
+  const importIds = ctx.ids.childScope(
     ScopeKind.Import,
     importStmt.ImportName ?? packageLocation,
   );
   const { dag, errors: importedErrors } = await makeDag(
     resolved.ast,
     resolved.resolver,
-    importCtx,
+    importIds,
   );
   reportImportedErrors(
     importStmt,
     [...resolved.parseErrors, ...importedErrors],
-    errors,
+    ctx,
   );
   return dag;
 }
@@ -348,17 +361,9 @@ async function processImport(
   importStmt: ImportTreeNode,
   isAssigned: boolean,
   workingDag: Dag,
-  errors: Error[],
-  resolveImport: ImportResolver,
-  ctx: StableIdContext,
+  ctx: BuildContext,
 ): Promise<NodeId | null> {
-  const importedDag = await getImportedDag(
-    importStmt,
-    resolveImport,
-    errors,
-    workingDag,
-    ctx,
-  );
+  const importedDag = await getImportedDag(importStmt, workingDag, ctx);
   if (!importedDag) return null;
 
   if (!isAssigned && !importStmt.ImportName) {
@@ -382,9 +387,7 @@ async function processAssignmentRhs(
   rhsNode:
     CallTreeNode | QualifiedVarTreeNode | NamespaceTreeNode | ImportTreeNode,
   workingDag: Dag,
-  errors: Error[],
-  resolveImport: ImportResolver,
-  ctx: StableIdContext,
+  ctx: BuildContext,
 ): Promise<NodeId | null> {
   return match(rhsNode.Type)
     .with(NodeType.QualifiedVariable, () => {
@@ -398,33 +401,20 @@ async function processAssignmentRhs(
           ErrorSource.Reference,
           ErrorCode.VariableNotFound,
         );
-        errors.push(errMsg);
+        ctx.errors.push(errMsg);
         console.debug(errMsg);
         return null;
       }
       return candidateSrcNodeId;
     })
     .with(NodeType.Call, () => {
-      return processCall(rhsNode as CallTreeNode, workingDag, errors, ctx);
+      return processCall(rhsNode as CallTreeNode, workingDag, ctx);
     })
     .with(NodeType.Namespace, () => {
-      return processNamespace(
-        rhsNode as NamespaceTreeNode,
-        workingDag,
-        errors,
-        resolveImport,
-        ctx,
-      );
+      return processNamespace(rhsNode as NamespaceTreeNode, workingDag, ctx);
     })
     .with(NodeType.Import, async () => {
-      return processImport(
-        rhsNode as ImportTreeNode,
-        true,
-        workingDag,
-        errors,
-        resolveImport,
-        ctx,
-      );
+      return processImport(rhsNode as ImportTreeNode, true, workingDag, ctx);
     })
     .otherwise(() => {
       const errMsg = makeError(
@@ -433,7 +423,7 @@ async function processAssignmentRhs(
         ErrorSource.Internal,
         ErrorCode.InvalidRhsType,
       );
-      errors.push(errMsg);
+      ctx.errors.push(errMsg);
       console.error(errMsg);
       return null;
     });
@@ -441,7 +431,7 @@ async function processAssignmentRhs(
 
 function checkDuplicateAssignmentLhsNames(
   assignmentStmt: AssignmentTreeNode,
-  errors: Error[],
+  ctx: BuildContext,
 ): void {
   const seenNames = new Set<string>();
   assignmentStmt.Lhs.forEach((lhsVar) => {
@@ -453,7 +443,7 @@ function checkDuplicateAssignmentLhsNames(
         ErrorCode.DuplicateLhsName,
         "warning",
       );
-      errors.push(errMsg);
+      ctx.errors.push(errMsg);
       console.debug(errMsg);
       return;
     }
@@ -464,9 +454,7 @@ function checkDuplicateAssignmentLhsNames(
 async function processAssignment(
   assignmentStmt: AssignmentTreeNode,
   workingDag: Dag,
-  errors: Error[],
-  resolveImport: ImportResolver,
-  ctx: StableIdContext,
+  ctx: BuildContext,
 ): Promise<void> {
   const lhsIsEmpty = assignmentStmt.Lhs.length === 0;
   if (lhsIsEmpty) {
@@ -476,7 +464,7 @@ async function processAssignment(
       ErrorSource.Syntax,
       ErrorCode.MissingLhs,
     );
-    errors.push(errMsg);
+    ctx.errors.push(errMsg);
     console.debug(errMsg);
   }
   const rhsIsEmpty = !assignmentStmt.Rhs;
@@ -487,24 +475,22 @@ async function processAssignment(
       ErrorSource.Syntax,
       ErrorCode.MissingRhs,
     );
-    errors.push(errMsg);
+    ctx.errors.push(errMsg);
     console.debug(errMsg);
   }
   if (lhsIsEmpty || rhsIsEmpty) return;
 
-  checkDuplicateAssignmentLhsNames(assignmentStmt, errors);
+  checkDuplicateAssignmentLhsNames(assignmentStmt, ctx);
 
   const thisNodeId = await processAssignmentRhs(
     assignmentStmt.Rhs,
     workingDag,
-    errors,
-    resolveImport,
     ctx,
   );
   if (!thisNodeId) return;
   for (const lhsVar of assignmentStmt.Lhs) {
     workingDag.setVarNode(lhsVar.VarName, thisNodeId);
-    checkStyleTagsInStyleNode(lhsVar.Styling, workingDag, errors);
+    checkStyleTagsInStyleNode(lhsVar.Styling, workingDag, ctx);
     const varStyle = lhsVar.Styling ? makeDagStyle(lhsVar.Styling) : null;
     workingDag.setVarStyle(lhsVar.VarName, varStyle);
   }
@@ -513,10 +499,10 @@ async function processAssignment(
 function processNamedStyle(
   namedStyleStmt: NamedStyleTreeNode,
   workingDag: Dag,
-  errors: Error[],
+  ctx: BuildContext,
 ): void {
   const styleNode = namedStyleStmt.StyleNode;
-  checkStyleTagsInStyleNode(styleNode, workingDag, errors);
+  checkStyleTagsInStyleNode(styleNode, workingDag, ctx);
   const workingStyleProperties: StyleProperties = styleNode.StyleTags.map(
     (tag) => workingDag.getStyle(tag.QualifiedTagName) ?? new Map(),
   ).reduce((acc, props) => new Map([...acc, ...props]), new Map());
@@ -529,17 +515,17 @@ function processNamedStyle(
 function processStyleBinding(
   styleBindingStmt: StyleBindingTreeNode,
   workingDag: Dag,
-  errors: Error[],
+  ctx: BuildContext,
 ): void {
   const styleNode = styleBindingStmt.StyleNode;
-  checkStyleTagsInStyleNode(styleNode, workingDag, errors);
+  checkStyleTagsInStyleNode(styleNode, workingDag, ctx);
   workingDag.addStyleBinding(styleBindingStmt.Keyword, makeDagStyle(styleNode));
 }
 
 function processGlobalStyleBinding(
   globalStyleBindingStmt: GlobalStyleBindingTreeNode,
   workingDag: Dag,
-  errors: Error[],
+  ctx: BuildContext,
 ): void {
   const keyword = globalStyleBindingStmt.Keyword;
   const canonicalKeyword = GLOBAL_STYLE_KEYWORD_MAP.get(keyword);
@@ -550,19 +536,19 @@ function processGlobalStyleBinding(
       ErrorSource.Syntax,
       ErrorCode.InvalidGlobalStyleKeyword,
     );
-    errors.push(errMsg);
+    ctx.errors.push(errMsg);
     console.debug(errMsg);
     return;
   }
   const styleNode = globalStyleBindingStmt.StyleNode;
-  checkStyleTagsInStyleNode(styleNode, workingDag, errors);
+  checkStyleTagsInStyleNode(styleNode, workingDag, ctx);
   workingDag.addGlobalStyleBinding(canonicalKeyword, makeDagStyle(styleNode));
 }
 
 function processRendererDirective(
   rendererDirectiveStmt: RendererDirectiveTreeNode,
   workingDag: Dag,
-  errors: Error[],
+  ctx: BuildContext,
 ): void {
   // Renderer directives configure the drawing surface and layout, which are
   // properties of the whole graph. A renderer instantiates one layout for the
@@ -575,7 +561,7 @@ function processRendererDirective(
       ErrorSource.Syntax,
       ErrorCode.RendererDirectiveNotAtTopLevel,
     );
-    errors.push(errMsg);
+    ctx.errors.push(errMsg);
     console.debug(errMsg);
     return;
   }
@@ -583,7 +569,7 @@ function processRendererDirective(
   // knowledge of the renderer registry, and a directive addressed to a
   // renderer that is not active is simply never read.
   const styleNode = rendererDirectiveStmt.StyleNode;
-  checkStyleTagsInStyleNode(styleNode, workingDag, errors);
+  checkStyleTagsInStyleNode(styleNode, workingDag, ctx);
   workingDag.addRendererDirective(
     rendererDirectiveStmt.RendererName,
     makeDagStyle(styleNode),
@@ -593,7 +579,7 @@ function processRendererDirective(
 function processAboutNote(
   aboutNoteStmt: AboutNoteTreeNode,
   workingDag: Dag,
-  errors: Error[],
+  ctx: BuildContext,
 ): void {
   // About notes should describe the recipe file as a whole, so a note nested
   // in a namespace cannot be read from the root dag.
@@ -605,7 +591,7 @@ function processAboutNote(
       ErrorSource.Syntax,
       ErrorCode.AboutNoteNotAtTopLevel,
     );
-    errors.push(errMsg);
+    ctx.errors.push(errMsg);
     console.debug(errMsg);
     return;
   }
@@ -614,72 +600,51 @@ function processAboutNote(
   // or its keys. We may add validation in the future if the community converges
   // on standard metadata notes.
   const styleNode = aboutNoteStmt.StyleNode;
-  checkStyleTagsInStyleNode(styleNode, workingDag, errors);
+  checkStyleTagsInStyleNode(styleNode, workingDag, ctx);
   workingDag.addAboutNote(aboutNoteStmt.NoteName, makeDagStyle(styleNode));
 }
 
 async function processStatement(
   stmt: BaseTreeNode,
   workingDag: Dag,
-  errors: Error[],
-  resolveImport: ImportResolver,
-  ctx: StableIdContext,
+  ctx: BuildContext,
 ): Promise<void> {
   await match(stmt.Type)
     .with(NodeType.Call, () => {
-      processCall(stmt as CallTreeNode, workingDag, errors, ctx);
+      processCall(stmt as CallTreeNode, workingDag, ctx);
     })
     .with(NodeType.Assignment, async () => {
-      await processAssignment(
-        stmt as AssignmentTreeNode,
-        workingDag,
-        errors,
-        resolveImport,
-        ctx,
-      );
+      await processAssignment(stmt as AssignmentTreeNode, workingDag, ctx);
     })
     .with(NodeType.NamedStyle, () => {
-      processNamedStyle(stmt as NamedStyleTreeNode, workingDag, errors);
+      processNamedStyle(stmt as NamedStyleTreeNode, workingDag, ctx);
     })
     .with(NodeType.StyleBinding, () => {
-      processStyleBinding(stmt as StyleBindingTreeNode, workingDag, errors);
+      processStyleBinding(stmt as StyleBindingTreeNode, workingDag, ctx);
     })
     .with(NodeType.GlobalStyleBinding, () => {
       processGlobalStyleBinding(
         stmt as GlobalStyleBindingTreeNode,
         workingDag,
-        errors,
+        ctx,
       );
     })
     .with(NodeType.RendererDirective, () => {
       processRendererDirective(
         stmt as RendererDirectiveTreeNode,
         workingDag,
-        errors,
+        ctx,
       );
     })
     .with(NodeType.AboutNote, () => {
-      processAboutNote(stmt as AboutNoteTreeNode, workingDag, errors);
+      processAboutNote(stmt as AboutNoteTreeNode, workingDag, ctx);
     })
     .with(NodeType.QualifiedVariable, () => null)
     .with(NodeType.Namespace, async () => {
-      await processNamespace(
-        stmt as NamespaceTreeNode,
-        workingDag,
-        errors,
-        resolveImport,
-        ctx,
-      );
+      await processNamespace(stmt as NamespaceTreeNode, workingDag, ctx);
     })
     .with(NodeType.Import, async () => {
-      await processImport(
-        stmt as ImportTreeNode,
-        false,
-        workingDag,
-        errors,
-        resolveImport,
-        ctx,
-      );
+      await processImport(stmt as ImportTreeNode, false, workingDag, ctx);
     })
     .otherwise(() => {
       const errMsg = makeError(
@@ -688,21 +653,18 @@ async function processStatement(
         ErrorSource.Internal,
         ErrorCode.UnknownStatementType,
       );
-      errors.push(errMsg);
+      ctx.errors.push(errMsg);
       console.error(errMsg);
     });
 }
 
-export async function makeSubDag(
+async function makeSubDag(
   dagId: DagId,
   dagNamespaceStmt: NamespaceTreeNode,
-  errors: Error[],
-  resolveImport: ImportResolver,
+  ctx: BuildContext,
   parentDag?: Dag,
-  ctx?: StableIdContext,
 ): Promise<Dag> {
-  const idCtx = ctx ?? new StableIdContext(dagId);
-  checkStyleTagsInStyleNode(dagNamespaceStmt.Styling, parentDag, errors);
+  checkStyleTagsInStyleNode(dagNamespaceStmt.Styling, parentDag, ctx);
   const dagStyleTags =
     dagNamespaceStmt.Styling?.StyleTags.map((tag) => tag.QualifiedTagName) ??
     [];
@@ -716,7 +678,7 @@ export async function makeSubDag(
   );
 
   for (const stmt of dagNamespaceStmt.Statements) {
-    await processStatement(stmt, curLevelDag, errors, resolveImport, idCtx);
+    await processStatement(stmt, curLevelDag, ctx);
   }
   return curLevelDag;
 }
@@ -724,7 +686,7 @@ export async function makeSubDag(
 export async function makeDag(
   recipe: RecipeTreeNode,
   resolveImport: ImportResolver,
-  ctx: StableIdContext = new StableIdContext("root"),
+  ids: StableIdContext = new StableIdContext("root"),
 ): Promise<{ dag: Dag; errors: Error[] }> {
   const errors: Error[] = [];
   const statementList = new StatementListTreeNode(
@@ -732,12 +694,9 @@ export async function makeDag(
     recipe.Position,
   );
   const dag = await makeSubDag(
-    ctx.ScopePath,
+    ids.ScopePath,
     new NamespaceTreeNode("", statementList),
-    errors,
-    resolveImport,
-    undefined,
-    ctx,
+    { errors, resolveImport, ids },
   );
   return { dag, errors };
 }

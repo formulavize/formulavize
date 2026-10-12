@@ -13,8 +13,7 @@ import {
 // travels with the node: a bare import statement with no alias merges its
 // contents into the importing scope, while an import on an assignment's right
 // hand side keeps them in a scope of their own, reachable only through an
-// alias if it carries one (dagFactory's processUnassignedImport vs
-// processImport).
+// alias if it carries one (the flag dagFactory's processImport branches on).
 export interface DeclaredImport {
   node: ImportTreeNode;
   isAssigned: boolean;
