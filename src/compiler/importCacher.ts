@@ -9,17 +9,6 @@ import {
   hasFizExtension,
 } from "./importFetcher";
 
-// Drops a cached promise, but only while it is still the entry under that key.
-// A clearCache() or a later request may have replaced it since it settled, and
-// evicting the replacement would throw away a result nothing went wrong with.
-function evictIfCurrent<T>(
-  cache: Map<string, Promise<T>>,
-  key: string,
-  cachedPromise: Promise<T>,
-): void {
-  if (cache.get(key) === cachedPromise) cache.delete(key);
-}
-
 // What a location holds does not depend on who asked for it, and neither does
 // the tree that text parses to, so one cache covers both and nothing in it is
 // ever conditional on an import chain. A compiled dag is a different matter --
@@ -59,10 +48,15 @@ export class ImportCacher {
     this.parseCache.set(packageLocation, parsePromise);
     // A cached rejection would make one transient failure permanent, so the
     // entry is evicted once it is known to have failed. Attaching the handler
-    // here also keeps the rejection from being reported as unhandled.
-    parsePromise.catch(() =>
-      evictIfCurrent(this.parseCache, packageLocation, parsePromise),
-    );
+    // here also keeps the rejection from being reported as unhandled. The
+    // entry goes only while it is still this promise: a clearCache() or a
+    // later request may have replaced it since, and evicting the replacement
+    // would throw away a result nothing went wrong with.
+    parsePromise.catch(() => {
+      if (this.parseCache.get(packageLocation) === parsePromise) {
+        this.parseCache.delete(packageLocation);
+      }
+    });
     return parsePromise;
   }
 
