@@ -1,4 +1,4 @@
-import { describe, test, expect } from "vitest";
+import { describe, test, expect, vi } from "vitest";
 import {
   RecipeTreeNode as Recipe,
   CallTreeNode as Call,
@@ -1528,5 +1528,50 @@ describe("error reporting", () => {
 
     expect(dag.getNodeList()).toHaveLength(0);
     expect(dag.getEdgeList()).toHaveLength(0);
+  });
+  // Every diagnostic is also echoed to the console, and the level it is echoed
+  // at is decided by its source rather than written out at each report site:
+  // a mistake in the recipe is already visible in the editor, while an
+  // Internal source means the compiler itself is confused and nothing in the
+  // editor would say so.
+  test("a recipe's own mistake is not logged as a console error", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    const recipe = new Recipe([
+      new Call("f", new ValueList([new QualifiedVariable(["not_found_var"])])),
+    ]);
+    const { errors } = await makeDag(recipe, dummyImportResolver);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].source).toEqual(ErrorSource.Reference);
+    expect(debug).toHaveBeenCalledWith(errors[0]);
+    expect(error).not.toHaveBeenCalled();
+
+    debug.mockRestore();
+    error.mockRestore();
+  });
+  test("an internal error is logged as a console error", async () => {
+    const debug = vi.spyOn(console, "debug").mockImplementation(() => {});
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // An argument that is neither a call nor a variable cannot come out of the
+    // parser, so the only way to reach the guard is to hand it one directly.
+    const recipe = new Recipe([
+      new Call(
+        "f",
+        new ValueList([new StyleTagNode(["notAValue"]) as unknown as Call]),
+      ),
+    ]);
+    const { errors } = await makeDag(recipe, dummyImportResolver);
+
+    expect(errors).toHaveLength(1);
+    expect(errors[0].source).toEqual(ErrorSource.Internal);
+    expect(errors[0].code).toEqual(ErrorCode.UnknownArgumentType);
+    expect(error).toHaveBeenCalledWith(errors[0]);
+    expect(debug).not.toHaveBeenCalled();
+
+    debug.mockRestore();
+    error.mockRestore();
   });
 });

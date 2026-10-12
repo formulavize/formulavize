@@ -119,20 +119,24 @@ type IncomingEdgeInfo = {
   varStyle: DagStyle | null;
 };
 
-function makeError(
+function reportError(
+  ctx: BuildContext,
   node: BaseTreeNode,
   message: string,
   source: ErrorSource,
   code?: ErrorCode,
   severity: Error["severity"] = "error",
-): Error {
-  return {
+): void {
+  const errMsg: Error = {
     position: node.Position ?? DEFAULT_POSITION,
     message,
     severity,
     source,
     code,
   };
+  ctx.errors.push(errMsg);
+  if (source === ErrorSource.Internal) console.error(errMsg);
+  else console.debug(errMsg);
 }
 
 function checkStyleTagsInStyleNode(
@@ -144,14 +148,13 @@ function checkStyleTagsInStyleNode(
   styleNode.StyleTags.forEach((styleTag) => {
     const styleTagName = styleTag.QualifiedTagName;
     if (!workingDag?.getStyle(styleTagName)) {
-      const errMsg = makeError(
+      reportError(
+        ctx,
         styleTag,
         `Style tag '${styleTagName.join(".")}' not found`,
         ErrorSource.Reference,
         ErrorCode.StyleTagNotFound,
       );
-      ctx.errors.push(errMsg);
-      console.debug(errMsg);
     }
   });
 }
@@ -174,14 +177,13 @@ function argListToEdgeInfo(
           const varStyle = workingDag.getVarStyle(varName) ?? null;
           const candidateSrcNodeId = workingDag.getVarNode(varName);
           if (!candidateSrcNodeId) {
-            const errMsg = makeError(
+            reportError(
+              ctx,
               arg,
               `Variable '${varName}' not found`,
               ErrorSource.Reference,
               ErrorCode.VariableNotFound,
             );
-            ctx.errors.push(errMsg);
-            console.debug(errMsg);
             return null;
           }
           return {
@@ -191,14 +193,13 @@ function argListToEdgeInfo(
           };
         })
         .otherwise(() => {
-          const errMsg = makeError(
+          reportError(
+            ctx,
             arg,
             `Unknown argument type '${arg.Type}'`,
             ErrorSource.Internal,
             ErrorCode.UnknownArgumentType,
           );
-          ctx.errors.push(errMsg);
-          console.error(errMsg);
           return null;
         }),
     )
@@ -288,7 +289,8 @@ function reportImportedErrors(
   // editor's document, so they are never forwarded: one aggregated diagnostic
   // is reported against the import statement instead.
   if (importedErrors.length === 0) return;
-  const errMsg = makeError(
+  reportError(
+    ctx,
     importStmt,
     `Imported package '${importStmt.ImportLocation}' reported ` +
       `${importedErrors.length} issue(s): ${importedErrors[0].message}`,
@@ -296,8 +298,6 @@ function reportImportedErrors(
     undefined,
     "warning",
   );
-  ctx.errors.push(errMsg);
-  console.debug(errMsg);
 }
 
 // Resolves an import and builds its contents as a dag of their own. Returns
@@ -316,14 +316,13 @@ async function getImportedDag(
   const resolved = await ctx
     .resolveImport(packageLocation, ctx.importChain)
     .catch((err) => {
-      const errMsg = makeError(
+      reportError(
+        ctx,
         importStmt,
         describeError(err),
         ErrorSource.Import,
         err instanceof ImportError ? err.code : ErrorCode.ImportFetchFailed,
       );
-      ctx.errors.push(errMsg);
-      console.debug(errMsg);
       return null;
     });
   if (!resolved) return null;
@@ -396,14 +395,13 @@ async function processAssignmentRhs(
       const varName = rhsVar.QualifiedVarName;
       const candidateSrcNodeId = workingDag.getVarNode(varName);
       if (!candidateSrcNodeId) {
-        const errMsg = makeError(
+        reportError(
+          ctx,
           rhsNode,
           `Variable '${varName}' not found`,
           ErrorSource.Reference,
           ErrorCode.VariableNotFound,
         );
-        ctx.errors.push(errMsg);
-        console.debug(errMsg);
         return null;
       }
       return candidateSrcNodeId;
@@ -418,14 +416,13 @@ async function processAssignmentRhs(
       return processImport(rhsNode as ImportTreeNode, true, workingDag, ctx);
     })
     .otherwise(() => {
-      const errMsg = makeError(
+      reportError(
+        ctx,
         rhsNode,
         `Invalid right hand side type '${rhsNode.Type}'`,
         ErrorSource.Internal,
         ErrorCode.InvalidRhsType,
       );
-      ctx.errors.push(errMsg);
-      console.error(errMsg);
       return null;
     });
 }
@@ -437,15 +434,14 @@ function checkDuplicateAssignmentLhsNames(
   const seenNames = new Set<string>();
   assignmentStmt.Lhs.forEach((lhsVar) => {
     if (seenNames.has(lhsVar.VarName)) {
-      const errMsg = makeError(
+      reportError(
+        ctx,
         lhsVar,
         `Duplicate left hand side variable '${lhsVar.VarName}'`,
         ErrorSource.Syntax,
         ErrorCode.DuplicateLhsName,
         "warning",
       );
-      ctx.errors.push(errMsg);
-      console.debug(errMsg);
       return;
     }
     seenNames.add(lhsVar.VarName);
@@ -459,25 +455,23 @@ async function processAssignment(
 ): Promise<void> {
   const lhsIsEmpty = assignmentStmt.Lhs.length === 0;
   if (lhsIsEmpty) {
-    const errMsg = makeError(
+    reportError(
+      ctx,
       assignmentStmt,
       "Left hand side is missing",
       ErrorSource.Syntax,
       ErrorCode.MissingLhs,
     );
-    ctx.errors.push(errMsg);
-    console.debug(errMsg);
   }
   const rhsIsEmpty = !assignmentStmt.Rhs;
   if (rhsIsEmpty) {
-    const errMsg = makeError(
+    reportError(
+      ctx,
       assignmentStmt,
       "Right hand side is missing",
       ErrorSource.Syntax,
       ErrorCode.MissingRhs,
     );
-    ctx.errors.push(errMsg);
-    console.debug(errMsg);
   }
   if (lhsIsEmpty || rhsIsEmpty) return;
 
@@ -531,14 +525,13 @@ function processGlobalStyleBinding(
   const keyword = globalStyleBindingStmt.Keyword;
   const canonicalKeyword = GLOBAL_STYLE_KEYWORD_MAP.get(keyword);
   if (!canonicalKeyword) {
-    const errMsg = makeError(
+    reportError(
+      ctx,
       globalStyleBindingStmt,
       `Invalid global style binding keyword '${keyword}'`,
       ErrorSource.Syntax,
       ErrorCode.InvalidGlobalStyleKeyword,
     );
-    ctx.errors.push(errMsg);
-    console.debug(errMsg);
     return;
   }
   const styleNode = globalStyleBindingStmt.StyleNode;
@@ -555,15 +548,14 @@ function processRendererDirective(
   // properties of the whole graph. A renderer instantiates one layout for the
   // root dag, so a directive nested in a namespace could never take effect.
   if (workingDag.Parent) {
-    const errMsg = makeError(
+    reportError(
+      ctx,
       rendererDirectiveStmt,
       `Renderer directive '^${rendererDirectiveStmt.RendererName}' is only ` +
         `allowed at the top level, not inside namespace '${workingDag.Name}'`,
       ErrorSource.Syntax,
       ErrorCode.RendererDirectiveNotAtTopLevel,
     );
-    ctx.errors.push(errMsg);
-    console.debug(errMsg);
     return;
   }
   // The renderer name is deliberately not validated. The compiler has no
@@ -585,15 +577,14 @@ function processAboutNote(
   // About notes should describe the recipe file as a whole, so a note nested
   // in a namespace cannot be read from the root dag.
   if (workingDag.Parent) {
-    const errMsg = makeError(
+    reportError(
+      ctx,
       aboutNoteStmt,
       `About note '~${aboutNoteStmt.NoteName}' is only ` +
         `allowed at the top level, not inside namespace '${workingDag.Name}'`,
       ErrorSource.Syntax,
       ErrorCode.AboutNoteNotAtTopLevel,
     );
-    ctx.errors.push(errMsg);
-    console.debug(errMsg);
     return;
   }
   // The note name is deliberately not validated. A note can be treated as a
@@ -648,14 +639,13 @@ async function processStatement(
       await processImport(stmt as ImportTreeNode, false, workingDag, ctx);
     })
     .otherwise(() => {
-      const errMsg = makeError(
+      reportError(
+        ctx,
         stmt,
         `Unknown statement type '${stmt.Type}'`,
         ErrorSource.Internal,
         ErrorCode.UnknownStatementType,
       );
-      ctx.errors.push(errMsg);
-      console.error(errMsg);
     });
 }
 
