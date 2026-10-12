@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { pathToFileURL } from "node:url";
 import { makeNodeSourceFetcher } from "src/cli/nodeSourceFetcher";
-import { ImportError } from "src/compiler/importFetcher";
+import { ImportError } from "src/compiler/compilationErrors";
 import { ErrorCode } from "src/compiler/compilationErrors";
 
 describe("node source fetcher", () => {

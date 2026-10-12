@@ -41,6 +41,19 @@ export enum ErrorCode {
   UnknownStatementType = "INT_UNKNOWN_STMT_TYPE",
 }
 
+// Thrown rather than collected: resolving an import either yields a recipe or
+// fails outright, so the failure travels as a rejection and dagFactory turns it
+// into a CompilationError against the import statement it can position.
+export class ImportError extends Error {
+  readonly code: ErrorCode;
+
+  constructor(message: string, code: ErrorCode) {
+    super(message);
+    this.name = "ImportError";
+    this.code = code;
+  }
+}
+
 export interface CompilationError {
   position: Position;
   message: string;

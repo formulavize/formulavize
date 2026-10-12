@@ -1,12 +1,12 @@
 import { readFile } from "node:fs/promises";
 import { isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { FetchSourceFn, fetchSourceOverHttp } from "../compiler/importFetcher";
 import {
-  FetchSourceFn,
+  ErrorCode,
   ImportError,
-  fetchSourceOverHttp,
-} from "../compiler/importFetcher";
-import { ErrorCode, describeError } from "../compiler/compilationErrors";
+  describeError,
+} from "../compiler/compilationErrors";
 
 // Node's fetch requires an absolute URL, so a recipe's '@ "lib.fiz"' cannot be
 // fetched the way a browser resolves it against the page origin. Outside a

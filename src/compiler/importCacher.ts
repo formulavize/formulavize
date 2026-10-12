@@ -2,10 +2,9 @@ import { FIZ_FILE_EXTENSION } from "./constants";
 import { RecipeTreeNode } from "./ast";
 import { ParseResult, parseFromSource } from "./parser";
 import { getImportsFromRecipe } from "./astUtility";
-import { CompilationError, ErrorCode } from "./compilationErrors";
+import { CompilationError, ErrorCode, ImportError } from "./compilationErrors";
 import {
   FetchSourceFn,
-  ImportError,
   fetchSourceOverHttp,
   hasFizExtension,
 } from "./importFetcher";

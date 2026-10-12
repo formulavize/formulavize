@@ -1,5 +1,5 @@
 import { FIZ_FILE_EXTENSION } from "./constants";
-import { ErrorCode, describeError } from "./compilationErrors";
+import { ErrorCode, ImportError, describeError } from "./compilationErrors";
 
 // How an import location becomes recipe text, and what counts as a plausible
 // fiz file on the way in. Nothing here caches or compiles anything: this is
@@ -9,16 +9,6 @@ import { ErrorCode, describeError } from "./compilationErrors";
 // the network; the CLI supplies a filesystem-backed one so that a relative
 // import resolves against the input file rather than failing to parse as a URL.
 export type FetchSourceFn = (packageLocation: string) => Promise<string>;
-
-export class ImportError extends Error {
-  readonly code: ErrorCode;
-
-  constructor(message: string, code: ErrorCode) {
-    super(message);
-    this.name = "ImportError";
-    this.code = code;
-  }
-}
 
 export const IMPORT_FETCH_TIMEOUT_MS: number = 10_000;
 export const MAX_IMPORT_BYTES: number = 4 * 1024 * 1024;

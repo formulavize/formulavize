@@ -1,6 +1,6 @@
 import { expect } from "vitest";
 import { ErrorCode } from "src/compiler/compilationErrors";
-import { ImportError } from "src/compiler/importFetcher";
+import { ImportError } from "src/compiler/compilationErrors";
 
 // Shared by importFetcher.test.ts and importCacher.test.ts: both drive the
 // same mocked fetch, one through the transport directly and one through the

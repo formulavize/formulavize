@@ -21,12 +21,12 @@ import {
 import { Dag, NodeId, StyleProperties, DagId, DagStyle } from "./dag";
 import { GLOBAL_STYLE_KEYWORD_MAP } from "./constants";
 import { ImportResolver } from "./importCacher";
-import { ImportError } from "./importFetcher";
 import {
   CompilationError as Error,
   DEFAULT_POSITION,
   ErrorCode,
   ErrorSource,
+  ImportError,
   describeError,
 } from "./compilationErrors";
 
