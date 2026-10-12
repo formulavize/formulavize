@@ -287,13 +287,16 @@ function reportImportedErrors(
   console.debug(errMsg);
 }
 
+// Resolves an import and builds its contents as a dag of their own. Returns
+// null when the package could not be resolved: the diagnostic has already been
+// reported against the import statement, so a caller's only job is to stop.
 async function getImportedDag(
   importStmt: ImportTreeNode,
   imports: ImportResolver,
   errors: Error[],
   workingDag: Dag,
   ctx: StableIdContext,
-): Promise<Dag> {
+): Promise<Dag | null> {
   // Imports are processed sequentially to ensure order is respected.
   // Hoisting and parallelizing would be faster, but could result in
   // incorrect behavior if the order of imports matters.
@@ -308,8 +311,9 @@ async function getImportedDag(
     );
     errors.push(errMsg);
     console.debug(errMsg);
-    throw err;
+    return null;
   });
+  if (!resolved) return null;
   // The package's contents are built here rather than reused from a cache,
   // under a scope belonging to this import site, so two sites importing one
   // package get their own ids instead of two subgraphs that collide. The
@@ -331,61 +335,49 @@ async function getImportedDag(
   return dag;
 }
 
-// Attach an imported dag under the importing dag. Its id is already the
-// import site's scope path, since that is the scope its contents were built
-// under; an import with no name leaves the dag itself unnamed.
-function nestImportedDag(
-  importedDag: Dag,
+// An import's contents keep a scope of their own whenever something can
+// address them: an alias names that scope, and an assignment's variable points
+// at it. A bare import with no alias has neither, so its contents merge into
+// the importing dag instead. That is the same distinction astUtility's
+// DeclaredImport carries as `isAssigned`, which is why the flag is the
+// parameter here rather than two near-identical functions.
+// Returns the nested dag's id for an assignment to bind to, or null when there
+// is no id to bind: a merged import, or one that failed to resolve (which has
+// already reported itself).
+async function processImport(
   importStmt: ImportTreeNode,
+  isAssigned: boolean,
   workingDag: Dag,
-): NodeId {
+  errors: Error[],
+  imports: ImportResolver,
+  ctx: StableIdContext,
+): Promise<NodeId | null> {
+  const importedDag = await getImportedDag(
+    importStmt,
+    imports,
+    errors,
+    workingDag,
+    ctx,
+  );
+  if (!importedDag) return null;
+
+  if (!isAssigned && !importStmt.ImportName) {
+    workingDag.mergeDag(importedDag);
+    return null;
+  }
+
+  // The dag's id is already the import site's scope path, since that is the
+  // scope its contents were built under; an import with no name leaves the dag
+  // itself unnamed.
   importedDag.Name = importStmt.ImportName ?? "";
   workingDag.addChildDag(importedDag);
   return importedDag.Id;
 }
 
-async function processImport(
-  importStmt: ImportTreeNode,
-  workingDag: Dag,
-  errors: Error[],
-  imports: ImportResolver,
-  ctx: StableIdContext,
-): Promise<NodeId> {
-  // Process imports referenced by a variable, always returning a node id
-  const importedDag = await getImportedDag(
-    importStmt,
-    imports,
-    errors,
-    workingDag,
-    ctx,
-  );
-  return nestImportedDag(importedDag, importStmt, workingDag);
-}
-
-async function processUnassignedImport(
-  importStmt: ImportTreeNode,
-  workingDag: Dag,
-  errors: Error[],
-  imports: ImportResolver,
-  ctx: StableIdContext,
-) {
-  // Process imports not referenced by a variable. With no name there is
-  // nothing to address the scope by, so the contents land in the importing
-  // dag directly instead of under a scope of their own.
-  const importedDag = await getImportedDag(
-    importStmt,
-    imports,
-    errors,
-    workingDag,
-    ctx,
-  );
-  if (importStmt.ImportName) {
-    nestImportedDag(importedDag, importStmt, workingDag);
-  } else {
-    workingDag.mergeDag(importedDag);
-  }
-}
-
+// Returns null when the right hand side yields no node for the assignment to
+// bind to. Every such case has already pushed its own diagnostic, so a null is
+// the signal to stop rather than something a caller reports on -- the same
+// convention argListToEdgeInfo uses for an argument it could not resolve.
 async function processAssignmentRhs(
   rhsNode:
     CallTreeNode | QualifiedVarTreeNode | NamespaceTreeNode | ImportTreeNode,
@@ -393,23 +385,22 @@ async function processAssignmentRhs(
   errors: Error[],
   imports: ImportResolver,
   ctx: StableIdContext,
-): Promise<NodeId> {
+): Promise<NodeId | null> {
   return match(rhsNode.Type)
     .with(NodeType.QualifiedVariable, () => {
       const rhsVar = rhsNode as QualifiedVarTreeNode;
       const varName = rhsVar.QualifiedVarName;
       const candidateSrcNodeId = workingDag.getVarNode(varName);
       if (!candidateSrcNodeId) {
-        const errDescription = `Variable '${varName}' not found`;
         const errMsg = makeError(
           rhsNode,
-          errDescription,
+          `Variable '${varName}' not found`,
           ErrorSource.Reference,
           ErrorCode.VariableNotFound,
         );
         errors.push(errMsg);
         console.debug(errMsg);
-        return Promise.reject(errDescription);
+        return null;
       }
       return candidateSrcNodeId;
     })
@@ -428,6 +419,7 @@ async function processAssignmentRhs(
     .with(NodeType.Import, async () => {
       return processImport(
         rhsNode as ImportTreeNode,
+        true,
         workingDag,
         errors,
         imports,
@@ -443,7 +435,7 @@ async function processAssignmentRhs(
       );
       errors.push(errMsg);
       console.error(errMsg);
-      return Promise.reject(`Invalid right hand side type '${rhsNode.Type}'`);
+      return null;
     });
 }
 
@@ -508,10 +500,7 @@ async function processAssignment(
     errors,
     imports,
     ctx,
-  ).catch((err) => {
-    console.debug("Assignment failure:", err);
-    return null;
-  });
+  );
   if (!thisNodeId) return;
   for (const lhsVar of assignmentStmt.Lhs) {
     workingDag.setVarNode(lhsVar.VarName, thisNodeId);
@@ -683,15 +672,14 @@ async function processStatement(
       );
     })
     .with(NodeType.Import, async () => {
-      await processUnassignedImport(
+      await processImport(
         stmt as ImportTreeNode,
+        false,
         workingDag,
         errors,
         imports,
         ctx,
-      ).catch((err) => {
-        console.debug(err);
-      });
+      );
     })
     .otherwise(() => {
       const errMsg = makeError(
