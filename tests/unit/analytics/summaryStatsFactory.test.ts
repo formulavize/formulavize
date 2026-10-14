@@ -11,7 +11,7 @@ import {
   StatementListTreeNode,
 } from "src/compiler/ast";
 import { DEFAULT_POSITION } from "src/compiler/compilationErrors";
-import { parseFromSource } from "src/compiler/driver";
+import { parseFromSource } from "src/compiler/parser";
 import { SummaryStats } from "src/analytics/summaryStats";
 
 describe("DAG statistics", () => {

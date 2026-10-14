@@ -11,9 +11,12 @@ import {
 } from "src/compiler/ast";
 import { makeDag } from "src/compiler/dagFactory";
 import { Compiler } from "src/compiler/driver";
-import { ImportCacher } from "src/compiler/importCacher";
+import { ImportResolver } from "src/compiler/importCacher";
 
-const dummyImporter = {} as ImportCacher;
+// No recipe here imports anything, so the resolver should never be reached.
+const dummyImportResolver: ImportResolver = (packageLocation) => {
+  throw new Error(`unexpected import resolution: ${packageLocation}`);
+};
 
 function getNodeIds(dag: Awaited<ReturnType<typeof makeDag>>["dag"]): string[] {
   return dag.getNodeList().map((n) => n.id);
@@ -30,8 +33,8 @@ describe("stable ID generation", () => {
         new Call("a", new ValueList([])),
         new Call("b", new ValueList([])),
       ]);
-    const { dag: dag1 } = await makeDag(makeRecipe(), dummyImporter);
-    const { dag: dag2 } = await makeDag(makeRecipe(), dummyImporter);
+    const { dag: dag1 } = await makeDag(makeRecipe(), dummyImportResolver);
+    const { dag: dag2 } = await makeDag(makeRecipe(), dummyImportResolver);
     expect(getNodeIds(dag1)).toEqual(getNodeIds(dag2));
     expect(getEdgeIds(dag1)).toEqual(getEdgeIds(dag2));
   });
@@ -67,7 +70,7 @@ describe("stable ID generation", () => {
   describe("nodes", () => {
     test("root dag has stable ID 'root'", async () => {
       const recipe = new Recipe([]);
-      const { dag } = await makeDag(recipe, dummyImporter);
+      const { dag } = await makeDag(recipe, dummyImportResolver);
       expect(dag.Id).toBe("root");
     });
 
@@ -77,7 +80,7 @@ describe("stable ID generation", () => {
         new Call("g", new ValueList([])),
         new Call("f", new ValueList([])),
       ]);
-      const { dag } = await makeDag(recipe, dummyImporter);
+      const { dag } = await makeDag(recipe, dummyImportResolver);
       const nodeIds = getNodeIds(dag);
       expect(nodeIds).toContain("root-n-f-0");
       expect(nodeIds).toContain("root-n-g-0");
@@ -94,8 +97,8 @@ describe("stable ID generation", () => {
         new Call("b", new ValueList([])),
         new Call("c", new ValueList([])),
       ]);
-      const { dag: dag1 } = await makeDag(recipe1, dummyImporter);
-      const { dag: dag2 } = await makeDag(recipe2, dummyImporter);
+      const { dag: dag1 } = await makeDag(recipe1, dummyImportResolver);
+      const { dag: dag2 } = await makeDag(recipe2, dummyImportResolver);
 
       const ids1 = getNodeIds(dag1);
       const ids2 = getNodeIds(dag2);
@@ -116,8 +119,8 @@ describe("stable ID generation", () => {
         new Call("a", new ValueList([])),
         new Call("c", new ValueList([])),
       ]);
-      const { dag: dag1 } = await makeDag(recipe1, dummyImporter);
-      const { dag: dag2 } = await makeDag(recipe2, dummyImporter);
+      const { dag: dag1 } = await makeDag(recipe1, dummyImportResolver);
+      const { dag: dag2 } = await makeDag(recipe2, dummyImportResolver);
 
       const ids1 = getNodeIds(dag1);
       const ids2 = getNodeIds(dag2);
@@ -136,7 +139,7 @@ describe("stable ID generation", () => {
         new Call("e", new ValueList([])),
         new Call("ns", new ValueList([])),
       ]);
-      const { dag } = await makeDag(recipe, dummyImporter);
+      const { dag } = await makeDag(recipe, dummyImportResolver);
       const nodeIds = getNodeIds(dag);
       expect(nodeIds).toContain("root-n-n-0");
       expect(nodeIds).toContain("root-n-e-0");
@@ -151,7 +154,7 @@ describe("stable ID generation", () => {
         new Call("慢火", new ValueList([])),
         new Call("_under", new ValueList([])),
       ]);
-      const { dag } = await makeDag(recipe, dummyImporter);
+      const { dag } = await makeDag(recipe, dummyImportResolver);
       const nodeIds = getNodeIds(dag);
       expect(nodeIds).toContain("root-n-sauté-0");
       expect(nodeIds).toContain("root-n-慢火-0");
@@ -182,7 +185,7 @@ describe("stable ID generation", () => {
           ]),
         ),
       ]);
-      const { dag } = await makeDag(recipe, dummyImporter);
+      const { dag } = await makeDag(recipe, dummyImportResolver);
       const nodes = dag.getNodeList();
       const edges = dag.getEdgeList();
       expect(nodes).toHaveLength(7);
@@ -210,7 +213,7 @@ describe("stable ID generation", () => {
         ),
         new Call("b", new ValueList([new QualifiedVariable(["x"])])),
       ]);
-      const { dag } = await makeDag(recipe, dummyImporter);
+      const { dag } = await makeDag(recipe, dummyImportResolver);
       const edgeIds = getEdgeIds(dag);
       expect(edgeIds).toContain("root-e-root-n-a-0>root-n-b-0-0");
     });
@@ -230,7 +233,7 @@ describe("stable ID generation", () => {
           ]),
         ),
       ]);
-      const { dag } = await makeDag(recipe, dummyImporter);
+      const { dag } = await makeDag(recipe, dummyImportResolver);
       const edgeIds = getEdgeIds(dag);
       expect(edgeIds).toHaveLength(2);
       expect(edgeIds).toContain("root-e-root-n-a-0>root-n-b-0-0");
@@ -246,8 +249,8 @@ describe("stable ID generation", () => {
           ),
           new Call("b", new ValueList([new QualifiedVariable(["x"])])),
         ]);
-      const { dag: dag1 } = await makeDag(makeRecipe(), dummyImporter);
-      const { dag: dag2 } = await makeDag(makeRecipe(), dummyImporter);
+      const { dag: dag1 } = await makeDag(makeRecipe(), dummyImportResolver);
+      const { dag: dag2 } = await makeDag(makeRecipe(), dummyImportResolver);
       expect(getEdgeIds(dag1)).toEqual(getEdgeIds(dag2));
     });
   });
@@ -260,7 +263,7 @@ describe("stable ID generation", () => {
           new StatementList([new Call("inner", new ValueList([]))]),
         ),
       ]);
-      const { dag } = await makeDag(recipe, dummyImporter);
+      const { dag } = await makeDag(recipe, dummyImportResolver);
       const childDags = dag.getChildDags();
       expect(childDags).toHaveLength(1);
       expect(childDags[0].Id).toBe("root-ns-myNs-0");
@@ -280,7 +283,7 @@ describe("stable ID generation", () => {
           new StatementList([new Call("b", new ValueList([]))]),
         ),
       ]);
-      const { dag } = await makeDag(recipe, dummyImporter);
+      const { dag } = await makeDag(recipe, dummyImportResolver);
       const childDags = dag.getChildDags();
       expect(childDags).toHaveLength(2);
 
@@ -301,7 +304,7 @@ describe("stable ID generation", () => {
           new StatementList([new Call("inner", new ValueList([]))]),
         ),
       ]);
-      const { dag } = await makeDag(recipe, dummyImporter);
+      const { dag } = await makeDag(recipe, dummyImportResolver);
       const nodeId = "root-n-n-0";
       const nsScope = "root-ns-n-0";
 

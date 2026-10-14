@@ -164,7 +164,7 @@ export class Dag {
     // with inner dags taking precedence over outer dags
     // null is returned if the identifier is found but the value is null
     // undefined is returned if the identifier is not found
-    if (this.id in seenDags) {
+    if (seenDags.has(this.id)) {
       // this should never happen in practice
       console.warn("Cycle detected in the DAG lineage, stopping traversal");
       return undefined;

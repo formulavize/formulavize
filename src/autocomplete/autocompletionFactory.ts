@@ -11,9 +11,9 @@ import {
   RendererDirectiveTreeNode,
   AboutNoteTreeNode,
   NamespaceTreeNode,
-  ImportTreeNode,
 } from "../compiler/ast";
 import { GLOBAL_STYLE_KEYWORD_MAP } from "../compiler/constants";
+import { getDeclaredImports } from "../compiler/astUtility";
 import {
   CompletionIndex,
   TokenInfo,
@@ -298,12 +298,17 @@ async function processImports(
   importedASTLookupFn: ImportedASTLookup,
   visitedImports: Set<string>,
 ): Promise<CompletionIndex> {
-  const importNodes = statements.filter(
-    (s) => s.Type === NodeType.Import,
-  ) as ImportTreeNode[];
+  const declaredImports = getDeclaredImports(statements);
 
   const importResults = await Promise.all(
-    importNodes.map(async (importNode) => {
+    declaredImports.map(async ({ node: importNode, isAssigned }) => {
+      // An import assigned to a variable without an alias puts its contents in
+      // an unnamed scope, which no name here reaches into: not the variable
+      // ('x = @ "pkg.fiz"' leaves 'x.inner' unresolvable) and not the
+      // importing scope itself. The variable is all there is to offer, and the
+      // ast index already records it.
+      if (isAssigned && !importNode.ImportName) return null;
+
       if (visitedImports.has(importNode.ImportLocation)) return null;
 
       const importedAst = await importedASTLookupFn(importNode.ImportLocation);

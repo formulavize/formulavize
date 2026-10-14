@@ -1,91 +1,52 @@
 import { EditorState } from "@codemirror/state";
-import { syntaxTree } from "@codemirror/language";
-import { fizLanguage } from "@formulavize/lang-fiz";
-import { RecipeTreeNode } from "./ast";
-import { makeRecipeTree } from "./astFactory";
 import { makeDag } from "./dagFactory";
 import { Compilation } from "./compilation";
-import { ImportCacher } from "./importCacher";
-import { CompilationError as Error } from "./compilationErrors";
+import { ParseResult, parseFromEditorState, parseFromSource } from "./parser";
+import { ImportCacher, makeImportResolver } from "./importCacher";
+import { FetchSourceFn } from "./importFetcher";
 
-interface SourceGen<I> {
-  (input: I): string;
-}
-
-interface Parse<I> {
-  (input: I): { ast: RecipeTreeNode; errors: Error[] };
-}
-
-export function parseFromSource(sourceRecipe: string): {
-  ast: RecipeTreeNode;
-  errors: Error[];
-} {
-  const tree = fizLanguage.parser.parse(sourceRecipe);
-  const editorState = EditorState.create({ extensions: [fizLanguage] });
-  const text = editorState.toText(sourceRecipe);
-  return makeRecipeTree(tree, text);
+export interface CompilerOptions {
+  // How imports are read. Defaults to fetching over HTTP; the CLI passes a
+  // filesystem-backed fetcher so relative imports resolve outside a browser.
+  fetchSource?: FetchSourceFn;
 }
 
 export class Compiler {
   private importCacher: ImportCacher;
 
-  constructor() {
-    this.importCacher = new ImportCacher((source, seenImports) =>
-      this.compileFromSource(source, seenImports),
-    );
+  constructor(options: CompilerOptions = {}) {
+    this.importCacher = new ImportCacher(options.fetchSource);
   }
 
   get ImportCacher(): ImportCacher {
     return this.importCacher;
   }
 
-  async compile<I>(
-    input: I,
-    sourceGen: SourceGen<I>,
-    parse: Parse<I>,
-    seenImports: Set<string> = new Set(),
-  ): Promise<Compilation> {
-    const source = sourceGen(input);
-    const { ast, errors: parseErrors } = parse(input);
-    const { dag, errors: dagErrors } = await makeDag(
-      ast,
-      this.importCacher,
-      seenImports,
-    );
-    const errors = [...parseErrors, ...dagErrors];
-    return new Compilation(source, ast, dag, errors);
-  }
-
   compileFromEditor(editorState: EditorState): Promise<Compilation> {
-    function sourceFromEditor(editorState: EditorState): string {
-      return editorState.doc.toString();
-    }
-
-    function parseFromEditor(editorState: EditorState): {
-      ast: RecipeTreeNode;
-      errors: Error[];
-    } {
-      const tree = syntaxTree(editorState);
-      const text = editorState.doc;
-      return makeRecipeTree(tree, text);
-    }
-
-    return this.compile(editorState, sourceFromEditor, parseFromEditor);
+    return this.compileParsed(
+      editorState.doc.toString(),
+      parseFromEditorState(editorState),
+    );
   }
 
-  compileFromSource(
-    sourceRecipe: string,
-    seenImports: Set<string> = new Set(),
-  ): Promise<Compilation> {
-    function sourceFromSource(sourceRecipe: string): string {
-      return sourceRecipe;
-    }
+  compileFromSource(sourceRecipe: string): Promise<Compilation> {
+    return this.compileParsed(sourceRecipe, parseFromSource(sourceRecipe));
+  }
 
-    return this.compile(
-      sourceRecipe,
-      sourceFromSource,
-      parseFromSource,
-      seenImports,
+  // Every compile starts a fresh import chain: nothing imported this recipe.
+  // A nested import descends inside dagFactory, which extends the chain as it
+  // goes, so there is no recursive entry point here to thread one through.
+  private async compileParsed(
+    source: string,
+    parsed: ParseResult,
+  ): Promise<Compilation> {
+    const { dag, errors: dagErrors } = await makeDag(
+      parsed.ast,
+      makeImportResolver(this.importCacher),
     );
+    return new Compilation(source, parsed.ast, dag, [
+      ...parsed.errors,
+      ...dagErrors,
+    ]);
   }
 }

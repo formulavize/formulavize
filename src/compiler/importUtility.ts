@@ -1,15 +1,16 @@
 import { RecipeTreeNode } from "./ast";
-import { Compilation } from "./compilation";
 import { getImportsFromRecipe } from "./astUtility";
 
-interface CompilationCacher {
-  getCachedCompilation(
-    packageLocation: string,
-  ): Promise<Compilation | undefined>;
+// Only the cache peek is needed here: the dump reports what has already been
+// compiled and never pulls in a package to describe it. Resolving to undefined
+// is how both a miss and a failed import are reported, so there is nothing to
+// catch.
+interface AstCacher {
+  getCachedAst(packageLocation: string): Promise<RecipeTreeNode | undefined>;
 }
 
 async function dumpImportTreeHelper(
-  cacher: CompilationCacher,
+  cacher: AstCacher,
   imports: Set<string>,
   level: number,
   visitedImports: Set<string>,
@@ -23,13 +24,11 @@ async function dumpImportTreeHelper(
         return `${baseLine}\n${indent}\t*cyclic dependency*`;
       }
 
-      const cachedCompilation = await cacher
-        .getCachedCompilation(importPath)
-        .catch(() => undefined);
+      const cachedAst = await cacher.getCachedAst(importPath);
 
-      if (!cachedCompilation) return baseLine;
+      if (!cachedAst) return baseLine;
 
-      const transitiveImports = getImportsFromRecipe(cachedCompilation.AST);
+      const transitiveImports = getImportsFromRecipe(cachedAst);
       const newVisitedImports = new Set([...visitedImports, importPath]);
       const childLines = await dumpImportTreeHelper(
         cacher,
@@ -48,7 +47,7 @@ async function dumpImportTreeHelper(
 }
 
 export async function dumpImportTree(
-  cacher: CompilationCacher,
+  cacher: AstCacher,
   recipe: RecipeTreeNode,
 ): Promise<string> {
   const topLevelImports = getImportsFromRecipe(recipe);

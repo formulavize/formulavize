@@ -1,5 +1,5 @@
 import { describe, test, expect } from "vitest";
-import { parseFromSource } from "src/compiler/driver";
+import { parseFromSource } from "src/compiler/parser";
 import { DESCRIPTION_PROPERTY } from "src/compiler/constants";
 import {
   RecipeTreeNode as Recipe,
