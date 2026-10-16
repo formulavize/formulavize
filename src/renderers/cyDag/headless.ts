@@ -1,7 +1,11 @@
 import { JSDOM } from "jsdom";
 import { createCanvas, GlobalFonts, type Canvas } from "@napi-rs/canvas";
 import { Dag } from "../../compiler/dag";
-import { HeadlessRenderOptions, RendererDescriptor } from "../../rendererApi";
+import {
+  ExportFormat,
+  HeadlessRenderOptions,
+  RendererDescriptor,
+} from "../../rendererApi";
 import { cytoscapeRendererMeta } from "./meta";
 import { makeCyElements } from "./cyGraphFactory";
 import { makeCyStylesheets } from "./cyStyleSheetsFactory";
@@ -183,6 +187,33 @@ function installHeadlessDom(): Document {
 }
 
 /**
+ * Collapse repeated namespace declarations on the root <svg> element.
+ *
+ * svgcanvas declares the xlink namespace once, with setAttributeNS. A browser's
+ * native XMLSerializer emits that as a single declaration, but jsdom's writes
+ * it twice: once as the tracked namespace declaration and again as a literal
+ * attribute. A duplicate attribute is a fatal XML well-formedness error, and an
+ * SVG referenced from an <img> tag is parsed as strict XML, so the file renders
+ * in the app's export yet shows as a broken image when the CLI writes it.
+ *
+ * Only the headless path goes through jsdom, which is why this lives here
+ * rather than in the exporter the Vue component shares.
+ */
+function dedupeRootNamespaceDeclarations(svg: string): string {
+  const rootEnd = svg.indexOf(">");
+  if (rootEnd === -1) return svg;
+  const seen = new Set<string>();
+  const root = svg
+    .slice(0, rootEnd)
+    .replace(/\s+(xmlns(?::[\w-]+)?)="[^"]*"/g, (attr, name: string) => {
+      if (seen.has(name)) return "";
+      seen.add(name);
+      return attr;
+    });
+  return root + svg.slice(rootEnd);
+}
+
+/**
  * Render a compiled Dag to image bytes headlessly (no browser).
  *
  * Reuses the exact same element/stylesheet factories, layout options, and
@@ -263,7 +294,10 @@ export async function renderDagToBytes(
     if (!blob) {
       throw new Error(`Unsupported export format: ${options.fileType}`);
     }
-    return Buffer.from(await blob.arrayBuffer());
+    const bytes = Buffer.from(await blob.arrayBuffer());
+    return options.fileType === ExportFormat.SVG
+      ? Buffer.from(dedupeRootNamespaceDeclarations(bytes.toString("utf8")))
+      : bytes;
   } finally {
     cy.destroy();
   }

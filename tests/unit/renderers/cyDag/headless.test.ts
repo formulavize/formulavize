@@ -1,5 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { createCanvas, loadImage } from "@napi-rs/canvas";
+import { JSDOM } from "jsdom";
 import { Compiler } from "src/compiler/driver";
 import { ExportFormat, HeadlessRenderOptions } from "src/rendererApi";
 import { renderDagToBytes } from "src/renderers/cyDag/headless";
@@ -54,6 +55,24 @@ describe("headless CLI rendering", () => {
     expect(svg).toContain("<svg");
     expect(svg).toContain("alpha");
     expect(svg).toContain("beta");
+  });
+
+  test("exported SVG is well-formed XML with no repeated namespace declaration", async () => {
+    const bytes = await render("a = alpha()\nbeta(a)\n", {
+      fileType: ExportFormat.SVG,
+      includeDescriptions: false,
+    });
+    const svg = bytes.toString("utf8");
+
+    // jsdom's XMLSerializer used to emit xmlns:xlink twice on the root. A
+    // duplicate attribute is a fatal XML error, and an SVG referenced from an
+    // <img> tag is parsed as strict XML, so the file showed as a broken image.
+    const root = svg.slice(0, svg.indexOf(">"));
+    expect(root.match(/xmlns:xlink=/g)).toHaveLength(1);
+
+    const { window } = new JSDOM("");
+    const parsed = new window.DOMParser().parseFromString(svg, "image/svg+xml");
+    expect(parsed.querySelector("parsererror")).toBeNull();
   });
 
   test("canvas background color fills the exported PNG", async () => {
