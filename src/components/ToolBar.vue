@@ -24,18 +24,6 @@
         <v-icon :icon="mdiTextBoxOutline" />
         <v-tooltip activator="parent" text="Documentation" location="bottom" />
       </v-btn>
-      <v-btn
-        icon
-        href="https://github.com/formulavize/formulavize"
-        target="_blank"
-      >
-        <v-icon :icon="mdiGithub" />
-        <v-tooltip
-          activator="parent"
-          text="View Project GitHub"
-          location="bottom"
-        />
-      </v-btn>
       <v-btn icon @click="$emit('open-options')">
         <v-icon :icon="mdiCogOutline" />
         <v-tooltip activator="parent" text="Options" location="bottom" />
@@ -51,7 +39,6 @@ import {
   mdiContentCopy,
   mdiExport,
   mdiTextBoxOutline,
-  mdiGithub,
   mdiCogOutline,
 } from "@mdi/js";
 export default defineComponent({
@@ -82,7 +69,6 @@ export default defineComponent({
       mdiExport,
       mdiTextBoxOutline,
       mdiCogOutline,
-      mdiGithub,
       copied,
       handleCopySource,
     };
