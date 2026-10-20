@@ -3,10 +3,6 @@
     <img id="logo" src="/assets/formulavize_logo.svg" alt="Formulavize logo" />
     <h1>formulavize</h1>
     <v-btn-group density="comfortable">
-      <v-btn icon :active="tutorialMode" @click="$emit('tutorial-clicked')">
-        <v-icon :icon="mdiSchoolOutline" />
-        <v-tooltip activator="parent" text="Tutorial" location="bottom" />
-      </v-btn>
       <v-btn icon @click="handleCopySource">
         <v-icon :icon="mdiContentCopy" />
         <v-tooltip
@@ -20,17 +16,13 @@
         <v-icon :icon="mdiExport" />
         <v-tooltip activator="parent" text="Export Image" location="bottom" />
       </v-btn>
-      <v-btn
-        icon
-        href="https://github.com/formulavize/formulavize"
-        target="_blank"
-      >
-        <v-icon :icon="mdiGithub" />
-        <v-tooltip
-          activator="parent"
-          text="View Project GitHub"
-          location="bottom"
-        />
+      <v-btn icon :active="tutorialMode" @click="$emit('tutorial-clicked')">
+        <v-icon :icon="mdiSchoolOutline" />
+        <v-tooltip activator="parent" text="Tutorial" location="bottom" />
+      </v-btn>
+      <v-btn icon href="https://docs.formulavize.com" target="_blank">
+        <v-icon :icon="mdiTextBoxOutline" />
+        <v-tooltip activator="parent" text="Documentation" location="bottom" />
       </v-btn>
       <v-btn icon @click="$emit('open-options')">
         <v-icon :icon="mdiCogOutline" />
@@ -46,7 +38,7 @@ import {
   mdiSchoolOutline,
   mdiContentCopy,
   mdiExport,
-  mdiGithub,
+  mdiTextBoxOutline,
   mdiCogOutline,
 } from "@mdi/js";
 export default defineComponent({
@@ -75,8 +67,8 @@ export default defineComponent({
       mdiSchoolOutline,
       mdiContentCopy,
       mdiExport,
+      mdiTextBoxOutline,
       mdiCogOutline,
-      mdiGithub,
       copied,
       handleCopySource,
     };
