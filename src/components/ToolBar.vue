@@ -20,6 +20,10 @@
         <v-icon :icon="mdiExport" />
         <v-tooltip activator="parent" text="Export Image" location="bottom" />
       </v-btn>
+      <v-btn icon href="https://docs.formulavize.com" target="_blank">
+        <v-icon :icon="mdiTextBoxOutline" />
+        <v-tooltip activator="parent" text="Documentation" location="bottom" />
+      </v-btn>
       <v-btn
         icon
         href="https://github.com/formulavize/formulavize"
@@ -46,6 +50,7 @@ import {
   mdiSchoolOutline,
   mdiContentCopy,
   mdiExport,
+  mdiTextBoxOutline,
   mdiGithub,
   mdiCogOutline,
 } from "@mdi/js";
@@ -75,6 +80,7 @@ export default defineComponent({
       mdiSchoolOutline,
       mdiContentCopy,
       mdiExport,
+      mdiTextBoxOutline,
       mdiCogOutline,
       mdiGithub,
       copied,
