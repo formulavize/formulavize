@@ -2,6 +2,7 @@ export const defaultCubic = `\
 /* Welcome to Formulavize! */
 
 // The Default Cubic:
+icons @ "https://formulavize.github.io/fiz-tutorial-imports/shapes.fiz"
 *node{
   text-valign: "center"
   text-halign: "center"
@@ -14,9 +15,12 @@ export const defaultCubic = `\
 }
 %v{ background-color: #80ebff }
 %multiply{ background-color: #33acff; label: "×";}
-%output{ shape: "round-rectangle"; font-size: 10 }
 
 v_squared = multiply(v(), v())
 v_cubed = multiply(v_squared, v())
-output(v_cubed)
+output(v_cubed) {
+  label: ""
+  shape: "round-rectangle"
+  #icons.cube
+}
 `;
