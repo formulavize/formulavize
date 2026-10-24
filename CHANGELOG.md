@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.16.0](https://github.com/formulavize/formulavize/compare/v1.15.0...v1.16.0) (2026-10-24)
+
+
+### Features
+
+* **importer:** cli can import for local file paths ([#84](https://github.com/formulavize/formulavize/issues/84)) ([17dc25e](https://github.com/formulavize/formulavize/commit/17dc25e9b066444423a011502543669713742d60))
+* **ToolBar:** add documentation button ([#87](https://github.com/formulavize/formulavize/issues/87)) ([0ca54e5](https://github.com/formulavize/formulavize/commit/0ca54e5832dba24cb9b426d88a4e349fa2135ae7))
+* **tutorial:** add import statement to the default example ([#88](https://github.com/formulavize/formulavize/issues/88)) ([5184f60](https://github.com/formulavize/formulavize/commit/5184f603206c2717b0818b36b639b374a091b786))
+
+
+### Bug Fixes
+
+* **cyDag:** dedupe namespace declarations from headless export ([#86](https://github.com/formulavize/formulavize/issues/86)) ([fd83087](https://github.com/formulavize/formulavize/commit/fd83087422f9919fe95b75d5434c1c81c8ec3057))
+
 ## [1.15.0](https://github.com/formulavize/formulavize/compare/v1.14.0...v1.15.0) (2026-10-09)
 
 
